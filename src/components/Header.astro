@@ -1,0 +1,11 @@
+---
+import { AvatarDropdownMenu } from '@Components/react/AvatarDropdownMenu';
+---
+
+<header class="sm:hidden p-4 flex justify-between items-center">
+  <div class="flex items-center">
+    <img src="/uss_logo.webp" alt="SipanGPT Logo" class="h-5 mr-2 dark:invert" />
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white">SipanGPT</h1>
+  </div>
+  <AvatarDropdownMenu client:load src="https://github.com/jhangmez.png" alt="jhangmez" fallbackText="Jhan" />
+</header>
