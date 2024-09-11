@@ -7,134 +7,26 @@ const { title } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="es">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="description" content="Astro description" />
+		<meta name="description" content="SipanGPT Chatbot" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      property="og:image"
+      content="https://www.jhangmez.xyz/api/img?title=SipanGPT&description=null&bg=333333&color=5fed00"
+    />
+    <meta property="og:url" content="https://sipangpt.vercel.app/" />
+		<meta property="og:title" content="SipanGPT Chatbot" />
+    <meta property="og:description" content="SipanGPT, prototipo realizado por @jhangmez y la Universidad Señor de Sipán" />
 		<meta name="generator" content={Astro.generator} />
 		<ViewTransitions />
 		<title>{title}</title>
 	</head>
-	<body>
+	<body class="bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background">
+		<noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
 		<slot />
 	</body>
 </html>
-<style is:global>
-:root {
-  /* Colores principales */
-  --color-primary: 125, 250, 0;  /* #7dfa00 */
-  --color-secondary: 51, 51, 51; /* #333333 */
 
-  /* Escala de grises */
-  --color-gray-100: 240, 240, 240; /* #f0f0f0 */
-  --color-gray-200: 220, 220, 220; /* #dcdcdc */
-  --color-gray-300: 190, 190, 190; /* #bebebe */
-
-  /* Gradiente de acento */
-  --accent-gradient: linear-gradient(
-    45deg,
-    rgb(var(--color-primary)),
-    rgb(var(--color-gray-100)) 60%
-  );
-
-  /* Fuentes */
-  --font-title: 'Lyon Display', serif;
-  --font-body: 'Marselis Pro', sans-serif;
-}
-
-/* Estilos base */
-html {
-  font-family: var(--font-body);
-  background: rgb(240, 240, 240);
-  color: rgb(var(--color-secondary));
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-title);
-}
-
-code {
-  font-family: Menlo, Monaco, 'Lucida Console', 'Liberation Mono', 'DejaVu Sans Mono',
-    'Bitstream Vera Sans Mono', 'Courier New', monospace;
-}
-
-/* Estilos específicos para el afiche */
-.poster-title {
-  font-family: var(--font-title);
-  font-weight: 800; /* Extra bold */
-  font-size: 2.5rem;
-  color: #ffffff;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-}
-
-.webinar-tag {
-  font-family: var(--font-body);
-  font-weight: 600; /* Semi-bold */
-  font-size: 1.2rem;
-  text-transform: uppercase;
-  background-color: #ffffff;
-  color: rgb(var(--color-secondary));
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-}
-
-.date-time {
-  font-family: var(--font-body);
-  font-weight: 700; /* Bold */
-  font-size: 1.5rem;
-  color: #ffffff;
-}
-
-.presenter-name {
-  font-family: var(--font-title);
-  font-weight: 600; /* Semi-bold */
-  font-size: 1.3rem;
-  margin-bottom: 0.25rem;
-}
-
-.presenter-description {
-  font-family: var(--font-body);
-  font-weight: 400; /* Regular */
-  font-size: 1rem;
-  line-height: 1.4;
-}
-
-.info-section {
-  font-family: var(--font-body);
-  font-weight: 700; /* Bold */
-  font-size: 1.2rem;
-  color: rgb(var(--color-primary));
-  margin-top: 1rem;
-}
-
-.info-email {
-  font-weight: 400; /* Regular */
-  font-size: 1rem;
-}
-
-.uss-logo {
-  font-family: var(--font-title);
-  font-weight: 900; /* Black */
-  font-size: 2rem;
-  color: #ffffff;
-}
-
-/* Modo oscuro */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-primary: 95, 237, 0;  /* #5fed00 - versión más clara para modo oscuro */
-  }
-  
-  html {
-    background: #333333;
-    color: rgb(var(--color-gray-100));
-  }
-
-  .webinar-tag {
-    background-color: rgb(var(--color-gray-300));
-    color: #13151a;
-  }
-}
-</style>
