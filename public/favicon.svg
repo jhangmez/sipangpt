@@ -1,0 +1,25 @@
+<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px"
+    y="0px" viewBox="0 0 1086 445" style="enable-background:new 0 0 1086 445;" xml:space="preserve">
+    <style type="text/css">
+        .st0 {
+            fill: rgb(240, 240, 240);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .st0 {
+                fill: rgb(51, 51, 51);
+            }
+        }
+    </style>
+    <g>
+        <g>
+            <path class="st0"
+                d="M1018.5,193.4V20.5H739.8V248l201.1,85.3v86h77.6v-139.5L817.4,194.6V98.9h123.5v61.6H1018.5z" />
+            <path class="st0" d="M739.8,419.3h199.4l-199.4-85V419.3z" />
+            <path class="st0"
+                d="M660.4,193.4V20.5H381.7V248l201.1,85.3v86h77.6v-139.5L459.3,194.6V98.9h123.5v61.6H660.4z" />
+            <path class="st0" d="M381.7,419.3h199.5l-199.5-85V419.3z" />
+            <path class="st0" d="M225.7,54.5v287h-123.5V54.5L24.5,21.5v397.8h278.7V21.5H225.7z" />
+        </g>
+    </g>
+</svg>
