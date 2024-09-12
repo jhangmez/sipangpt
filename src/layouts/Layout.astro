@@ -1,32 +1,36 @@
 ---
 interface Props {
-	title: string;
+  title: string
 }
-import { ViewTransitions } from 'astro:transitions';
-const { title } = Astro.props;
+import { ViewTransitions } from 'astro:transitions'
+const { title } = Astro.props
 ---
 
 <!doctype html>
-<html lang="es">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="description" content="SipanGPT Chatbot" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<html lang='es'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='description' content='SipanGPT Chatbot' />
+    <meta name='viewport' content='width=device-width' />
+    <link rel='icon' type='image/svg+xml' href='/favicon.svg' />
     <meta
-      property="og:image"
-      content="https://www.jhangmez.xyz/api/img?title=SipanGPT&description=null&bg=333333&color=5fed00"
+      property='og:image'
+      content='https://www.jhangmez.xyz/api/img?title=SipanGPT&description=null&bg=333333&color=5fed00'
     />
-    <meta property="og:url" content="https://sipangpt.vercel.app/" />
-		<meta property="og:title" content="SipanGPT Chatbot" />
-    <meta property="og:description" content="SipanGPT, prototipo realizado por @jhangmez y la Universidad Señor de Sipán" />
-		<meta name="generator" content={Astro.generator} />
-		<ViewTransitions />
-		<title>{title}</title>
-	</head>
-	<body class="bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background">
-		<noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
-		<slot />
-	</body>
+    <meta property='og:url' content='https://sipangpt.vercel.app/' />
+    <meta property='og:title' content='SipanGPT Chatbot' />
+    <meta
+      property='og:description'
+      content='SipanGPT, Chatbot prototipo realizado por @jhangmez y la Universidad Señor de Sipán'
+    />
+    <meta name='generator' content={Astro.generator} />
+    <ViewTransitions />
+    <title>{title}</title>
+  </head>
+  <body
+    class='bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background'
+  >
+    <noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
+    <slot />
+  </body>
 </html>
-

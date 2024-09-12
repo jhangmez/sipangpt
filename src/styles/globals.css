@@ -3,6 +3,38 @@
 @tailwind utilities;
 @layer base {
   :root {
-    --radius: 0.5rem
+    --radius: 0.5rem;
+  }
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/Fraunces-VariableFont.ttf') format('woff2');
+  }
+
+  /* Fraunces Italic */
+  @font-face {
+    font-family: 'Fraunces';
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/Fraunces-Italic-VariableFont.ttf') format('woff2');
+  }
+  @font-face {
+    font-family: 'Exo 2';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/Exo2-VariableFont_wght.ttf') format('woff2');
+  }
+
+  /* Exo 2 Italic */
+  @font-face {
+    font-family: 'Exo 2';
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/Exo2-Italic-VariableFont_wght.ttf') format('woff2');
   }
 }

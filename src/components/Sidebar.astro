@@ -1,26 +1,51 @@
 ---
-import { Button } from '@/components/ui/button';
-import { AvatarDropdownMenu } from '@Components/react/AvatarDropdownMenu';
-
+import { Button } from '@/components/ui/button'
+import { AvatarDropdownMenu } from '@Components/react/AvatarDropdownMenu'
 ---
 
-<aside class="flex h-screen lg:w-2/12 md:w-4/12 w-1/12 flex-col border-r border-gray-200 lg:flex md:flex hidden">
-  <div class="flex-1 overflow-auto">
-    <div class="flex mx-2 mb-6 mt-2 gap-2 items-center">
-      
-      <img src="/uss_logo.webp" alt="SipanGPT Logo" class="h-5 mt-1 dark:invert" />
-      <h1 class="text-xl font-bold text-primary">SipanGPT</h1>
+<aside
+  class='flex h-screen lg:w-2/12 md:w-4/12 w-1/12 flex-col border-r border-gray-200 lg:flex md:flex hidden'
+>
+  <div class='flex-1 overflow-auto'>
+    <div class='flex mx-2 mb-6 mt-2 gap-2 items-center'>
+      <img
+        src='/uss_logo.webp'
+        alt='SipanGPT Logo'
+        class='h-5 mt-1 dark:invert'
+      />
+      <h1 class='text-xl font-bold text-primary font-frances'>SipanGPT</h1>
     </div>
-    <nav class="flex-1">
+    <nav class='flex-1 font-exo'>
       <ul>
-        <li><Button variant="ghost" className="w-full justify-start">Nuevo chat</Button></li>
-        <li><Button variant="ghost" className="w-full justify-start">Historial</Button></li>
-        <li><Button variant="ghost" className="w-full justify-start">Configuraciones</Button></li>
+        <li>
+          <Button variant='ghost' className='w-full justify-start font-semibold'
+            >Nuevo chat</Button
+          >
+        </li>
+        <li>
+          <Button variant='ghost' className='w-full justify-start font-semibold'
+            >Historial</Button
+          >
+        </li>
+        <li>
+          <Button variant='ghost' className='w-full justify-start font-semibold'
+            >Configuraciones</Button
+          >
+        </li>
       </ul>
     </nav>
   </div>
-  <div class="flex gap-2 p-4">
-    <AvatarDropdownMenu client:load src="https://github.com/jhangmez.png" alt="jhangmez" fallbackText="Jhan" />
-    <Button variant="outline" className="mt-auto text-onPrimary bg-primary dark:text-onPrimary dark:bg-primary">Salir</Button>
+  <div class='flex gap-2 p-4'>
+    <AvatarDropdownMenu
+      client:load
+      src='https://github.com/jhangmez.png'
+      alt='jhangmez'
+      fallbackText='Jhan'
+    />
+    <Button
+      variant='outline'
+      className='mt-auto text-onPrimary bg-primary dark:text-onPrimary dark:bg-primary font-frances font-bold'
+      >Salir</Button
+    >
   </div>
 </aside>

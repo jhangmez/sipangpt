@@ -18,8 +18,8 @@ export default {
         'gray-300': 'rgb(190, 190, 190)' // #bebebe
       },
       fontFamily: {
-        title: ['Lyon Display', 'serif'],
-        body: ['Marselis Pro', 'sans-serif']
+        exo: ['"Exo 2"', 'system-ui'],
+        frances: ['"Fraunces"', 'system-ui']
       }
     }
   },

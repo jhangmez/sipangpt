@@ -16,7 +16,7 @@ export const AvatarDropdownMenu = ({ src, alt, fallbackText }) => {
           <AvatarFallback>{fallbackText}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent className='font-exo font-medium'>
         <DropdownMenuItem>Profile</DropdownMenuItem>
         <DropdownMenuItem>Settings</DropdownMenuItem>
         <DropdownMenuItem>Logout</DropdownMenuItem>
