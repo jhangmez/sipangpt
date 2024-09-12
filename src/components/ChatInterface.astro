@@ -1,13 +1,19 @@
 ---
-import ChatMessage from './ChatMessage.astro';
-import UserInput from './UserInput.astro';
-import FeedbackModal from './FeedbackModal.astro';
+import ChatMessage from './ChatMessage.astro'
+import UserInput from './UserInput.astro'
+import FeedbackModal from './FeedbackModal.astro'
 ---
 
-<div class="flex-1 flex flex-col ">
-  <div class="flex-1 overflow-y-auto p-4 space-y-4">
-    <ChatMessage type="bot" message="Hola, le estás escribiendo al área de DTI." />
-    <ChatMessage type="user" message="Hola, quisiera ayuda para acceder a mi campus." />
+<div class='flex-1 flex flex-col'>
+  <div class='flex-1 overflow-y-auto p-4 space-y-4'>
+    <ChatMessage
+      type='bot'
+      message='Hola, le estás escribiendo al área de DTI.'
+    />
+    <ChatMessage
+      type='user'
+      message='Hola, quisiera ayuda para acceder a mi campus.'
+    />
     <!-- Add more messages as needed -->
   </div>
   <!-- <FeedbackModal /> -->
