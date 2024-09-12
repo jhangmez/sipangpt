@@ -1,19 +1,19 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from '../layouts/Layout.astro'
 import '@/styles/globals.css'
-import Header from '@Components/Header.astro';
-import Sidebar from '@Components/Sidebar.astro';
-import ChatInterface from '@Components/ChatInterface.astro';
+import Header from '@Components/Header.astro'
+import Sidebar from '@Components/Sidebar.astro'
+import ChatInterface from '@Components/ChatInterface.astro'
 ---
 
-<Layout title="SipanGPT Chatbot">
-	<main class="min-h-screen">
-		<section class="flex h-max">
+<Layout title='SipánGPT Chatbot'>
+  <main class='min-h-screen'>
+    <section class='flex h-max'>
       <Sidebar />
-      <div class="flex overflow-auto h-screen w-full  flex-col">
-        <Header  />
+      <div class='flex overflow-auto h-screen w-full flex-col'>
+        <Header />
         <ChatInterface />
       </div>
     </section>
-	</main>
+  </main>
 </Layout>
