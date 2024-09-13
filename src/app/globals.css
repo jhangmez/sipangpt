@@ -3,9 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --radius: 0.5rem;
-  }
   @font-face {
     font-family: 'Fraunces';
     font-style: normal;

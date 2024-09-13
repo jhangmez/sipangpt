@@ -1,18 +1,15 @@
+import type { Config } from 'tailwindcss'
 const { nextui } = require('@nextui-org/react')
 
-/** @type {import('tailwindcss').Config} */
-export default {
+const config: Config = {
   content: [
-    './src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     './node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}'
   ],
   theme: {
     extend: {
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
-      },
       colors: {
         primary: 'rgb(125, 250, 0)', // #7dfa00
         background: 'rgb(51, 51, 51)', // #333333
@@ -28,6 +25,6 @@ export default {
       }
     }
   },
-
-  plugins: [require('tailwindcss-animate'), nextui()]
+  plugins: [nextui()]
 }
+export default config

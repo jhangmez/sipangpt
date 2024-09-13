@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@nextui-org/react'
 import {
   Dropdown,
@@ -5,6 +7,7 @@ import {
   DropdownMenu,
   DropdownItem
 } from '@nextui-org/dropdown'
+import { Avatar } from '@nextui-org/avatar'
 
 export const HeaderDropdownMenu = () => {
   return (
@@ -34,6 +37,29 @@ export const HeaderDropdownMenu = () => {
         <DropdownItem>Nuevo chat</DropdownItem>
         <DropdownItem>Historial</DropdownItem>
         <DropdownItem>Configuraciones</DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
+  )
+}
+
+export const AvatarDropdownMenu = ({
+  src,
+  alt,
+  fallbackText
+}: {
+  src: string
+  alt: string
+  fallbackText: string
+}) => {
+  return (
+    <Dropdown>
+      <DropdownTrigger>
+        <Avatar isBordered src={src} alt={alt} name={fallbackText} />
+      </DropdownTrigger>
+      <DropdownMenu>
+        <DropdownItem>Profile</DropdownItem>
+        <DropdownItem>Settings</DropdownItem>
+        <DropdownItem>Logout</DropdownItem>
       </DropdownMenu>
     </Dropdown>
   )
