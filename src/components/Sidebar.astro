@@ -1,6 +1,8 @@
 ---
 import { Button } from '@nextui-org/react'
 import { AvatarDropdownMenu } from '@/components/react/AvatarDropdownMenu'
+import { Image } from 'astro:assets'
+import ussLogo from 'public/uss_logo.webp'
 ---
 
 <aside
@@ -8,10 +10,12 @@ import { AvatarDropdownMenu } from '@/components/react/AvatarDropdownMenu'
 >
   <div class='flex-1 overflow-auto'>
     <div class='flex mx-2 mb-6 mt-2 gap-2 items-center'>
-      <img
-        src='/uss_logo.webp'
-        alt='SipanGPT Logo'
-        class='h-5 mt-1 dark:invert'
+      <Image
+        src={ussLogo}
+        alt='USS Logo'
+        width={ussLogo.width / 18}
+        densities={[1.5, 2]}
+        class='dark:invert'
       />
       <h1 class='text-2xl font-bold text-primary font-frances'>SipánGPT</h1>
     </div>
