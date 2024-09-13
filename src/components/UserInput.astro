@@ -1,15 +1,20 @@
 ---
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Textarea } from '@nextui-org/input'
+import { Button } from '@nextui-org/react'
 ---
 
-<div class='p-4 my-4 border-t border-gray-200'>
+<div class='w-full p-4 border-t border-gray-200'>
   <form class='flex items-center'>
-    <Input
-      type='text'
+    <Textarea
+      client:visible
       placeholder='Escribe tu mensaje...'
-      className='flex-1 mr-2 dark:text-gray-100'
+      className='flex-1 mr-2 dark:text-gray-100 resize-none'
     />
-    <Button type='submit' className='font-frances font-bold'>Enviar</Button>
+    <Button
+      type='submit'
+      client:visible
+      className='text-onPrimary bg-primary dark:text-onPrimary dark:bg-primary font-frances font-bold'
+      >Enviar</Button
+    >
   </form>
 </div>

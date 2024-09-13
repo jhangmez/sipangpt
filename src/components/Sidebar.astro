@@ -1,6 +1,6 @@
 ---
-import { Button } from '@/components/ui/button'
-import { AvatarDropdownMenu } from '@Components/react/AvatarDropdownMenu'
+import { Button } from '@nextui-org/react'
+import { AvatarDropdownMenu } from '@/components/react/AvatarDropdownMenu'
 ---
 
 <aside
@@ -19,21 +19,21 @@ import { AvatarDropdownMenu } from '@Components/react/AvatarDropdownMenu'
       <ul>
         <li>
           <Button
-            variant='ghost'
+            variant='light'
             className='w-full justify-start font-semibold dark:text-gray-100 hover:text-secondary dark:hover:text-secondary text-lg'
             >Nuevo chat</Button
           >
         </li>
         <li>
           <Button
-            variant='ghost'
+            variant='light'
             className='w-full justify-start font-semibold dark:text-gray-100 hover:text-secondary dark:hover:text-secondary text-lg'
             >Historial</Button
           >
         </li>
         <li>
           <Button
-            variant='ghost'
+            variant='light'
             className='w-full justify-start font-semibold dark:text-gray-100 hover:text-secondary dark:hover:text-secondary text-lg'
             >Configuraciones</Button
           >
@@ -50,6 +50,7 @@ import { AvatarDropdownMenu } from '@Components/react/AvatarDropdownMenu'
     />
     <Button
       variant='outline'
+      client:visible
       className='mt-auto text-onPrimary bg-primary dark:text-onPrimary dark:bg-primary font-frances font-bold'
       >Salir</Button
     >
