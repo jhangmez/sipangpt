@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Hola, buen día.",
+    "answer": "Hola, le estás escribiendo al área de DTI. ¿Cómo puedo asistirte?"
+  },
+  {
+    "question": "No puedo ingresar a mi aula virtual, parece que mi contraseña no funciona.",
+    "answer": "Entiendo, ¿te gustaría cambiar la contraseña? Puedo guiarte en el proceso."
+  },
+  {
+    "question": "Sí, por favor, no sé cómo cambiarla.",
+    "answer": "Para restablecer tu clave del aula virtual, ingresa a tu campus USS y selecciona **Cambiar clave**. La nueva contraseña debe tener entre 8 y 15 dígitos, incluir al menos una mayúscula, una minúscula, un número y no debe contener caracteres especiales. Esta clave servirá para acceder a tu campus, aula y correo."
+  },
+  {
+    "question": "Voy a hacerlo ahora.",
+    "answer": "Perfecto, ¿necesitas alguna otra ayuda?"
+  },
+  {
+    "question": "No, todo claro. Muchas gracias.",
+    "answer": "De nada, recuerda que estamos aquí si necesitas más ayuda. ¡Buen día!"
+  }
+]
