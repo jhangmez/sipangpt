@@ -1,11 +1,11 @@
 ---
 import ChatMessage from './ChatMessage.astro'
 import UserInput from './UserInput.astro'
-import FeedbackModal from './FeedbackModal.astro'
 import { ScrollShadow } from '@nextui-org/scroll-shadow'
 ---
 
 <div class='flex flex-col h-full'>
+  <!-- @ts-expect-error Temporary ignore for migration -->
   <ScrollShadow client:visible size={50} className='flex-grow p-4'>
     <div class='space-y-4'>
       <ChatMessage

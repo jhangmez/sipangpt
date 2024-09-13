@@ -9,7 +9,9 @@ import { Button } from '@nextui-org/react'
   <div class='flex space-x-2'>
     {
       [1, 2, 3, 4, 5].map((rating) => (
-        <Button variant='outline'>{rating}</Button>
+        <Button client:load variant='outline'>
+          {rating}
+        </Button>
       ))
     }
   </div>
