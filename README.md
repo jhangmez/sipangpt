@@ -1,6 +1,6 @@
 # SipánGPT
 
-![image](https://github.com/user-attachments/assets/63982b62-e5c5-4665-9e43-b76514ac4da2)
+![image](https://github.com/user-attachments/assets/6c27d75f-f263-4a54-8438-32ac55f3915c)
 
 - 👀⚠️ Actualmente en desarrollo
 
