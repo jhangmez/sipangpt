@@ -1,5 +1,6 @@
 import './globals.css'
 import { Providers } from './providers'
+import { Toaster } from 'react-hot-toast'
 
 export default function RootLayout({
   children
@@ -26,7 +27,15 @@ export default function RootLayout({
       </head>
       <body className='bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background'>
         <noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
-        <Providers>{children}</Providers>
+        <Providers>
+          {' '}
+          <Toaster
+            containerClassName='font-semibold text-primary'
+            position='bottom-right'
+            reverseOrder={false}
+          />
+          {children}
+        </Providers>
       </body>
     </html>
   )
