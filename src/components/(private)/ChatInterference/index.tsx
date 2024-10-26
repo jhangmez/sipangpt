@@ -5,7 +5,7 @@ import ChatMessage from '@/components/(private)/ChatMessage'
 import UserInput from '@/components/(private)/UserInput'
 import ServerSelector from '@/components/(private)/ServerSelector'
 import { ScrollShadow } from '@nextui-org/scroll-shadow'
-import { Server, Message } from '@/types/chat'
+import { Server, Messagecustom } from '@/types/chat'
 import toast from 'react-hot-toast'
 import { Image } from '@nextui-org/react'
 import ussLogo from '../../../../public/uss_logo.webp'
@@ -14,15 +14,15 @@ const servers: Server[] = [
   { key: 'local', name: 'Servidor Local', url: 'http://localhost:11434' }
 ]
 
-const defaultMessages: Message[] = []
+const defaultMessages: Messagecustom[] = []
 
 export default function ChatComponent({
   messages = defaultMessages
 }: {
-  messages?: Array<Message>
+  messages?: Array<Messagecustom>
 }): React.ReactElement {
   const [selectedServer, setSelectedServer] = useState(servers[0].url)
-  const [chatMessages, setChatMessages] = useState<Message[]>(messages)
+  const [chatMessages, setChatMessages] = useState<Messagecustom[]>(messages)
 
   const handleServerChange = (serverUrl: string) => {
     setSelectedServer(serverUrl)

@@ -1,9 +1,9 @@
 import Header from '@Components/(private)/Header'
 import Sidebar from '@Components/(private)/Sidebar'
 import ChatInterface from '@Components/(private)/ChatInterference'
-import { Message } from '@/types/chat'
+import { Messagecustom } from '@/types/chat'
 
-const messages: Message[] = [
+const messages: Messagecustom[] = [
   { type: 'user', content: 'Hola' },
   { type: 'bot', content: 'Respuesta 1' },
   { type: 'admin', content: 'Respuesta 1' },
