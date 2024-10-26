@@ -57,9 +57,8 @@ export const AvatarDropdownMenu = ({
         <Avatar isBordered src={src} alt={alt} name={fallbackText} />
       </DropdownTrigger>
       <DropdownMenu>
-        <DropdownItem>Profile</DropdownItem>
-        <DropdownItem>Settings</DropdownItem>
-        <DropdownItem>Logout</DropdownItem>
+        <DropdownItem color='secondary'>Perfil</DropdownItem>
+        <DropdownItem color='danger'>Cerrar sesión</DropdownItem>
       </DropdownMenu>
     </Dropdown>
   )

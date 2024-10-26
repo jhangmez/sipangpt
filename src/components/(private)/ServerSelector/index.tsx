@@ -1,6 +1,6 @@
 import { Select, SelectItem } from '@nextui-org/select'
 import { Server } from '@typescustom/chat'
-
+import { Chip } from '@nextui-org/chip'
 interface ServerSelectorProps {
   servers: Server[]
   selectedServer: string
@@ -29,6 +29,11 @@ export default function ServerSelector({
       onChange={handleSelectionChange}
       disallowEmptySelection
       className='max-w-xs'
+      endContent={
+        <Chip size='sm' className='bg-error text-errorContainer'>
+          Desconectado
+        </Chip>
+      }
       startContent={
         <svg
           xmlns='http://www.w3.org/2000/svg'

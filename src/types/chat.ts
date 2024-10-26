@@ -3,3 +3,7 @@ export interface Server {
   name: string
   url: string
 }
+export interface Message {
+  type: 'user' | 'admin' | 'bot' | 'feedback' | 'form'
+  content: string
+}
