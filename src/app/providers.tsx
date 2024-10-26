@@ -1,10 +1,14 @@
-import { NextUIProvider } from '@nextui-org/react'
-import { ViewTransitions } from 'next-view-transitions'
+'use client'
 
-export function Providers({ children }: { children: React.ReactNode }) {
+import { NextUIProvider } from '@nextui-org/react'
+import * as React from 'react'
+import { ThemeProvider as NextThemesProvider } from 'next-themes'
+import { type ThemeProviderProps } from 'next-themes/dist/types'
+
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
-    <ViewTransitions>
+    <NextThemesProvider {...props}>
       <NextUIProvider>{children}</NextUIProvider>
-    </ViewTransitions>
+    </NextThemesProvider>
   )
 }

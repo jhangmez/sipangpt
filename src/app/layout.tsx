@@ -1,6 +1,13 @@
 import './globals.css'
-import { Providers } from './providers'
+import { ThemeProvider } from './providers'
 import { Toaster } from 'react-hot-toast'
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: 1
+}
 
 export default function RootLayout({
   children
@@ -27,15 +34,14 @@ export default function RootLayout({
       </head>
       <body className='bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background'>
         <noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
-        <Providers>
-          {' '}
+        <ThemeProvider attribute='class' defaultTheme='dark'>
           <Toaster
             containerClassName='font-semibold text-primary'
             position='bottom-right'
             reverseOrder={false}
           />
           {children}
-        </Providers>
+        </ThemeProvider>
       </body>
     </html>
   )

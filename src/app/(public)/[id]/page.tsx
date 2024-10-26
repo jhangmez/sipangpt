@@ -1,26 +1,18 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
-import { Attachment, ChatRequestOptions } from 'ai'
-import { Message, useChat } from 'ai/react'
+import { ChatLayout } from '@/components/chat/chat-layout'
+import { getSelectedModel } from '@/lib/model-helper'
 import { ChatOllama } from '@langchain/community/chat_models/ollama'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
 import { BytesOutputParser } from '@langchain/core/output_parsers'
-import {
-  Dialog,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogContent
-} from '@/components/ui/dialog'
-import useChatStore from '../hooks/useChatStore'
+import { Attachment, ChatRequestOptions } from 'ai'
+import { Message, useChat } from 'ai/react'
+import React, { useEffect } from 'react'
 import { toast } from 'sonner'
-import { getSelectedModel } from '@/lib/model-helper'
 import { v4 as uuidv4 } from 'uuid'
-import UsernameForm from '@/components/username-form'
-import { ChatLayout } from '@/components/chat/chat-layout'
+import useChatStore from '../../hooks/useChatStore'
 
-export default function Home() {
+export default function Page({ params }: { params: { id: string } }) {
   const {
     messages,
     input,
@@ -28,7 +20,6 @@ export default function Home() {
     handleSubmit,
     isLoading,
     error,
-    data,
     stop,
     setMessages,
     setInput
@@ -40,34 +31,17 @@ export default function Home() {
     },
     onError: (error) => {
       setLoadingSubmit(false)
-      toast.error('Ha ocurrido un error. Por favor, intente de nuevo.')
+      toast.error('An error occurred. Please try again.')
     }
   })
   const [chatId, setChatId] = React.useState<string>('')
   const [selectedModel, setSelectedModel] = React.useState<string>(
     getSelectedModel()
   )
-  const [open, setOpen] = React.useState(false)
-  const [ollama, setOllama] = useState<ChatOllama>()
+  const [ollama, setOllama] = React.useState<ChatOllama>()
   const env = process.env.NODE_ENV
   const [loadingSubmit, setLoadingSubmit] = React.useState(false)
-  const formRef = useRef<HTMLFormElement>(null)
-  useEffect(() => {
-    if (messages.length < 1) {
-      console.log('Generando id del chat')
-      const id = uuidv4()
-      setChatId(id)
-    }
-  }, [messages])
-
-  React.useEffect(() => {
-    if (!isLoading && !error && chatId && messages.length > 0) {
-      // Save messages to local storage
-      localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages))
-      // Trigger the storage event to update the sidebar component
-      window.dispatchEvent(new Event('storage'))
-    }
-  }, [chatId, isLoading, error])
+  const formRef = React.useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     if (env === 'production') {
@@ -77,13 +51,18 @@ export default function Home() {
       })
       setOllama(newOllama)
     }
-
-    if (!localStorage.getItem('ollama_user')) {
-      setOpen(true)
-    }
   }, [selectedModel])
 
-  const addMessage = (Message: Message) => {
+  React.useEffect(() => {
+    if (params.id) {
+      const item = localStorage.getItem(`chat_${params.id}`)
+      if (item) {
+        setMessages(JSON.parse(item))
+      }
+    }
+  }, [])
+
+  const addMessage = (Message: any) => {
     messages.push(Message)
     window.dispatchEvent(new Event('storage'))
     setMessages([...messages])
@@ -127,7 +106,7 @@ export default function Home() {
         addMessage({ role: 'assistant', content: responseMessage, id: chatId })
         setMessages([...messages])
 
-        localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages))
+        localStorage.setItem(`chat_${params.id}`, JSON.stringify(messages))
         // Trigger the storage event to update the sidebar component
         window.dispatchEvent(new Event('storage'))
       } catch (error) {
@@ -162,46 +141,34 @@ export default function Home() {
     }
   }
 
-  const onOpenChange = (isOpen: boolean) => {
-    const username = localStorage.getItem('ollama_user')
-    if (username) return setOpen(isOpen)
+  // When starting a new chat, append the messages to the local storage
+  React.useEffect(() => {
+    if (!isLoading && !error && messages.length > 0) {
+      localStorage.setItem(`chat_${params.id}`, JSON.stringify(messages))
+      // Trigger the storage event to update the sidebar component
+      window.dispatchEvent(new Event('storage'))
+    }
+  }, [messages, chatId, isLoading, error])
 
-    localStorage.setItem('ollama_user', 'Anonymous')
-    window.dispatchEvent(new Event('storage'))
-    setOpen(isOpen)
-  }
   return (
     <main className='flex h-[calc(100dvh)] flex-col items-center'>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <ChatLayout
-          chatId=''
-          setSelectedModel={setSelectedModel}
-          messages={messages}
-          input={input}
-          handleInputChange={handleInputChange}
-          handleSubmit={onSubmit}
-          isLoading={isLoading}
-          loadingSubmit={loadingSubmit}
-          error={error}
-          stop={stop}
-          navCollapsedSize={10}
-          defaultLayout={[30, 160]}
-          formRef={formRef}
-          setMessages={setMessages}
-          setInput={setInput}
-        />
-        {/* <h1 className='text-3xl text-white'>Hola</h1> */}
-        <DialogContent className='flex flex-col space-y-4'>
-          <DialogHeader className='space-y-2'>
-            <DialogTitle>Bienvenido a SipánGPT</DialogTitle>
-            <DialogDescription>
-              Escribe tu nombre para comenzar. Esto es sólo para personalizar tu
-              experiencia.
-            </DialogDescription>
-            <UsernameForm setOpen={setOpen} />
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+      <ChatLayout
+        chatId={params.id}
+        setSelectedModel={setSelectedModel}
+        messages={messages}
+        input={input}
+        handleInputChange={handleInputChange}
+        handleSubmit={onSubmit}
+        isLoading={isLoading}
+        loadingSubmit={loadingSubmit}
+        error={error}
+        stop={stop}
+        navCollapsedSize={10}
+        defaultLayout={[30, 160]}
+        formRef={formRef}
+        setMessages={setMessages}
+        setInput={setInput}
+      />
     </main>
   )
 }
