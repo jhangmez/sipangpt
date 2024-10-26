@@ -11,8 +11,7 @@ export default function Home() {
   const [conversations, setConversations] = useState<{
     [key: string]: MessageCustom[]
   }>({})
-  const [activeConversation, setActiveConversation] =
-    useState<string>('default')
+  const [activeConversation] = useState<string>('default')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSendMessage = async (message: string) => {

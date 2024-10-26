@@ -28,7 +28,6 @@ export default function ChatComponent({
   conversationId
 }: ChatComponentProps): React.ReactElement {
   const [selectedServer, setSelectedServer] = useState(servers[0].url)
-  const [chatMessages, setChatMessages] = useState<MessageCustom[]>(messages)
 
   const handleServerChange = (serverUrl: string) => {
     setSelectedServer(serverUrl)
@@ -42,7 +41,7 @@ export default function ChatComponent({
     }
   }
 
-  const hasMessages = chatMessages.length > 0
+  const hasMessages = messages.length > 0
   return (
     <div className='flex flex-col h-full'>
       <div className='p-4'>
@@ -55,8 +54,8 @@ export default function ChatComponent({
       <ScrollShadow size={50} className='flex-grow p-4'>
         {hasMessages ? (
           <div className='space-y-4'>
-            {chatMessages.map((message, index) => {
-              const prevMessage = index > 0 ? chatMessages[index - 1] : null
+            {messages.map((message, index) => {
+              const prevMessage = index > 0 ? messages[index - 1] : null
               const showLabel = prevMessage?.type !== message.type
 
               return (
