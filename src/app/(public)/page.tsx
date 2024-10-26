@@ -1,25 +1,75 @@
+'use client'
+
+import { useState } from 'react'
 import Header from '@Components/(private)/Header'
 import Sidebar from '@Components/(private)/Sidebar'
 import ChatInterface from '@Components/(private)/ChatInterference'
-import { Messagecustom } from '@/types/chat'
-
-const messages: Messagecustom[] = [
-  { type: 'user', content: 'Hola' },
-  { type: 'bot', content: 'Respuesta 1' },
-  { type: 'admin', content: 'Respuesta 1' },
-  { type: 'admin', content: 'Respuesta 2' }, // Este no mostrará el label DTI
-  { type: 'feedback', content: 'Califica tu experiencia' },
-  { type: 'form', content: 'Llena el formulario' }
-]
+import { MessageCustom } from '@/types/chat'
+import toast from 'react-hot-toast'
 
 export default function Home() {
+  const [conversations, setConversations] = useState<{
+    [key: string]: MessageCustom[]
+  }>({})
+  const [activeConversation, setActiveConversation] =
+    useState<string>('default')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSendMessage = async (message: string) => {
+    setIsLoading(true)
+    try {
+      // Agregar mensaje del usuario
+      const newMessage: MessageCustom = {
+        type: 'user',
+        content: message
+      }
+
+      // Actualizamos la conversación de forma segura
+      setConversations((prev) => {
+        const currentMessages = prev[activeConversation] || []
+        return {
+          ...prev,
+          [activeConversation]: [...currentMessages, newMessage]
+        }
+      })
+
+      // Aquí iría tu lógica para obtener la respuesta del servidor
+      // const response = await yourApiCall(message)
+
+      // Ejemplo de respuesta del bot
+      const botResponse: MessageCustom = {
+        type: 'bot',
+        content: 'Respuesta de ejemplo'
+      }
+
+      setConversations((prev) => {
+        const currentMessages = prev[activeConversation] || []
+        return {
+          ...prev,
+          [activeConversation]: [...currentMessages, botResponse]
+        }
+      })
+    } catch (error) {
+      toast.error('Error al enviar el mensaje')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Obtener los mensajes de la conversación activa de forma segura
+  const activeMessages = conversations[activeConversation] || []
   return (
     <main className='flex h-screen overflow-hidden'>
       <Sidebar />
       <div className='flex flex-col w-full'>
         <Header />
         <div className='flex-grow overflow-hidden'>
-          <ChatInterface messages={[]} />
+          <ChatInterface
+            messages={activeMessages}
+            onSendMessage={handleSendMessage}
+            isLoading={isLoading}
+            conversationId={activeConversation}
+          />
         </div>
       </div>
     </main>

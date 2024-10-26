@@ -3,7 +3,7 @@ export interface Server {
   name: string
   url: string
 }
-export interface Messagecustom {
+export interface MessageCustom {
   type: 'user' | 'admin' | 'bot' | 'feedback' | 'form'
   content: string
 }
