@@ -250,8 +250,8 @@ export default function ChatList({
           <div className='flex pl-4 pb-4 gap-2 items-center'>
             <Avatar className='flex justify-start items-center'>
               <AvatarImage
-                src='/ollama.png'
-                alt='AI'
+                src='/uss_logo.webp'
+                alt='SipánGPT'
                 width={6}
                 height={6}
                 className='object-contain dark:invert'
