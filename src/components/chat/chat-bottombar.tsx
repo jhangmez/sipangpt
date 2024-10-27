@@ -81,7 +81,7 @@ export default function ChatBottombar({
                   onChange={handleInputChange}
                   name='message'
                   placeholder='Escribe tu pregunta aquí.'
-                  className=' max-h-24 px-14 bg-accent py-[22px] rounded-lg  text-sm placeholder:text-muted-foreground border focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full flex items-center h-16 resize-none overflow-hidden dark:bg-card'
+                  className=' max-h-24 px-14 bg-accent py-[22px] rounded-lg font-exo font-medium text-sm placeholder:text-muted-foreground border focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full flex items-center h-16 resize-none overflow-hidden dark:bg-card'
                 />
 
                 {!isLoading ? (

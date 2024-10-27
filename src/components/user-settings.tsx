@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-
+import Link from 'next/link'
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { GearIcon } from '@radix-ui/react-icons'
+import { GearIcon, StarIcon } from '@radix-ui/react-icons'
 import { useEffect, useState } from 'react'
 import { Skeleton } from './ui/skeleton'
 import EditUsernameForm from './edit-username-form'
@@ -73,7 +73,7 @@ export default function UserSettings() {
               {name && name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className='text-xs truncate'>
+          <div className='text-xs truncate font-exo font-medium'>
             {isLoading ? (
               <Skeleton className='w-20 h-4' />
             ) : (
@@ -86,16 +86,53 @@ export default function UserSettings() {
         <Dialog>
           <DialogTrigger className='w-full'>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <div className='flex w-full gap-2 p-1 items-center cursor-pointer'>
+              <div className='flex w-full gap-2 p-1 items-center cursor-pointer font-exo'>
                 <GearIcon className='w-4 h-4' />
                 Configuraciones
               </div>
             </DropdownMenuItem>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader className='space-y-4'>
+            <DialogHeader className='space-y-4 font-exo'>
               <DialogTitle>Configuraciones</DialogTitle>
               <EditUsernameForm setOpen={setOpen} />
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+        <Dialog>
+          <DialogTrigger className='w-full'>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <div className='flex w-full gap-2 p-1 items-center cursor-pointer font-exo'>
+                <StarIcon className='w-4 h-4' />
+                Créditos
+              </div>
+            </DropdownMenuItem>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader className='space-y-4 font-exo'>
+              <DialogTitle>Créditos</DialogTitle>
+              <div className='pl-2'>
+                <Link
+                  href='https://www.linkedin.com/in/jhangmez/'
+                  className='underline hover:text-sky-500'
+                >
+                  @jhangmez
+                </Link>
+                <br></br>
+                <Link
+                  href='https://www.uss.edu.pe/uss/'
+                  className='underline hover:text-sky-500'
+                >
+                  Universidad Señor de Sipán
+                </Link>
+                <br></br>
+                <Link
+                  href='https://github.com/jakobhoeg'
+                  className='underline hover:text-sky-500'
+                >
+                  @jakobhoeg
+                </Link>
+              </div>
             </DialogHeader>
           </DialogContent>
         </Dialog>

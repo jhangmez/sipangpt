@@ -100,12 +100,12 @@ export default function ChatList({
                 SipánGPT
               </h1>
             </div>
-            <p className='text-center text-lg text-muted-foreground'>
-              Como te puedo ayudar?
+            <p className='text-center text-lg text-muted-foreground font-exo font-medium'>
+              ¿Cómo puedo ayudarte?
             </p>
           </div>
 
-          <div className='absolute bottom-0 w-full px-4 sm:max-w-3xl grid gap-2 sm:grid-cols-2 sm:gap-4 text-sm'>
+          <div className='absolute bottom-0 w-full px-4 sm:max-w-3xl grid gap-2 sm:grid-cols-2 sm:gap-4 text-sm font-exo'>
             {/* Only display 4 random questions */}
             {initialQuestions.length > 0 &&
               initialQuestions.map((message) => {

@@ -120,7 +120,7 @@ export function Sidebar({
           variant='ghost'
           className='flex justify-between w-full h-14 text-sm xl:text-lg font-normal items-center group transition-colors duration-100'
         >
-          <div className='flex gap-3 items-center text-xl font-bold text-primary font-frances group-hover:text-white relative'>
+          <div className='flex gap-3 items-center text-xl font-bold text-primary font-frances group-hover:text-black/80 dark:group-hover:text-white relative'>
             {!isCollapsed && !isMobile && (
               <Image
                 src='/uss_logo.webp'
@@ -142,7 +142,7 @@ export function Sidebar({
           />
         </Button>
 
-        <div className='flex flex-col pt-10 gap-2'>
+        <div className='flex flex-col pt-10 gap-2 font-exo font-medium'>
           <p className='pl-4 text-xs text-muted-foreground'>Historial</p>
           {localChats.length > 0 && (
             <div>

@@ -190,7 +190,7 @@ export default function Home() {
           setMessages={setMessages}
           setInput={setInput}
         />
-        <DialogContent className='flex flex-col space-y-4'>
+        <DialogContent className='flex flex-col space-y-4 font-exo'>
           <DialogHeader className='space-y-2'>
             <DialogTitle>Bienvenido a SipánGPT</DialogTitle>
             <DialogDescription>

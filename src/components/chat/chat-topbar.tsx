@@ -130,9 +130,8 @@ export default function ChatTopbar({
   }
 
   const getDisplayName = (model: string) => {
-    return model === 'hf.co/ussipan/SipanGPT-0.3-Llama-3.2-1B-GGUF:Q4_K_M'
-      ? 'SipánGPT'
-      : model
+    const match = model.match(/SipanGPT-(.*?)-Llama/)
+    return match ? `SipánGPT-${match[1]}` : model
   }
 
   return (
@@ -160,7 +159,7 @@ export default function ChatTopbar({
             variant='outline'
             role='combobox'
             aria-expanded={open}
-            className='w-[300px] justify-between'
+            className='w-[300px] justify-between font-exo'
           >
             {getDisplayName(currentModel || 'Select model')}
             <CaretSortIcon className='ml-2 h-4 w-4 shrink-0 opacity-50' />
@@ -181,7 +180,7 @@ export default function ChatTopbar({
               </Button>
             ))
           ) : (
-            <Button variant='ghost' disabled className=' w-full'>
+            <Button variant='ghost' disabled className='font-exo w-full'>
               No hay más modelos disponibles
             </Button>
           )}
