@@ -46,7 +46,7 @@ export function Sidebar({
   const [localChats, setLocalChats] = useState<
     { chatId: string; messages: Message[] }[]
   >([])
-  // const localChatss = useLocalStorageData('chat_', [])
+  const localChatss = useLocalStorageData('chat_', [])
   const [selectedChatId, setSselectedChatId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -64,7 +64,7 @@ export function Sidebar({
     return () => {
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [])
+  }, [chatId])
 
   const getLocalstorageChats = (): {
     chatId: string
@@ -118,9 +118,9 @@ export function Sidebar({
             }
           }}
           variant='ghost'
-          className='flex justify-between w-full h-14 text-sm xl:text-lg font-normal items-center '
+          className='flex justify-between w-full h-14 text-sm xl:text-lg font-normal items-center group transition-colors duration-100'
         >
-          <div className='flex gap-3 items-center font-medium'>
+          <div className='flex gap-3 items-center text-xl font-bold text-primary font-frances group-hover:text-white relative'>
             {!isCollapsed && !isMobile && (
               <Image
                 src='/uss_logo.webp'
@@ -131,9 +131,15 @@ export function Sidebar({
                 className='dark:invert hidden 2xl:block'
               />
             )}
-            Nuevo chat
+            <span className='transition-all duration-100'>
+              <span className='block group-hover:hidden'>SipánGPT</span>
+              <span className='hidden group-hover:block'>Nuevo Chat</span>
+            </span>
           </div>
-          <SquarePen size={18} className='shrink-0 w-4 h-4' />
+          <SquarePen
+            size={18}
+            className='shrink-0 w-4 h-4 group-hover:text-white transition-colors duration-100'
+          />
         </Button>
 
         <div className='flex flex-col pt-10 gap-2'>

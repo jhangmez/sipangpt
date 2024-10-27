@@ -58,16 +58,16 @@ export default function Home() {
       const id = uuidv4()
       setChatId(id)
     }
-  }, [messages])
+  }, [messages.length]) // Cambiado para usar messages.length en lugar de messages
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isLoading && !error && chatId && messages.length > 0) {
       // Save messages to local storage
       localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages))
       // Trigger the storage event to update the sidebar component
       window.dispatchEvent(new Event('storage'))
     }
-  }, [chatId, isLoading, error])
+  }, [chatId, isLoading, error, messages]) // Añadido messages como dependencia
 
   useEffect(() => {
     if (env === 'production') {
@@ -81,7 +81,7 @@ export default function Home() {
     if (!localStorage.getItem('ollama_user')) {
       setOpen(true)
     }
-  }, [selectedModel])
+  }, [selectedModel, env]) // Añadido env como dependencia
 
   const addMessage = (Message: Message) => {
     messages.push(Message)

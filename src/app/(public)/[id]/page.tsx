@@ -51,16 +51,16 @@ export default function Page({ params }: { params: { id: string } }) {
       })
       setOllama(newOllama)
     }
-  }, [selectedModel])
+  }, [selectedModel, env])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (params.id) {
       const item = localStorage.getItem(`chat_${params.id}`)
       if (item) {
         setMessages(JSON.parse(item))
       }
     }
-  }, [])
+  }, [params.id, setMessages])
 
   const addMessage = (Message: any) => {
     messages.push(Message)
@@ -142,13 +142,13 @@ export default function Page({ params }: { params: { id: string } }) {
   }
 
   // When starting a new chat, append the messages to the local storage
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isLoading && !error && messages.length > 0) {
       localStorage.setItem(`chat_${params.id}`, JSON.stringify(messages))
       // Trigger the storage event to update the sidebar component
       window.dispatchEvent(new Event('storage'))
     }
-  }, [messages, chatId, isLoading, error])
+  }, [messages, chatId, isLoading, error, params.id])
 
   return (
     <main className='flex h-[calc(100dvh)] flex-col items-center'>
