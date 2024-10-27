@@ -72,7 +72,7 @@ export default function Home() {
   useEffect(() => {
     if (env === 'production') {
       const newOllama = new ChatOllama({
-        baseUrl: process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://localhost:11434',
+        baseUrl: process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://127.0.0.1:11434',
         model: selectedModel
       })
       setOllama(newOllama)
@@ -192,7 +192,10 @@ export default function Home() {
         />
         <DialogContent className='flex flex-col space-y-4 font-exo'>
           <DialogHeader className='space-y-2'>
-            <DialogTitle>Bienvenido a SipánGPT</DialogTitle>
+            <DialogTitle>
+              Bienvenido a{' '}
+              <span className='font-frances text-primary'>SipánGPT</span>
+            </DialogTitle>
             <DialogDescription>
               Escribe tu nombre para comenzar. Esto es sólo para personalizar tu
               experiencia.

@@ -2,7 +2,7 @@ export async function POST(req: Request) {
   const { name } = await req.json()
 
   const ollamaUrl =
-    process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://localhost:11434'
+    process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://127.0.0.1:11434'
 
   const response = await fetch(ollamaUrl + '/api/pull', {
     method: 'POST',
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
             pump()
           })
           .catch((error) => {
-            console.error('Error reading response body:', error)
+            console.error('Error al leer el cuerpo de la respuesta:', error)
             controller.error(error)
           })
       }

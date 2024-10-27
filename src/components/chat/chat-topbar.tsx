@@ -60,7 +60,7 @@ export default function ChatTopbar({
           }
 
           const responseText = await fetchedModels.text()
-          console.log('Respuesta raw:', responseText)
+          // console.log('Respuesta raw:', responseText)
 
           // Verificar que la respuesta no esté vacía
           if (!responseText) {
@@ -92,7 +92,7 @@ export default function ChatTopbar({
           }
 
           const responseText = await fetchedModels.text()
-          console.log('Respuesta raw:', responseText)
+          // console.log('Respuesta raw:', responseText)
 
           try {
             const json = JSON.parse(responseText)

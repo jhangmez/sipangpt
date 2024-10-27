@@ -66,7 +66,7 @@ export default function ChatBottombar({
   return (
     <div className='p-4 pb-7 flex justify-between w-full items-center gap-2'>
       <AnimatePresence initial={false}>
-        <div className='w-full items-center flex relative gap-2'>
+        <div className='w-full items-center flex relative gap-2 flex-col'>
           <div className='flex flex-col relative w-full bg-accent dark:bg-card rounded-lg'>
             <div className='flex w-full'>
               <form
@@ -125,6 +125,11 @@ export default function ChatBottombar({
               </form>
             </div>
           </div>
+          <p className='text-[11px] lg:text-xs font-exo text-center'>
+            <span className='font-frances text-primary'>SipánGPT</span>, es un
+            modelo experimental y puede cometer errores. Considera verificar la
+            información mostrada.
+          </p>
         </div>
       </AnimatePresence>
     </div>

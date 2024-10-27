@@ -11,7 +11,7 @@ import { Image } from '@nextui-org/react'
 import ussLogo from '../../../../public/uss_logo.webp'
 
 const servers: Server[] = [
-  { key: 'local', name: 'Servidor Local', url: 'http://localhost:11434' }
+  { key: 'local', name: 'Servidor Local', url: 'http://127.0.0.1:11434' }
 ]
 
 interface ChatComponentProps {

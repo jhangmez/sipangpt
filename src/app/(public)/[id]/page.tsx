@@ -46,7 +46,7 @@ export default function Page({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (env === 'production') {
       const newOllama = new ChatOllama({
-        baseUrl: process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://localhost:11434',
+        baseUrl: process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://127.0.0.1:11434',
         model: selectedModel
       })
       setOllama(newOllama)

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { GearIcon, StarIcon } from '@radix-ui/react-icons'
+import { GearIcon, StarIcon, InfoCircledIcon } from '@radix-ui/react-icons'
 import { useEffect, useState } from 'react'
 import { Skeleton } from './ui/skeleton'
 import EditUsernameForm from './edit-username-form'
@@ -135,6 +135,54 @@ export default function UserSettings() {
                 >
                   @jakobhoeg
                 </Link>
+              </div>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+        <Dialog>
+          <DialogTrigger className='w-full'>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <div className='flex w-full gap-2 p-1 items-center cursor-pointer font-exo'>
+                <InfoCircledIcon className='w-4 h-4' />
+                <p>
+                  Sobre{' '}
+                  <span className='font-frances text-primary'>SipánGPT</span>
+                </p>
+              </div>
+            </DropdownMenuItem>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader className='space-y-4 font-exo'>
+              <DialogTitle>
+                Sobre{' '}
+                <span className='font-frances text-primary'>SipánGPT</span>
+              </DialogTitle>
+              <div className='pl-2'>
+                <h3>Modelo experimental entrenado con 50k conversaciones.</h3>
+                <h4>
+                  Puede generar alucinaciones o errores, considere verificar la
+                  información mostrada.
+                </h4>
+                <p>
+                  El dataset de entreno esta disponible en:{' '}
+                  <Link
+                    href='https://huggingface.co/datasets/ussipan/sipangpt'
+                    className='underline hover:text-sky-500 text-yellow-700 dark:text-yellow-400'
+                    target='_blank'
+                  >
+                    Dataset
+                  </Link>
+                </p>
+                <p>
+                  Para más información contactarse con:{' '}
+                  <Link
+                    href='https://www.linkedin.com/in/jhangmez/'
+                    className='underline hover:text-sky-500'
+                    target='_blank'
+                  >
+                    @jhangmez
+                  </Link>
+                </p>
               </div>
             </DialogHeader>
           </DialogContent>
