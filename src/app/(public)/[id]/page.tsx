@@ -2,7 +2,7 @@
 
 import { ChatLayout } from '@/components/chat/chat-layout'
 import { getSelectedModel } from '@/lib/model-helper'
-import { ChatOllama } from '@langchain/community/chat_models/ollama'
+import { ChatOllama } from '@langchain/ollama'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
 import { BytesOutputParser } from '@langchain/core/output_parsers'
 import { Attachment, ChatRequestOptions } from 'ai'
@@ -31,7 +31,7 @@ export default function Page({ params }: { params: { id: string } }) {
     },
     onError: (error) => {
       setLoadingSubmit(false)
-      toast.error('An error occurred. Please try again.')
+      toast.error('Ha ocurrido un error. Por favor, intente de nuevo.')
     }
   })
   const [chatId, setChatId] = React.useState<string>('')

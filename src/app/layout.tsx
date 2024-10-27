@@ -1,6 +1,6 @@
 import './globals.css'
 import { ThemeProvider } from './providers'
-import { Toaster } from 'react-hot-toast'
+import { Toaster } from '@/components/ui/sonner'
 
 export const viewport = {
   width: 'device-width',
@@ -43,11 +43,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Toaster
-            containerClassName='font-semibold text-primary'
-            position='bottom-right'
-            reverseOrder={false}
-          />
+          <Toaster />
           {children}
         </ThemeProvider>
       </body>

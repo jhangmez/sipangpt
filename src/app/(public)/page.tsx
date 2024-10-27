@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Attachment, ChatRequestOptions } from 'ai'
 import { Message, useChat } from 'ai/react'
-import { ChatOllama } from '@langchain/community/chat_models/ollama'
+import { ChatOllama } from '@langchain/ollama'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
 import { BytesOutputParser } from '@langchain/core/output_parsers'
 import {
@@ -54,7 +54,7 @@ export default function Home() {
   const formRef = useRef<HTMLFormElement>(null)
   useEffect(() => {
     if (messages.length < 1) {
-      console.log('Generando id del chat')
+      // console.log('Generando id del chat')
       const id = uuidv4()
       setChatId(id)
     }

@@ -115,6 +115,7 @@ export default function UserSettings() {
                 <Link
                   href='https://www.linkedin.com/in/jhangmez/'
                   className='underline hover:text-sky-500'
+                  target='_blank'
                 >
                   @jhangmez
                 </Link>
@@ -122,6 +123,7 @@ export default function UserSettings() {
                 <Link
                   href='https://www.uss.edu.pe/uss/'
                   className='underline hover:text-sky-500'
+                  target='_blank'
                 >
                   Universidad Señor de Sipán
                 </Link>
@@ -129,6 +131,7 @@ export default function UserSettings() {
                 <Link
                   href='https://github.com/jakobhoeg'
                   className='underline hover:text-sky-500'
+                  target='_blank'
                 >
                   @jakobhoeg
                 </Link>
