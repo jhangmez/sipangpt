@@ -5,8 +5,8 @@ import { Toaster } from '@/components/ui/sonner'
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: 1
+  maximumScale: 5,
+  userScalable: 'yes'
 }
 
 export default function RootLayout({
@@ -19,7 +19,6 @@ export default function RootLayout({
       <head>
         <meta charSet='UTF-8' />
         <meta name='description' content='SipánGPT Chatbot' />
-        <meta name='viewport' content='width=device-width' />
         <link rel='icon' type='image/svg+xml' href='/favicon.svg' />
         <meta
           property='og:image'

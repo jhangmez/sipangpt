@@ -90,6 +90,7 @@ export default function ChatBottombar({
                       className='shrink-0 rounded-full'
                       variant='ghost'
                       size='icon'
+                      aria-label='Botón para enviar pregunta'
                       type='submit'
                       disabled={isLoading || !input.trim()}
                     >
