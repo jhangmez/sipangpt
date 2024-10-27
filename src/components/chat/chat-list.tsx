@@ -170,7 +170,7 @@ export default function ChatList({
             <div className='flex gap-3 items-center'>
               {message.role === 'user' && (
                 <div className='flex items-end gap-3'>
-                  <div className='flex flex-col gap-2 bg-accent p-3 rounded-md max-w-xs sm:max-w-2xl overflow-x-auto'>
+                  <div className='flex flex-col gap-2 bg-accent p-3 rounded-md max-w-xs sm:max-w-2xl overflow-x-auto font-exo'>
                     <div className='flex gap-2'>
                       {message.experimental_attachments
                         ?.filter((attachment) =>
@@ -183,7 +183,7 @@ export default function ChatList({
                             width={200}
                             height={200}
                             alt='attached image'
-                            className='rounded-md object-contain'
+                            className='rounded-md object-contain font-exo'
                           />
                         ))}
                     </div>
@@ -204,17 +204,20 @@ export default function ChatList({
                 </div>
               )}
               {message.role === 'assistant' && (
-                <div className='flex items-end gap-2'>
+                <div className='flex items-end gap-2 '>
+                  {/* <span className='text-xs mb-1 px-3 text-gray-900 dark:text-secondary'>
+                    SipánGPT
+                  </span> */}
                   <Avatar className='flex justify-start items-center'>
                     <AvatarImage
-                      src='/ollama.png'
+                      src='/uss_logo.webp'
                       alt='AI'
                       width={6}
                       height={6}
                       className='object-contain dark:invert'
                     />
                   </Avatar>
-                  <span className='bg-accent p-3 rounded-md max-w-xs sm:max-w-2xl overflow-x-auto'>
+                  <span className='bg-accent p-3 rounded-md max-w-xs sm:max-w-2xl overflow-x-auto font-exo'>
                     {/* Check if the message content contains a code block */}
                     {message.content.split('```').map((part, index) => {
                       if (index % 2 === 0) {
