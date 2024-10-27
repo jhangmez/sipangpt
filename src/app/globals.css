@@ -39,27 +39,36 @@
     /* Background - #333333 */
     --background: 0 0% 20%;
     --foreground: 0 0% 100%;
+
     --card: 0 0% 20%;
     --card-foreground: 0 0% 100%;
+
     --popover: 0 0% 20%;
     --popover-foreground: 0 0% 100%;
+
     /* Primary - #7dfa00 */
     --primary: 90 100% 49%;
     --primary-foreground: 0 0% 20%;
+
     /* Secondary - #5fed00 */
     --secondary: 90 100% 46%;
     --secondary-foreground: 0 0% 20%;
+
     --muted: 0 0% 94%;
     --muted-foreground: 0 0% 45.1%;
+
     --accent: 90 100% 49%;
     --accent-foreground: 0 0% 20%;
+
     /* Error - #BA1A1A */
     --destructive: 0 75% 42%;
     --destructive-foreground: 0 0% 100%;
+
     /* Gray scales */
     --border: 0 0% 94%; /* basado en tu gray-100 */
     --input: 0 0% 86%; /* basado en tu gray-200 */
     --ring: 0 0% 75%; /* basado en tu gray-300 */
+
     --radius: 0.5rem;
   }
 
