@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='es'>
+    <html lang='es' suppressHydrationWarning>
       <head>
         <meta charSet='UTF-8' />
         <meta name='description' content='SipánGPT Chatbot' />
@@ -34,7 +34,12 @@ export default function RootLayout({
       </head>
       <body className='bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background'>
         <noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
-        <ThemeProvider attribute='class' defaultTheme='dark'>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
           <Toaster
             containerClassName='font-semibold text-primary'
             position='bottom-right'
