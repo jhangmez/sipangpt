@@ -120,14 +120,14 @@ export function Sidebar({
           variant='ghost'
           className='flex justify-between w-full h-14 text-sm xl:text-lg font-normal items-center group transition-colors duration-100'
         >
-          <div className='flex gap-3 items-center text-xl font-bold text-primary font-frances group-hover:text-black/80 dark:group-hover:text-white relative'>
+          <div className='flex gap-2 items-center text-xl font-bold text-primary font-frances group-hover:text-black/80 dark:group-hover:text-white relative'>
             {!isCollapsed && !isMobile && (
               <Image
                 src='/uss_logo.webp'
                 alt='USS'
                 radioGroup='none'
-                width={32}
-                height={32}
+                width={42}
+                height={42}
                 className='dark:invert hidden 2xl:block'
               />
             )}

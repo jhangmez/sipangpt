@@ -151,11 +151,23 @@ export default function ChatTopbar({
   const getStatusBadge = () => {
     switch (connectionStatus) {
       case 'loading':
-        return <Badge variant='outline'>Cargando</Badge>
+        return (
+          <Badge variant='outline' className='select-none'>
+            Cargando
+          </Badge>
+        )
       case 'error':
-        return <Badge variant='destructive'>Desactivado</Badge>
+        return (
+          <Badge variant='destructive' className='select-none'>
+            Desconectado
+          </Badge>
+        )
       case 'ok':
-        return <Badge variant='default'>Conectado</Badge>
+        return (
+          <Badge variant='default' className='select-none'>
+            Conectado
+          </Badge>
+        )
     }
   }
 

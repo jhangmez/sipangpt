@@ -10,6 +10,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { INITIAL_QUESTIONS } from '@/utils/initial-questions'
 import { Button } from '../ui/button'
+import { Badge } from '@/components/ui/badge'
 
 export default function ChatList({
   messages,
@@ -86,7 +87,6 @@ export default function ChatList({
     return (
       <div className='w-full h-full flex justify-center items-center'>
         <div className='relative flex flex-col gap-4 items-center justify-center w-full h-full'>
-          <div></div>
           <div className='flex flex-col gap-4 items-center'>
             <div className='flex mx-2 mb-6 mt-2 gap-2 items-center opacity-50'>
               <Image
@@ -94,11 +94,14 @@ export default function ChatList({
                 alt='AI'
                 width={60}
                 height={60}
-                className='h-20 w-14 object-contain dark:invert'
+                className='h-20 w-14 object-contain dark:invert select-none'
               />
-              <h1 className='text-2xl font-bold text-primary font-frances'>
+              <h1 className='text-2xl font-bold text-primary font-frances select-none'>
                 SipánGPT
               </h1>
+              <span className='font-exo rounded-xl select-none font-xs px-1.5 py-0.5 text-xs uppercase text-yellow-800 font-semibold bg-yellow-500'>
+                Beta
+              </span>
             </div>
             <p className='text-center text-lg text-muted-foreground font-exo font-medium'>
               ¿Cómo puedo ayudarte?
