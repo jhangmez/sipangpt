@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover'
+import { Badge } from '@/components/ui/badge'
 import {
   Sheet,
   SheetContent,
@@ -39,14 +40,17 @@ export default function ChatTopbar({
   const [open, setOpen] = React.useState(false)
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [currentModel, setCurrentModel] = React.useState<string | null>(null)
+  const [connectionStatus, setConnectionStatus] = React.useState<
+    'loading' | 'ok' | 'error'
+  >('loading')
 
   useEffect(() => {
     setCurrentModel(getSelectedModel())
 
     const env = process.env.NODE_ENV
-    const MODEL_NAME = 'SipánGPT'
 
     const fetchModels = async () => {
+      setConnectionStatus('loading')
       try {
         if (env === 'production') {
           const fetchedModels = await fetch(
@@ -55,6 +59,7 @@ export default function ChatTopbar({
 
           if (!fetchedModels.ok) {
             console.error('Error en la respuesta:', fetchedModels.status)
+            setConnectionStatus('error')
             setModels([])
             return
           }
@@ -66,6 +71,7 @@ export default function ChatTopbar({
           if (!responseText) {
             console.error('Respuesta vacía del servidor')
             setModels([])
+            setConnectionStatus('error')
             return
           }
 
@@ -74,13 +80,16 @@ export default function ChatTopbar({
             if (json && json.models) {
               const apiModels = json.models.map((model: any) => model.name)
               setModels([...apiModels])
+              setConnectionStatus('ok')
             } else {
               console.error('Formato de respuesta inválido:', json)
               setModels([])
+              setConnectionStatus('error')
             }
           } catch (parseError) {
             console.error('Error al parsear JSON:', parseError)
             setModels([])
+            setConnectionStatus('error')
           }
         } else {
           const fetchedModels = await fetch('/api/tags')
@@ -88,6 +97,7 @@ export default function ChatTopbar({
           if (!fetchedModels.ok) {
             console.error('Error en la respuesta:', fetchedModels.status)
             setModels([])
+            setConnectionStatus('error')
             return
           }
 
@@ -99,18 +109,22 @@ export default function ChatTopbar({
             if (json && json.models) {
               const apiModels = json.models.map((model: any) => model.name)
               setModels([...apiModels])
+              setConnectionStatus('ok')
             } else {
               console.error('Formato de respuesta inválido:', json)
+              setConnectionStatus('error')
               setModels([])
             }
           } catch (parseError) {
             console.error('Error al parsear JSON:', parseError)
             setModels([])
+            setConnectionStatus('error')
           }
         }
       } catch (error) {
         console.error('Error al obtener los modelos:', error)
         setModels([])
+        setConnectionStatus('error')
       }
     }
     fetchModels()
@@ -132,6 +146,17 @@ export default function ChatTopbar({
   const getDisplayName = (model: string) => {
     const match = model.match(/SipanGPT-(.*?)-Llama/)
     return match ? `SipánGPT-${match[1]}` : model
+  }
+
+  const getStatusBadge = () => {
+    switch (connectionStatus) {
+      case 'loading':
+        return <Badge variant='outline'>Cargando</Badge>
+      case 'error':
+        return <Badge variant='destructive'>Desactivado</Badge>
+      case 'ok':
+        return <Badge variant='default'>Conectado</Badge>
+    }
   }
 
   return (
@@ -162,7 +187,10 @@ export default function ChatTopbar({
             aria-expanded={open}
             className='w-[300px] justify-between font-exo'
           >
-            {getDisplayName(currentModel || 'Select model')}
+            <span className='flex w-full justify-between'>
+              {getDisplayName(currentModel || 'Escoge el modelo')}
+              {getStatusBadge()}
+            </span>
             <CaretSortIcon className='ml-2 h-4 w-4 shrink-0 opacity-50' />
           </Button>
         </PopoverTrigger>
