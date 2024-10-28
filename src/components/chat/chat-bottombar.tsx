@@ -125,7 +125,7 @@ export default function ChatBottombar({
               </form>
             </div>
           </div>
-          <p className='text-[11px] lg:text-xs font-exo text-center'>
+          <p className='text-[12px] lg:text-xs font-exo text-center'>
             <span className='font-frances text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text'>
               SipánGPT
             </span>{' '}
