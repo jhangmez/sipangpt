@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Attachment, ChatRequestOptions } from 'ai'
+import { ChatRequestOptions } from 'ai'
 import { Message, useChat } from 'ai/react'
 import { ChatOllama } from '@langchain/ollama'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogContent
 } from '@/components/ui/dialog'
-import useChatStore from '../hooks/useChatStore'
 import { toast } from 'sonner'
 import { getSelectedModel } from '@/lib/model-helper'
 import { v4 as uuidv4 } from 'uuid'
@@ -54,7 +53,6 @@ export default function Home() {
   const formRef = useRef<HTMLFormElement>(null)
   useEffect(() => {
     if (messages.length < 1) {
-      // console.log('Generando id del chat')
       const id = uuidv4()
       setChatId(id)
     }

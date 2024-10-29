@@ -5,12 +5,10 @@ import { getSelectedModel } from '@/lib/model-helper'
 import { ChatOllama } from '@langchain/ollama'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
 import { BytesOutputParser } from '@langchain/core/output_parsers'
-import { Attachment, ChatRequestOptions } from 'ai'
+import { ChatRequestOptions } from 'ai'
 import { Message, useChat } from 'ai/react'
 import React, { useEffect } from 'react'
 import { toast } from 'sonner'
-import { v4 as uuidv4 } from 'uuid'
-import useChatStore from '../../hooks/useChatStore'
 
 export default function Page({ params }: { params: { id: string } }) {
   const {

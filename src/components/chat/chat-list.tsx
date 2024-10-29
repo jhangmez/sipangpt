@@ -1,4 +1,4 @@
-import { Message, useChat } from 'ai/react'
+import { Message } from 'ai/react'
 import React, { useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,6 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { INITIAL_QUESTIONS } from '@/utils/initial-questions'
 import { Button } from '../ui/button'
-import { Badge } from '@/components/ui/badge'
 
 export default function ChatList({
   messages,
