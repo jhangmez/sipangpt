@@ -2,20 +2,11 @@
 
 import React, { useEffect } from 'react'
 import { ChatProps } from './chat'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
-import { Button, buttonVariants } from '../ui/button'
+import { Button } from '../ui/button'
 import TextareaAutosize from 'react-textarea-autosize'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Cross2Icon,
-  ImageIcon,
-  PaperPlaneIcon,
-  StopIcon
-} from '@radix-ui/react-icons'
-import { Mic, SendHorizonal } from 'lucide-react'
-import useChatStore from '@/app/hooks/useChatStore'
-import Image from 'next/image'
+import { AnimatePresence, motion } from 'framer-motion'
+import { StopIcon } from '@radix-ui/react-icons'
+import { SendHorizonal } from 'lucide-react'
 
 export default function ChatBottombar({
   messages,
@@ -30,8 +21,10 @@ export default function ChatBottombar({
 }: ChatProps) {
   const [message, setMessage] = React.useState(input)
   const [isMobile, setIsMobile] = React.useState(false)
+  const [showLimitError, setShowLimitError] = React.useState(false)
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
   const env = process.env.NODE_ENV
+  const CHARACTER_LIMIT = 200
 
   React.useEffect(() => {
     const checkScreenWidth = () => {
@@ -49,6 +42,11 @@ export default function ChatBottombar({
       window.removeEventListener('resize', checkScreenWidth)
     }
   }, [])
+
+  // Update error message visibility based on input length
+  React.useEffect(() => {
+    setShowLimitError(input.length > CHARACTER_LIMIT)
+  }, [input])
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -81,9 +79,8 @@ export default function ChatBottombar({
                   onChange={handleInputChange}
                   name='message'
                   placeholder='Escribe tu pregunta aquí.'
-                  className=' max-h-24 px-14 bg-accent py-[22px] rounded-lg font-exo font-medium text-sm placeholder:text-muted-foreground border focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full flex items-center h-16 resize-none overflow-hidden dark:bg-card'
+                  className=' max-h-24 px-8 bg-accent py-[22px] rounded-lg font-exo font-medium text-sm placeholder:text-muted-foreground border focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 w-full flex items-center h-16 resize-none overflow-hidden dark:bg-card'
                 />
-
                 {!isLoading ? (
                   <div className='flex absolute right-3 items-center'>
                     <Button
@@ -92,22 +89,17 @@ export default function ChatBottombar({
                       size='icon'
                       aria-label='Botón para enviar pregunta'
                       type='submit'
-                      disabled={isLoading || !input.trim()}
+                      disabled={
+                        isLoading ||
+                        !input.trim() ||
+                        input.length > CHARACTER_LIMIT
+                      }
                     >
                       <SendHorizonal className='w-5 h-5 ' />
                     </Button>
                   </div>
                 ) : (
                   <div className='flex absolute right-3 items-center'>
-                    <Button
-                      className='shrink-0 rounded-full'
-                      variant='ghost'
-                      size='icon'
-                      type='button'
-                      disabled={true}
-                    >
-                      <Mic className='w-5 h-5 ' />
-                    </Button>
                     <Button
                       className='shrink-0 rounded-full'
                       variant='ghost'
@@ -124,8 +116,18 @@ export default function ChatBottombar({
                 )}
               </form>
             </div>
+            {showLimitError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className='absolute select-none font-exo -top-6 left-0 text-sm text-red-500 font-medium'
+              >
+                Se admiten máximo {CHARACTER_LIMIT} caracteres
+              </motion.div>
+            )}
           </div>
-          <p className='text-[12px] lg:text-xs font-exo text-center'>
+          <p className='text-[12px] lg:text-xs font-exo text-center select-none'>
             <span className='font-frances text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text'>
               SipánGPT
             </span>{' '}

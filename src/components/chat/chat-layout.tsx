@@ -8,10 +8,8 @@ import {
 } from '@/components/ui/resizable'
 import { cn } from '@/lib/utils'
 import { Sidebar } from '../sidebar'
-import { Message, useChat } from 'ai/react'
+import { Message } from 'ai/react'
 import Chat, { ChatProps } from './chat'
-import ChatList from './chat-list'
-import { HamburgerMenuIcon } from '@radix-ui/react-icons'
 
 interface ChatLayoutProps {
   defaultLayout: number[] | undefined
