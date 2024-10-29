@@ -99,7 +99,7 @@ export default function ChatList({
               <h1 className='text-2xl font-bold text-primary font-frances select-none'>
                 SipánGPT
               </h1>
-              <span className='font-exo rounded-xl select-none font-xs px-1.5 py-0.5 text-xs uppercase text-yellow-800 font-semibold bg-yellow-500'>
+              <span className='font-exo rounded-xl select-none font-xs px-1.5 py-0.5 text-xs uppercase text-yellow-800 font-bold bg-yellow-500'>
                 Beta
               </span>
             </div>

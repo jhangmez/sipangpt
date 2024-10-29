@@ -16,7 +16,12 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { GearIcon, StarIcon, InfoCircledIcon } from '@radix-ui/react-icons'
+import {
+  GearIcon,
+  StarIcon,
+  InfoCircledIcon,
+  ChevronUpIcon
+} from '@radix-ui/react-icons'
 import { useEffect, useState } from 'react'
 import { Skeleton } from './ui/skeleton'
 import EditUsernameForm from './edit-username-form'
@@ -76,6 +81,7 @@ export default function UserSettings() {
           <div className='text-xs truncate font-exo font-medium'>
             {isLoading ? <Skeleton className='w-20 h-4' /> : name || 'Anónimo'}
           </div>
+          <ChevronUpIcon className='ml-auto' />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className='w-48 p-2'>
