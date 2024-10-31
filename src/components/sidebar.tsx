@@ -138,7 +138,7 @@ export function Sidebar({
           </div>
           <SquarePen
             size={18}
-            className='shrink-0 w-4 h-4 group-hover:text-white transition-colors duration-100'
+            className='shrink-0 w-4 h-4 dark:group-hover:text-primary transition-colors duration-100'
           />
         </Button>
 

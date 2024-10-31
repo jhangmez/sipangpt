@@ -20,11 +20,14 @@ import {
   GearIcon,
   StarIcon,
   InfoCircledIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  CubeIcon
 } from '@radix-ui/react-icons'
 import { useEffect, useState } from 'react'
 import { Skeleton } from './ui/skeleton'
 import EditUsernameForm from './edit-username-form'
+import { getModelInfo } from '@/lib/utils'
+import { INITIAL_MODELS } from '@/utils/initial-models'
 
 export default function UserSettings() {
   const [name, setName] = useState('')
@@ -199,7 +202,60 @@ export default function UserSettings() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-        <Dialog></Dialog>
+        <Dialog>
+          <DialogTrigger className='w-full'>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <div className='flex w-full gap-2 p-1 items-center cursor-pointer font-exo'>
+                <CubeIcon className='w-4 h-4' />
+                <p>Modelos</p>
+              </div>
+            </DropdownMenuItem>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader className='space-y-4 font-exo'>
+              <DialogTitle>Modelos disponibles</DialogTitle>
+              {INITIAL_MODELS.length > 0 ? (
+                INITIAL_MODELS.map((model) => {
+                  const modelInfo = getModelInfo(model.model_id)
+                  return (
+                    <div
+                      key={model.model_id}
+                      className='flex flex-col items-start text-left space-y-1 w-full'
+                    >
+                      <div className='flex gap-1 lg:items-center lg:justify-start lg:flex-row flex-col w-full'>
+                        <p className='font-semibold font-exo flex flex-wrap items-center gap-1'>
+                          {modelInfo.nombre_comercial}
+                        </p>
+                        <p className='text-xs text-muted-foreground font-frances italic inline-block overflow-hidden text-ellipsis  '>
+                          &#40;{modelInfo.nombre_original_modelo} &#41;
+                        </p>
+                      </div>
+                      <div className='w-full'>
+                        <p className='text-sm font-exo text-muted-foreground line-clamp-3 inline-block overflow-hidden text-ellipsis '>
+                          {modelInfo.descripcion}
+                        </p>
+                        <p className='text-sm font-exo text-muted-foreground'>
+                          Modelo base: {modelInfo.base_model}
+                        </p>
+                        <Link
+                          className='underline hover:text-sky-500'
+                          target='_blank'
+                          href={modelInfo.link_hf}
+                        >
+                          Enlace a HuggingFace
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <Button variant='ghost' disabled className='font-exo w-full'>
+                  No hay más modelos disponibles
+                </Button>
+              )}
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
       </DropdownMenuContent>
     </DropdownMenu>
   )

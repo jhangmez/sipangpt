@@ -7,19 +7,17 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger
-} from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '../ui/button'
-import { CaretSortIcon, HamburgerMenuIcon } from '@radix-ui/react-icons'
+import {
+  CaretSortIcon,
+  HamburgerMenuIcon,
+  CheckIcon
+} from '@radix-ui/react-icons'
 import { Sidebar } from '../sidebar'
 import { Message } from 'ai/react'
 import { getSelectedModel } from '@/lib/model-helper'
+import { getModelInfo } from '@/lib/utils'
 
 interface ChatTopbarProps {
   setSelectedModel: React.Dispatch<React.SetStateAction<string>>
@@ -140,7 +138,7 @@ export default function ChatTopbar({
   }
 
   const handleCloseSidebar = () => {
-    setSheetOpen(false) // Close the sidebar
+    setSheetOpen(false)
   }
 
   const getDisplayName = (model: string) => {
@@ -209,20 +207,44 @@ export default function ChatTopbar({
             <CaretSortIcon className='ml-2 h-4 w-4 shrink-0 opacity-50' />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className='w-[300px] p-1'>
+        <PopoverContent className='lg:w-[500px] md:w-[300px] w-full p-1'>
           {models.length > 0 ? (
-            models.map((model) => (
-              <Button
-                key={model}
-                variant='ghost'
-                className='w-full'
-                onClick={() => {
-                  handleModelChange(model)
-                }}
-              >
-                {getDisplayName(model)}
-              </Button>
-            ))
+            models.map((model) => {
+              const modelInfo = getModelInfo(model)
+              const isSelected = currentModel === model
+
+              return (
+                <Button
+                  key={model}
+                  variant='ghost'
+                  className='w-full h-auto py-4 px-4'
+                  onClick={() => handleModelChange(model)}
+                >
+                  <div className='flex w-full items-start justify-between gap-2'>
+                    <div className='flex flex-col items-start text-left space-y-1 max-w-[80%]'>
+                      <div className='flex gap-1 items-center'>
+                        <p className='font-semibold font-exo flex flex-wrap items-center gap-1'>
+                          {modelInfo.nombre_comercial}
+                        </p>
+                        <p className='text-xs text-muted-foreground font-frances italic inline-block overflow-hidden text-ellipsis max-w-[150px] sm:max-w-[200px] md:max-w-[150px] lg:max-w-[300px]'>
+                          &#40;{modelInfo.nombre_original_modelo} &#41;
+                        </p>
+                      </div>
+                      <div className='w-full'>
+                        <p className='text-sm font-exo text-muted-foreground line-clamp-3 inline-block overflow-hidden text-ellipsis max-w-[150px] sm:max-w-[200px] lg:max-w-full lg:max-w-full'>
+                          {modelInfo.descripcion}
+                        </p>
+                      </div>
+                    </div>
+                    <div className='flex items-center gap-2 ml-auto'>
+                      {isSelected && (
+                        <CheckIcon className='h-4 w-4 text-green-500 flex-shrink-0' />
+                      )}
+                    </div>
+                  </div>
+                </Button>
+              )
+            })
           ) : (
             <Button variant='ghost' disabled className='font-exo w-full'>
               No hay más modelos disponibles
