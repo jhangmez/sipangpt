@@ -19,9 +19,10 @@ export async function POST(req: Request) {
   const messageContent: UserContent = [
     { type: 'text', text: currentMessage.content }
   ]
-  // Stream text using the ollama model
-  const result = await streamText({
-    system: codeBlock`Eres SipánGPT, asistente virtual oficial de la Universidad Señor de Sipán (USS) en Chiclayo, Perú. Tu función es asistir a estudiantes, docentes y público general con información académica e institucional.
+  try {
+    // Stream text using the ollama model
+    const result = await streamText({
+      system: codeBlock`Eres SipánGPT, asistente virtual oficial de la Universidad Señor de Sipán (USS) en Chiclayo, Perú. Tu función es asistir a estudiantes, docentes y público general con información académica e institucional.
 
 Información clave:
 - Ubicación: Km 5 carretera Pimentel, Chiclayo
@@ -50,14 +51,18 @@ Comportamiento:
 
 Valores: Excelencia, Perseverancia y Servicio en toda interacción.
     `,
-    model: ollama(selectedModel),
-    messages: [
-      ...convertToCoreMessages(initialMessages),
-      { role: 'user', content: messageContent.slice(-maxMessageContext) }
-    ],
-    abortSignal: AbortSignal.timeout(15000),
-    maxTokens: 2800
-  })
-
-  return result.toDataStreamResponse()
+      model: ollama(selectedModel),
+      messages: [
+        ...convertToCoreMessages(initialMessages),
+        { role: 'user', content: messageContent.slice(-maxMessageContext) }
+      ],
+      abortSignal: AbortSignal.timeout(20000),
+      maxTokens: 2800
+    })
+    return result.toDataStreamResponse()
+  } catch (error) {
+    return new Response(`Tiempo de respuesta excedido(20s)`, {
+      status: 408
+    })
+  }
 }

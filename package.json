@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/react": "^0.0.70",
     "@hookform/resolvers": "^3.9.0",
     "@langchain/community": "^0.3.11",
     "@langchain/core": "^0.3.16",
@@ -23,7 +24,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.2",
     "@types/common-tags": "^1.8.4",
-    "ai": "^3.4.20",
+    "ai": "^3.4.31",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "common-tags": "^1.8.2",

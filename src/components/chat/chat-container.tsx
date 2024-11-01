@@ -38,8 +38,9 @@ export function ChatContainer({
     },
     onError: (error) => {
       setLoadingSubmit(false)
-      toast.error('Ha ocurrido un error. Por favor, intente de nuevo.')
-    }
+      toast.error(`Ha ocurrido un error:${error}`)
+    },
+    experimental_throttle: 100
   })
 
   const [chatId, setChatId] = useState<string>(initialChatId || '')
