@@ -12,7 +12,7 @@ export const metadata = {
     title,
     description,
     type: 'article',
-    url: 'https://sipangpt.vercel.app/',
+    url: 'https://sipangpt.xyz/',
     images: [{ url: imageUrl }]
   },
   twitter: {

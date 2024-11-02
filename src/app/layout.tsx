@@ -24,7 +24,7 @@ export default function RootLayout({
           property='og:image'
           content='https://www.jhangmez.xyz/api/og2?title=SipánGPT'
         />
-        <meta property='og:url' content='https://sipangpt.vercel.app/' />
+        <meta property='og:url' content='https://sipangpt.xyz/' />
         <meta property='og:title' content='SipánGPT Chatbot' />
         <meta
           property='og:description'
