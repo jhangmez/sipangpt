@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
+import { ClockIcon } from '@radix-ui/react-icons'
 
 interface SidebarProps {
   isCollapsed: boolean
@@ -143,7 +144,10 @@ export function Sidebar({
         </Button>
 
         <div className='flex flex-col pt-10 gap-2 font-exo font-medium'>
-          <p className='pl-4 text-xs text-muted-foreground'>Historial</p>
+          <span className='flex flex-row items-center justify-start pl-4'>
+            <ClockIcon className='scale-100 transition-all' />
+            <p className='pl-2 text-xs text-muted-foreground'>Historial</p>
+          </span>
           {localChats.length > 0 && (
             <div>
               {localChats.map(({ chatId, messages }, index) => (

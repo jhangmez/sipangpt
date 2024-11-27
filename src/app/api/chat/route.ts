@@ -54,10 +54,11 @@ Valores: Excelencia, Perseverancia y Servicio en toda interacción.
       model: ollama(selectedModel),
       messages: [
         ...convertToCoreMessages(initialMessages),
-        { role: 'user', content: messageContent.slice(-maxMessageContext) }
+        // { role: 'user', content: messageContent.slice(-maxMessageContext) }
+        { role: 'user', content: messageContent }
       ],
-      abortSignal: AbortSignal.timeout(20000),
-      maxTokens: 2800
+      abortSignal: AbortSignal.timeout(25000)
+      // maxTokens: 2800
     })
     return result.toDataStreamResponse()
   } catch (error) {

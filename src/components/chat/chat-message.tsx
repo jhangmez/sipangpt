@@ -1,4 +1,5 @@
 // components/chat/chat-message.tsx
+import React from 'react'
 import { memo } from 'react'
 import { Message } from 'ai'
 import { motion } from 'framer-motion'
@@ -8,6 +9,21 @@ import Image from 'next/image'
 import CodeDisplayBlock from '../code-display-block'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { toast } from 'sonner'
+import { Button } from '../ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
+import {
+  CheckIcon,
+  CopyIcon,
+  ReloadIcon,
+  CheckCircledIcon,
+  CrossCircledIcon
+} from '@radix-ui/react-icons'
 
 interface ChatMessageProps {
   message: Message
@@ -26,6 +42,15 @@ function ChatMessage({
   name,
   messagesLength
 }: ChatMessageProps) {
+  const [isCopied, setisCopied] = React.useState(false)
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(message.content)
+    setisCopied(true)
+    toast.success('Código copiado al portapapeles!')
+    setTimeout(() => {
+      setisCopied(false)
+    }, 1500)
+  }
   return (
     <motion.div
       layout
@@ -82,7 +107,7 @@ function ChatMessage({
           </div>
         )}
         {message.role === 'assistant' && (
-          <div className='flex items-end gap-2 '>
+          <div className='flex items-start gap-2 '>
             <Avatar className='flex justify-start items-center'>
               <AvatarImage
                 src='/uss_logo.webp'
@@ -113,6 +138,55 @@ function ChatMessage({
                   ...
                 </span>
               )}
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant='ghost' size='icon' className='self-end mt-2'>
+                    <ReloadIcon className='w-2 h-2 scale-100 transition-all' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Regenerar</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant='ghost' size='icon' className='self-end mt-2'>
+                    <CheckCircledIcon className='w-2 h-2 scale-100 transition-all' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Respuesta adecuada</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button variant='ghost' size='icon' className='self-end mt-2'>
+                    <CrossCircledIcon className='w-2 h-2 scale-100 transition-all' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Respuesta inadecuada</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='self-end mt-2'
+                    onClick={copyToClipboard}
+                  >
+                    {isCopied ? (
+                      <CheckIcon className='w-2 h-2 scale-100 transition-all' />
+                    ) : (
+                      <CopyIcon className='w-2 h-2 scale-100 transition-all' />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Copiar</p>
+                </TooltipContent>
+              </Tooltip>
             </span>
           </div>
         )}
