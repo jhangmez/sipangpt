@@ -46,7 +46,7 @@ function ChatMessage({
   const copyToClipboard = () => {
     navigator.clipboard.writeText(message.content)
     setisCopied(true)
-    toast.success('Código copiado al portapapeles!')
+    toast.success('Mensaje copiado!')
     setTimeout(() => {
       setisCopied(false)
     }, 1500)
@@ -151,7 +151,7 @@ function ChatMessage({
               <Tooltip>
                 <TooltipTrigger>
                   <Button variant='ghost' size='icon' className='self-end mt-2'>
-                    <CheckCircledIcon className='w-2 h-2 scale-100 transition-all' />
+                    <CheckCircledIcon className='w-2 bg-white h-2 scale-100 transition-all' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
