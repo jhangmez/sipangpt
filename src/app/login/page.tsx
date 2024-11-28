@@ -72,12 +72,18 @@ export default function LoginRegister() {
             <Button
               variant='outline'
               className='w-full'
+              asChild
               onClick={() => {
                 /* Add Google sign-in logic here */
               }}
             >
-              <FcGoogle className='mr-2 h-4 w-4' />
-              {isLogin ? 'Iniciar sesión con Google' : 'Registrarse con Google'}
+              <Link href='/chat'>
+                {/* Quitar la redirección luego de añadir credenciales */}
+                <FcGoogle className='mr-2 h-4 w-4' />
+                {isLogin
+                  ? 'Iniciar sesión con Google'
+                  : 'Registrarse con Google'}
+              </Link>
             </Button>
             <div className='mt-4 text-center text-sm'>
               Al {isLogin ? 'ingresar' : 'registrarte'} aceptas nuestros{' '}
