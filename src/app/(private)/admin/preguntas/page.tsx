@@ -18,11 +18,13 @@ export default function Page() {
           <Breadcrumb>
             <BreadcrumbList className='font-exo'>
               <BreadcrumbItem className='hidden md:block'>
-                <BreadcrumbLink href='/admin/dashboard'>Datos</BreadcrumbLink>
+                <BreadcrumbLink href='/admin/dashboard'>
+                  Valores predefinidos
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className='hidden md:block' />
               <BreadcrumbItem>
-                <BreadcrumbPage>Resumen</BreadcrumbPage>
+                <BreadcrumbPage>Preguntas</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>

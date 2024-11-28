@@ -15,6 +15,23 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem
 } from '@/components/ui/sidebar'
+import Link from 'next/link'
+import { ModeToggle } from '@Components/mode-toggle'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form'
 export function NavMain({
   items
 }: {
@@ -52,11 +69,29 @@ export function NavMain({
                 <SidebarMenuSub>
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
-                          <span>{subItem.title}</span>
-                        </a>
-                      </SidebarMenuSubButton>
+                      {subItem.title === 'Tema' ? (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <SidebarMenuSubButton>
+                              <span>{subItem.title}</span>
+                            </SidebarMenuSubButton>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <div className='w-auto flex flex-col gap-4 pt-4'>
+                              <h2 className='font-exo -mt-5 font-bold text-lg'>
+                                Tema
+                              </h2>
+                              <ModeToggle />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      ) : (
+                        <SidebarMenuSubButton asChild>
+                          <Link href={subItem.url}>
+                            <span>{subItem.title}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      )}
                     </SidebarMenuSubItem>
                   ))}
                 </SidebarMenuSub>

@@ -1,15 +1,14 @@
-import { Spinner } from '@nextui-org/spinner'
-
+import { Loader2 } from 'lucide-react'
 export default function Loading() {
-  // You can add any UI inside Loading, including a Skeleton.
   return (
-    <section className='flex flex-col items-center justify-center min-w-full min-h-full'>
-      <p className='mb-4 self-center whitespace-nowrap text-2xl font-semibold'>
-        Harkay
-        <span className='text-2xl text-[0.8em] font-normal'> S O F T</span>
+    <section className='flex flex-col items-center justify-center min-w-full min-h-screen bg-background'>
+      <h1 className='mb-4 text-3xl font-bold text-primary font-frances'>
+        SipánGPT
+      </h1>
+      <Loader2 className='h-8 w-8 animate-spin text-primary' />
+      <p className='mt-4 text-muted-foreground font-semibold font-exo'>
+        Cargando sección...
       </p>
-      <Spinner color='primary' />
-      <p className='mt-4 text-light-onBackground'>Cargando sección...</p>
     </section>
   )
 }

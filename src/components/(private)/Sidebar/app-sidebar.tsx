@@ -1,19 +1,13 @@
 'use client'
 import * as React from 'react'
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
+  Asterisk,
   BotMessageSquare,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
   Settings2,
   ChartBar,
   SquareTerminal
 } from 'lucide-react'
+import { useSidebar } from '@/components/ui/sidebar'
 import { NavMain } from '@Components/(private)/Sidebar/nav-main'
 import { NavProjects } from '@Components/(private)/Sidebar/nav-projects'
 import { NavUser } from '@Components/(private)/Sidebar/nav-user'
@@ -30,25 +24,8 @@ const data = {
   user: {
     name: 'Jhan Gómez',
     email: 'jhangmez.pe@gmail.com',
-    avatar: '/avatars/jhan.webp'
+    avatar: '/avatars/user_picture.webp'
   },
-  teams: [
-    {
-      name: 'Acme Inc',
-      logo: GalleryVerticalEnd,
-      plan: 'Enterprise'
-    },
-    {
-      name: 'Acme Corp.',
-      logo: AudioWaveform,
-      plan: 'Startup'
-    },
-    {
-      name: 'Evil Corp.',
-      logo: Command,
-      plan: 'Free'
-    }
-  ],
   navMain: [
     {
       title: 'Datos',
@@ -58,26 +35,26 @@ const data = {
       items: [
         {
           title: 'Resumen',
-          url: '#'
+          url: '/admin/dashboard'
         },
         {
           title: 'Tiempo real',
-          url: '#'
+          url: '/admin/tiemporeal'
         },
         {
           title: 'Feedback',
-          url: '#'
+          url: '/admin/feedback'
         }
       ]
     },
     {
       title: 'Valores predefinidos',
       url: '#',
-      icon: BookOpen,
+      icon: Asterisk,
       items: [
         {
           title: 'Preguntas',
-          url: '#'
+          url: '/admin/preguntas'
         }
       ]
     },
@@ -88,7 +65,7 @@ const data = {
       items: [
         {
           title: 'Tema',
-          url: '#'
+          url: '/admin/cuenta'
         }
       ]
     }
@@ -102,18 +79,28 @@ const data = {
   ]
 }
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { state } = useSidebar()
   return (
     <Sidebar collapsible='icon' {...props}>
       <SidebarHeader className='bg-primary'>
-        <Link
-          href={'/admin/dashboard'}
-          className='text-2xl h-12 font-bold font-frances text-gray-sipan  flex items-center gap-1.5 mx-2'
-        >
-          SipánGPT{' '}
-          <span className='font-exo rounded-xl select-none font-xs px-1.5 py-0.5 text-xs uppercase text-yellow-800 font-bold bg-yellow-500'>
-            Beta
-          </span>
-        </Link>
+        {state === 'expanded' ? (
+          <Link
+            href={'/admin/dashboard'}
+            className='text-2xl h-12 font-bold font-frances text-gray-sipan  flex items-center gap-1.5 mx-2'
+          >
+            SipánGPT{' '}
+            <span className='font-exo rounded-xl select-none font-xs px-1.5 py-0.5 text-xs uppercase text-yellow-800 font-bold bg-yellow-500'>
+              Beta
+            </span>
+          </Link>
+        ) : (
+          <Link
+            href={'/admin/dashboard'}
+            className='text-2xl h-12 font-bold font-frances text-gray-sipan  flex items-center gap-1.5 mx-2'
+          >
+            S
+          </Link>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

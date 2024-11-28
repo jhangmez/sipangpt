@@ -22,7 +22,7 @@ export default function Page() {
               </BreadcrumbItem>
               <BreadcrumbSeparator className='hidden md:block' />
               <BreadcrumbItem>
-                <BreadcrumbPage>Resumen</BreadcrumbPage>
+                <BreadcrumbPage>Feedback</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
