@@ -18,6 +18,7 @@
       }
     ],
     "paths": {
+      "@root/*": ["./*"],
       "@/*": ["./src/*"],
       "@Components/*": ["./src/components/*"],
       "@utils/*": ["./src/utils/*"],

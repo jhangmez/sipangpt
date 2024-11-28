@@ -19,7 +19,7 @@ export default function LoginRegister() {
   return (
     <div className='min-h-screen flex flex-col sm:flex-row'>
       <div className='bg-primary w-full sm:w-1/2 flex items-center justify-center p-8'>
-        <div className='text-center dark:text-background'>
+        <div className='text-center dark:text-gray-sipan'>
           <h1 className='text-4xl font-bold mb-2 font-frances'>SipánGPT</h1>
           <p className='text-sm font-exo font-semibold'>
             Proyecto de tesis de{' '}
@@ -38,7 +38,7 @@ export default function LoginRegister() {
               rel='noopener noreferrer'
               className='underline hover:text-gray-100'
             >
-              USS
+              Universidad Señor de Sipán
             </a>
           </p>
         </div>

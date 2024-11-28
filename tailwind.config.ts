@@ -24,6 +24,7 @@ const config: Config = {
         'gray-100': 'rgb(240, 240, 240)',
         'gray-200': 'rgb(220, 220, 220)',
         'gray-300': 'rgb(190, 190, 190)',
+        'gray-sipan': '#333333',
         error: '#BA1A1A',
         onError: '#FFFFFF',
         errorContainer: '#FFDAD6',
