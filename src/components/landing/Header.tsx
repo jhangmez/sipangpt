@@ -7,12 +7,15 @@ export default function Header() {
     <header className='bg-primary shadow-sm'>
       <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
         <div className='flex justify-between items-center py-4'>
-          <h1 className='text-2xl font-bold font-frances dark:text-background flex items-center gap-1.5'>
+          <Link
+            href={'/'}
+            className='text-2xl font-bold font-frances text-gray-sipan  flex items-center gap-1.5'
+          >
             SipánGPT{' '}
             <span className='font-exo rounded-xl select-none font-xs px-1.5 py-0.5 text-xs uppercase text-yellow-800 font-bold bg-yellow-500'>
               Beta
             </span>
-          </h1>
+          </Link>
 
           <Button
             variant='outline'

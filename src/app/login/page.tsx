@@ -10,6 +10,7 @@ import {
   CardTitle
 } from '@/components/ui/card'
 import { FcGoogle } from 'react-icons/fc'
+import Link from 'next/link'
 
 export default function LoginRegister() {
   const [isLogin, setIsLogin] = useState(true)
@@ -18,9 +19,14 @@ export default function LoginRegister() {
 
   return (
     <div className='min-h-screen flex flex-col sm:flex-row'>
-      <div className='bg-primary w-full sm:w-1/2 flex items-center justify-center p-8'>
-        <div className='text-center dark:text-gray-sipan'>
-          <h1 className='text-4xl font-bold mb-2 font-frances'>SipánGPT</h1>
+      <div className='bg-[#7dfa00] w-full sm:w-1/2 flex items-center justify-center p-8'>
+        <div className='text-center text-gray-sipan'>
+          <Link
+            href={'/'}
+            className='text-4xl font-bold mb-3 font-frances hover:underline'
+          >
+            SipánGPT
+          </Link>
           <p className='text-sm font-exo font-semibold'>
             Proyecto de tesis de{' '}
             <a
@@ -43,6 +49,18 @@ export default function LoginRegister() {
           </p>
         </div>
       </div>
+      <svg
+        viewBox='0 0 1440 58'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+        width='100%'
+        className='dark:text-gray-sipan flex sm:hidden'
+      >
+        <path
+          d='M-100 58C-100 58 218.416 36.3297 693.5 36.3297C1168.58 36.3297 1487 58 1487 58V-3.8147e-06H-100V58Z'
+          fill='#7dfa00'
+        ></path>
+      </svg>
       <div className='w-full sm:w-1/2 flex items-center justify-center p-8'>
         <Card className='w-full max-w-md font-exo'>
           <CardHeader>
@@ -62,13 +80,15 @@ export default function LoginRegister() {
               {isLogin ? 'Iniciar sesión con Google' : 'Registrarse con Google'}
             </Button>
             <div className='mt-4 text-center text-sm'>
+              Al {isLogin ? 'ingresar' : 'registrarte'} aceptas nuestros{' '}
               <a href='#' className='text-primary hover:underline'>
                 Términos de uso
               </a>{' '}
-              &bull;{' '}
+              y{' '}
               <a href='#' className='text-primary hover:underline'>
                 Política de privacidad
               </a>
+              .
             </div>
           </CardContent>
           <CardFooter>
