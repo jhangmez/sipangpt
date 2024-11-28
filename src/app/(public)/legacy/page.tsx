@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Header from '@Components/(private)/Header'
-import Sidebar from '@Components/(private)/Sidebar'
+import Sidebar from '@Components/(private)/Sidebar1'
 import ChatInterface from '@Components/(private)/ChatInterference'
 import { MessageCustom } from '@/types/chat'
 import toast from 'react-hot-toast'

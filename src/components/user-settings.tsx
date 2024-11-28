@@ -77,7 +77,7 @@ export default function UserSettings() {
               height={4}
               className='object-contain'
             />
-            <AvatarFallback>
+            <AvatarFallback className='font-exo'>
               {name && name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
