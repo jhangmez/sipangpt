@@ -15,7 +15,7 @@ export default function Hero() {
               Pregunta a SipánGPT
             </h1>
             <h2 className='text-xl md:text-2xl lg:text-3xl mb-6 font-semibold'>
-              Pregunta todas tus dudas sobre la universidad Señor de Sipán
+              Pregunta todas tus dudas sobre la Universidad Señor de Sipán
             </h2>
             <Link href='/login'>
               <Button
