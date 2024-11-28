@@ -111,7 +111,7 @@ export function Sidebar({
       <div className=' flex flex-col justify-between p-2 max-h-fit overflow-y-auto'>
         <Button
           onClick={() => {
-            router.push('/')
+            router.push('/chat')
             // Clear messages
             setMessages([])
             if (closeSidebar) {

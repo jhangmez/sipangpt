@@ -18,18 +18,32 @@ export default function Hero() {
               Pregunta todas tus dudas sobre la universidad Señor de Sipán
             </h2>
             <Link href='/login'>
-              <Button size='lg' className='font-semibold'>
+              <Button
+                size='lg'
+                className='font-semibold lg:w-auto md:w-auto w-full text-gray-sipan'
+              >
                 Empezar
               </Button>
             </Link>
-            <p className='text-sm mt-4'>
+            <p className='text-sm mt-4 font-exo font-semibold'>
               Proyecto de tesis de{' '}
-              <Link
+              <a
                 href='https://www.linkedin.com/in/jhangmez'
-                className='text-blue-600 hover:underline'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='underline hover:text-gray-100'
               >
                 @jhangmez
-              </Link>
+              </a>{' '}
+              para la{' '}
+              <a
+                href='https://www.linkedin.com/in/jhangmez'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='underline hover:text-gray-100'
+              >
+                Universidad Señor de Sipán
+              </a>
             </p>
           </div>
           <div className='w-full md:w-1/2 hidden md:block'>
