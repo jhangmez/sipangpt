@@ -13,13 +13,9 @@ declare module 'next-auth' {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  pages: {
-    error: '/error'
-  },
   providers: [
     Google({
       profile(profile) {
-        // console.log(profile)
         return {
           id: profile.sub,
           name: profile.name,
