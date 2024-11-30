@@ -22,7 +22,7 @@ export default function Home() {
       <main className='flex-grow flex items-center justify-center bg-gray-50'>
         <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 font-exo'>
           <h2 className='text-2xl md:text-3xl lg:text-4xl font-bold text-center text-gray-sipan'>
-            Pregunta lo que desees sobre la universidad Señor de Sipán
+            Pregunta lo que desees sobre la Universidad Señor de Sipán
           </h2>
         </div>
       </main>

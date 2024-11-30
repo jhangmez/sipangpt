@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,11 +11,57 @@ import {
 } from '@/components/ui/card'
 import { FcGoogle } from 'react-icons/fc'
 import Link from 'next/link'
+import { signIn, useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 
 export default function LoginRegister() {
   const [isLogin, setIsLogin] = useState(true)
+  const { data: session } = useSession()
+  const { status } = useSession()
+  const router = useRouter()
+  const isLoading = status === 'loading'
+
+  useEffect(() => {
+    // Si ya hay una sesión, redirigir según el rol
+    if (status === 'authenticated') {
+      if (session?.user?.role === 'admin') {
+        router.push('/admin/dashboard')
+      } else {
+        router.push('/chat')
+      }
+    }
+  }, [status, session, router])
 
   const toggleForm = () => setIsLogin(!isLogin)
+
+  const handleGoogleSignIn = async () => {
+    try {
+      // Intentar iniciar sesión con Google
+      const result = await signIn('google', {
+        redirect: false // Evita la redirección automática
+      })
+
+      // Si el inicio de sesión es exitoso, manejar manualmente la redirección
+      if (result?.ok) {
+        // Esperar un momento para que session se actualice
+        setTimeout(() => {
+          if (session?.user?.role === 'admin') {
+            router.push('/admin/dashboard')
+          } else {
+            router.push('/chat')
+          }
+        }, 500)
+      }
+    } catch (error) {
+      console.error('Error during sign in:', error)
+    }
+  }
+
+  // Si ya está autenticado, no mostrar el formulario
+  if (status === 'authenticated') {
+    return null
+  }
 
   return (
     <div className='min-h-screen flex flex-col sm:flex-row'>
@@ -65,25 +111,30 @@ export default function LoginRegister() {
         <Card className='w-full max-w-md font-exo'>
           <CardHeader>
             <CardTitle className='font-frances'>
-              {isLogin ? 'Iniciar sesión' : 'Registrarse'}
+              {isLoading ? (
+                <p>Redirigiendo...</p>
+              ) : isLogin ? (
+                'Iniciar sesión'
+              ) : (
+                'Registrarse'
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Button
               variant='outline'
               className='w-full'
-              asChild
-              onClick={() => {
-                /* Add Google sign-in logic here */
-              }}
+              disabled={isLoading}
+              onClick={handleGoogleSignIn}
             >
-              <Link href='/chat'>
-                {/* Quitar la redirección luego de añadir credenciales */}
-                <FcGoogle className='mr-2 h-4 w-4' />
-                {isLogin
-                  ? 'Iniciar sesión con Google'
-                  : 'Registrarse con Google'}
-              </Link>
+              <FcGoogle className='mr-2 h-4 w-4' />
+              {isLoading ? (
+                <Loader2 className='h-8 w-8 animate-spin text-primary' />
+              ) : isLogin ? (
+                'Iniciar sesión con Google'
+              ) : (
+                'Registrarse con Google'
+              )}
             </Button>
             <div className='mt-4 text-center text-sm'>
               Al {isLogin ? 'ingresar' : 'registrarte'} aceptas nuestros{' '}

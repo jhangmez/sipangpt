@@ -59,29 +59,6 @@ export default function EditUsernameForm({ setOpen }: EditUsernameFormProps) {
         <FormLabel>Tema</FormLabel>
         <ModeToggle />
       </div>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <FormField
-          control={form.control}
-          name='username'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre</FormLabel>
-              <FormControl>
-                <div className='md:flex gap-4 lg:space-y-0 space-y-4'>
-                  <Input
-                    {...field}
-                    type='text'
-                    value={name}
-                    onChange={(e) => handleChange(e)}
-                  />
-                  <Button type='submit'>Cambiar nombre</Button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </form>
     </Form>
   )
 }

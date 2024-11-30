@@ -1,12 +1,6 @@
 'use client'
 import * as React from 'react'
-import {
-  Asterisk,
-  BotMessageSquare,
-  Settings2,
-  ChartBar,
-  SquareTerminal
-} from 'lucide-react'
+import { Asterisk, BotMessageSquare, Settings2, ChartBar } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { NavMain } from '@Components/(private)/Sidebar/nav-main'
 import { NavProjects } from '@Components/(private)/Sidebar/nav-projects'
@@ -19,11 +13,12 @@ import {
   SidebarRail
 } from '@/components/ui/sidebar'
 import Link from 'next/link'
-// This is sample data.
+import { useSession } from 'next-auth/react'
+
 const data = {
   user: {
-    name: 'Jhan Gómez',
-    email: 'jhangmez.pe@gmail.com',
+    name: 'Administrador',
+    email: 'admin@admin.com',
     avatar: '/avatars/user_picture.webp'
   },
   navMain: [
@@ -74,12 +69,21 @@ const data = {
     {
       name: 'Ir al Chat',
       url: '/chat',
+      external: true,
       icon: BotMessageSquare
     }
   ]
 }
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { state } = useSidebar()
+  const { data: session } = useSession()
+  const user = {
+    ...data.user,
+    name: session?.user?.name ?? data.user.name,
+    email: session?.user?.email ?? data.user.email,
+    avatar: session?.user?.image ?? data.user.avatar
+  }
+
   return (
     <Sidebar collapsible='icon' {...props}>
       <SidebarHeader className='bg-primary'>
@@ -107,7 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

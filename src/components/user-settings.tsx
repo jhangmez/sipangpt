@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import {
   Dialog,
@@ -21,46 +22,19 @@ import {
   StarIcon,
   InfoCircledIcon,
   ChevronUpIcon,
-  CubeIcon
+  CubeIcon,
+  ExitIcon,
+  PersonIcon
 } from '@radix-ui/react-icons'
-import { useEffect, useState } from 'react'
-import { Skeleton } from './ui/skeleton'
+import { useState } from 'react'
 import EditUsernameForm from './edit-username-form'
 import { getModelInfo } from '@/lib/utils'
 import { INITIAL_MODELS } from '@/utils/initial-models'
+import { useSession } from 'next-auth/react'
 
 export default function UserSettings() {
-  const [name, setName] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: session } = useSession()
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const username = localStorage.getItem('ollama_user')
-      if (username) {
-        setName(username)
-        setIsLoading(false)
-      }
-    }
-
-    const fetchData = () => {
-      const username = localStorage.getItem('ollama_user')
-      if (username) {
-        setName(username)
-        setIsLoading(false)
-      }
-    }
-
-    // Initial fetch
-    fetchData()
-
-    // Listen for storage changes
-    window.addEventListener('storage', handleStorageChange)
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-    }
-  }, [])
 
   return (
     <DropdownMenu>
@@ -71,18 +45,24 @@ export default function UserSettings() {
         >
           <Avatar className='flex justify-start items-center overflow-hidden'>
             <AvatarImage
-              src=''
+              src={session?.user?.image ?? 'User'}
               alt='AI'
               width={4}
               height={4}
               className='object-contain'
             />
             <AvatarFallback className='font-exo'>
-              {name && name.substring(0, 2).toUpperCase()}
+              {session?.user?.name &&
+                session.user.name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className='text-xs truncate font-exo font-medium'>
-            {isLoading ? <Skeleton className='w-20 h-4' /> : name || 'Anónimo'}
+          <div className='grid flex-1 text-left text-sm leading-tight'>
+            <span className='truncate font-semibold'>
+              {session?.user?.name || 'Anónimo'}
+            </span>
+            <span className='truncate text-xs text-muted-foreground'>
+              {session?.user?.email}
+            </span>
           </div>
           <ChevronUpIcon className='ml-auto' />
         </Button>
@@ -256,6 +236,27 @@ export default function UserSettings() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
+        {session?.user?.role === 'admin' && (
+          <DropdownMenuItem asChild>
+            <Link href={'/admin/dashboard'}>
+              <div className='flex w-full gap-2 p-1 items-center cursor-pointer font-exo'>
+                <PersonIcon className='w-4 h-4' />
+                <p>Administrador</p>
+              </div>
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault()
+            signOut({ redirectTo: '/login' })
+          }}
+        >
+          <div className='flex w-full gap-2 p-1 items-center cursor-pointer font-exo text-error'>
+            <ExitIcon className='w-4 h-4' />
+            <p>Cerrar sesión</p>
+          </div>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

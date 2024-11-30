@@ -32,10 +32,7 @@ export default function RootLayout({
         />
       </head>
       <body className='bg-gray-100 dark:bg-background selection:bg-background selection:text-primary dark:selection:bg-primary dark:selection:text-background'>
-        <noscript>
-          Página realizada por Jhan Gómez P. @jhangmez, forked from
-          https://github.com/jakobhoeg/nextjs-ollama-llm-ui by @jakobhoeg
-        </noscript>
+        <noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
         <ThemeProvider
           attribute='class'
           defaultTheme='system'

@@ -17,6 +17,7 @@ import {
   useSidebar
 } from '@/components/ui/sidebar'
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 
 export function NavUser({
   user
@@ -81,7 +82,13 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              className='text-error'
+              onSelect={(e) => {
+                e.preventDefault()
+                signOut({ redirectTo: '/login' })
+              }}
+            >
               <LogOut />
               Cerrar Sesión
             </DropdownMenuItem>

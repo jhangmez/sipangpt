@@ -10,6 +10,8 @@ import {
   SidebarMenuItem,
   useSidebar
 } from '@/components/ui/sidebar'
+import Link from 'next/link'
+
 export function NavProjects({
   projects
 }: {
@@ -17,6 +19,7 @@ export function NavProjects({
     name: string
     url: string
     icon: LucideIcon
+    external?: boolean
   }[]
 }) {
   const { isMobile } = useSidebar()
@@ -27,11 +30,14 @@ export function NavProjects({
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url}>
+              <Link
+                href={item.url}
+                target={item.external ? '_blank' : undefined}
+              >
                 <item.icon />
                 <span>{item.name}</span>
                 <ExternalLink className='ml-auto' />
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
