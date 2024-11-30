@@ -138,13 +138,19 @@ export default function LoginRegister() {
             </Button>
             <div className='mt-4 text-center text-sm'>
               Al {isLogin ? 'ingresar' : 'registrarte'} aceptas nuestros{' '}
-              <a href='#' className='text-primary hover:underline'>
+              <Link
+                href='/terms#condiciones'
+                className='text-primary hover:underline'
+              >
                 Términos de uso
-              </a>{' '}
+              </Link>{' '}
               y{' '}
-              <a href='#' className='text-primary hover:underline'>
+              <Link
+                href='/terms#politica'
+                className='text-primary hover:underline'
+              >
                 Política de privacidad
-              </a>
+              </Link>
               .
             </div>
           </CardContent>
