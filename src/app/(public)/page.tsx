@@ -1,10 +1,10 @@
 import Header from '@Components/landing/Header'
-import Hero from '@Components/landing/Hero'
 import Footer from '@Components/landing/Footer'
+import Hero from '@Components/landing/Hero'
 
 export default function Home() {
   return (
-    <div className='flex flex-col min-h-screen'>
+    <main className='flex flex-col min-h-screen'>
       <Header />
       <Hero />
       <svg
@@ -41,6 +41,6 @@ export default function Home() {
         ></path>
       </svg>
       <Footer />
-    </div>
+    </main>
   )
 }

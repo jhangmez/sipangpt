@@ -10,11 +10,11 @@ export default function Footer() {
         <div className='flex flex-col sm:flex-row justify-between items-center font-exo text-sm text-gray-100'>
           <p>2024 Jhan Gómez P.</p>
           <p className='my-2 sm:my-0'>
-            <Link href='#' target='_blank' className='hover:underline'>
+            <Link href='/terms#condiciones' className='hover:underline'>
               Términos de uso
             </Link>{' '}
             &bull;{' '}
-            <Link href='#' target='_blank' className='hover:underline'>
+            <Link href='/terms#politica' className='hover:underline'>
               Política de privacidad
             </Link>
           </p>
