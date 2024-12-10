@@ -7,7 +7,53 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
+import RequestContador from '@root/src/components/(private)/contador'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+const feedbackData = [
+  {
+    email: 'usuario1@example.com',
+    feedback: 'Excelente servicio, muy satisfecho...',
+    puntuacion: 5
+  },
+  {
+    email: 'usuario2@example.com',
+    feedback: 'Bueno, pero podría mejorar en...',
+    puntuacion: 4
+  },
+  {
+    email: 'usuario3@example.com',
+    feedback: 'Tuve algunos problemas con...',
+    puntuacion: 3
+  },
+  {
+    email: 'usuario4@example.com',
+    feedback: 'No cumplió mis expectativas...',
+    puntuacion: 2
+  },
+  {
+    email: 'usuario5@example.com',
+    feedback: 'Muy insatisfecho con el servicio...',
+    puntuacion: 1
+  }
+]
+
+const sesionesRecientes = [
+  { status: 'active', avatar: '/avatar1.png', email: 'usuario1@example.com' },
+  { status: 'idle', avatar: '/avatar2.png', email: 'usuario2@example.com' },
+  { status: 'offline', avatar: '/avatar3.png', email: 'usuario3@example.com' },
+  { status: 'active', avatar: '/avatar4.png', email: 'usuario4@example.com' },
+  { status: 'idle', avatar: '/avatar5.png', email: 'usuario5@example.com' }
+]
 export default function Page() {
   return (
     <>
@@ -28,13 +74,88 @@ export default function Page() {
           </Breadcrumb>
         </div>
       </header>
-      <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
-        <div className='grid auto-rows-min gap-4 md:grid-cols-3'>
-          <div className='aspect-video rounded-xl bg-muted/50' />
-          <div className='aspect-video rounded-xl bg-muted/50' />
-          <div className='aspect-video rounded-xl bg-muted/50' />
+
+      <div
+        className='flex flex-1 flex-col gap-4 p-4 pt-0'
+        title='Resumen'
+        data-parent-title='Datos'
+        data-link='dashboard'
+      >
+        <h1 className='font-exo font-bold text-xl'>Hola este es dashboard</h1>
+        <RequestContador />
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle>Feedback en vivo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Correo electrónico</TableHead>
+                    <TableHead>Feedback</TableHead>
+                    <TableHead>Puntuación</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {feedbackData.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{item.email}</TableCell>
+                      <TableCell>{item.feedback.substring(0, 30)}...</TableCell>
+                      <TableCell>{item.puntuacion}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Sesiones recientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Correo electrónico</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sesionesRecientes.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <span
+                          className={`inline-block w-3 h-3 rounded-full ${
+                            item.status === 'active'
+                              ? 'bg-green-500 animate-pulse'
+                              : item.status === 'idle'
+                              ? 'bg-yellow-500'
+                              : 'bg-gray-500'
+                          }`}
+                        ></span>
+                      </TableCell>
+                      <TableCell>
+                        <Avatar>
+                          <AvatarImage
+                            src={item.avatar}
+                            alt={`Avatar de ${item.email}`}
+                          />
+                          <AvatarFallback>
+                            {item.email[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell>{item.email}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
-        <div className='min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min' />
       </div>
     </>
   )

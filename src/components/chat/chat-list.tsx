@@ -42,21 +42,32 @@ export default function ChatList({
   }, [])
 
   useEffect(() => {
-    // Fetch 4 initial questions
-    if (messages.length === 0) {
-      const questionCount = isMobile ? 2 : 4
+    const fetchPreguntas = async () => {
+      try {
+        const response = await fetch('/api/preguntas')
+        if (response.ok) {
+          const preguntas = await response.json()
+          const questionCount = isMobile ? 2 : 4
+          setInitialQuestions(
+            preguntas
+              .sort(() => Math.random() - 0.5)
+              .slice(0, questionCount)
+              .map((pregunta: any) => ({
+                id: pregunta.id.toString(),
+                role: 'user',
+                content: pregunta.contenido
+              }))
+          )
+        } else {
+          console.error('Error al obtener las preguntas')
+        }
+      } catch (error) {
+        console.error('Error al obtener las preguntas:', error)
+      }
+    }
 
-      setInitialQuestions(
-        INITIAL_QUESTIONS.sort(() => Math.random() - 0.5)
-          .slice(0, questionCount)
-          .map((message) => {
-            return {
-              id: '1',
-              role: 'user',
-              content: message.content
-            }
-          })
-      )
+    if (messages.length === 0) {
+      fetchPreguntas()
     }
   }, [isMobile, messages.length])
 
@@ -76,8 +87,6 @@ export default function ChatList({
       )
     }, 1)
   }
-
-  // messages.map((m) => console.log(m.experimental_attachments))
 
   if (messages.length === 0) {
     return (

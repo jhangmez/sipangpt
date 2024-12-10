@@ -8,7 +8,11 @@ import {
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
-export default function Page() {
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import PreguntasForm from '@Components/(private)/preguntas-form'
+import TablaPreguntas from '@Components/(private)/TablaPreguntas'
+
+export default async function Page() {
   return (
     <>
       <header className='flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12'>
@@ -18,7 +22,7 @@ export default function Page() {
           <Breadcrumb>
             <BreadcrumbList className='font-exo'>
               <BreadcrumbItem className='hidden md:block'>
-                <BreadcrumbLink href='/admin/dashboard'>
+                <BreadcrumbLink href='/admin/preguntas'>
                   Valores predefinidos
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -31,12 +35,15 @@ export default function Page() {
         </div>
       </header>
       <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
-        <div className='grid auto-rows-min gap-4 md:grid-cols-3'>
-          <div className='aspect-video rounded-xl bg-muted/50' />
-          <div className='aspect-video rounded-xl bg-muted/50' />
-          <div className='aspect-video rounded-xl bg-muted/50' />
-        </div>
-        <div className='min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min' />
+        <Card>
+          <CardHeader>
+            <CardTitle className='font-frances'>Cambiar Preguntas</CardTitle>
+          </CardHeader>
+          <CardContent className='grid gap-6'>
+            <PreguntasForm />
+            <TablaPreguntas />
+          </CardContent>
+        </Card>
       </div>
     </>
   )

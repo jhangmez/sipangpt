@@ -22,7 +22,6 @@ export default function TermsAndPrivacyPage() {
   return (
     <>
       <Header />
-
       <main className='container mx-auto py-8 px-4 font-exo relative'>
         <div className='fixed bottom-4 right-4 z-50'>
           <Button
