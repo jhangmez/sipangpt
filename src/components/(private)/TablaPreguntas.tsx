@@ -13,6 +13,7 @@ import { Button } from '@Components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { Skeleton } from '@Components/ui/skeleton'
 
 interface Pregunta {
   id: number
@@ -22,28 +23,18 @@ interface Pregunta {
   }
 }
 
-export default function TablaPreguntas() {
-  const [preguntas, setPreguntas] = useState<Pregunta[]>([])
+interface TablaPreguntasProps {
+  preguntas: Pregunta[]
+  refresh: boolean
+  setPreguntas: React.Dispatch<React.SetStateAction<Pregunta[]>>
+}
+
+export default function TablaPreguntas({
+  preguntas,
+  refresh,
+  setPreguntas
+}: TablaPreguntasProps) {
   const [loadingDelete, setLoadingDelete] = useState<number | null>(null)
-
-  const fetchPreguntas = async () => {
-    try {
-      const response = await fetch('/api/preguntas')
-      if (response.ok) {
-        const data = await response.json()
-        setPreguntas(data)
-      } else {
-        toast.error('Error al cargar las preguntas.')
-      }
-    } catch (error) {
-      console.error('Error al cargar las preguntas:', error)
-      toast.error('Error al cargar las preguntas.')
-    }
-  }
-
-  useEffect(() => {
-    fetchPreguntas()
-  }, [])
 
   async function handleEliminarPregunta(id: number) {
     setLoadingDelete(id)

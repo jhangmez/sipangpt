@@ -1,5 +1,4 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
@@ -11,41 +10,42 @@ import {
 } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import PreguntasForm from '@Components/(private)/preguntas-form'
-import TablaPreguntas from '@Components/(private)/TablaPreguntas'
+import PersonasForm from '@Components/(private)/personas-form'
+import TablaPersonas from '@Components/(private)/TablaPersonas'
+import { useState, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
-interface Pregunta {
-  id: number
-  contenido: string
-  creadoPor: {
-    name: string | null
-  }
+
+interface Persona {
+  id: string
+  email: string
+  name: string | null
+  role: string
 }
 export default function Page() {
   const [refresh, setRefresh] = useState(false)
-  const [preguntas, setPreguntas] = useState<Pregunta[]>([])
+  const [personas, setPersonas] = useState<Persona[]>([])
 
-  const handlePreguntaCreada = useCallback(() => {
+  const handlePersonaCreada = useCallback(() => {
     setRefresh(!refresh)
   }, [refresh])
 
-  const fetchPreguntas = async () => {
+  const fetchPersonas = async () => {
     try {
-      const response = await fetch('/api/preguntas')
+      const response = await fetch('/api/personas')
       if (response.ok) {
         const data = await response.json()
-        setPreguntas(data)
+        setPersonas(data)
       } else {
-        toast.error('Error al cargar las preguntas.')
+        toast.error('Error al cargar las personas.')
       }
     } catch (error) {
-      console.error('Error al cargar las preguntas:', error)
-      toast.error('Error al cargar las preguntas.')
+      console.error('Error al cargar las personas:', error)
+      toast.error('Error al cargar las personas.')
     }
   }
 
   useEffect(() => {
-    fetchPreguntas()
+    fetchPersonas()
   }, [refresh])
   return (
     <>
@@ -56,11 +56,11 @@ export default function Page() {
           <Breadcrumb>
             <BreadcrumbList className='font-exo'>
               <BreadcrumbItem className='hidden md:block'>
-                <BreadcrumbLink href='/admin/preguntas'>Gestión</BreadcrumbLink>
+                <BreadcrumbLink href='/admin/dashboard'>Gestión</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className='hidden md:block' />
               <BreadcrumbItem>
-                <BreadcrumbPage>Preguntas</BreadcrumbPage>
+                <BreadcrumbPage>Personas</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -69,14 +69,19 @@ export default function Page() {
       <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
         <Card>
           <CardHeader>
-            <CardTitle className='font-frances'>Cambiar Preguntas</CardTitle>
+            <CardTitle className='font-frances'>
+              Administrar Personas (Rol Admin)
+            </CardTitle>
           </CardHeader>
           <CardContent className='grid gap-6'>
-            <PreguntasForm onPreguntaCreada={handlePreguntaCreada} />
-            <TablaPreguntas
-              preguntas={preguntas}
+            <PersonasForm
+              onPersonaCreada={handlePersonaCreada}
+              personas={personas}
+            />
+            <TablaPersonas
+              personas={personas}
               refresh={refresh}
-              setPreguntas={setPreguntas}
+              setPersonas={setPersonas}
             />
           </CardContent>
         </Card>

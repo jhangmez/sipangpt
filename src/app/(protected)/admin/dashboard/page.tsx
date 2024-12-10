@@ -7,7 +7,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
-import RequestContador from '@root/src/components/(private)/contador'
 import {
   Table,
   TableBody,
@@ -19,6 +18,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import SesionesActivas from '@Components/(private)/SesionesActivas'
+
 const feedbackData = [
   {
     email: 'usuario1@example.com',
@@ -47,13 +48,6 @@ const feedbackData = [
   }
 ]
 
-const sesionesRecientes = [
-  { status: 'active', avatar: '/avatar1.png', email: 'usuario1@example.com' },
-  { status: 'idle', avatar: '/avatar2.png', email: 'usuario2@example.com' },
-  { status: 'offline', avatar: '/avatar3.png', email: 'usuario3@example.com' },
-  { status: 'active', avatar: '/avatar4.png', email: 'usuario4@example.com' },
-  { status: 'idle', avatar: '/avatar5.png', email: 'usuario5@example.com' }
-]
 export default function Page() {
   return (
     <>
@@ -81,8 +75,8 @@ export default function Page() {
         data-parent-title='Datos'
         data-link='dashboard'
       >
-        <h1 className='font-exo font-bold text-xl'>Hola este es dashboard</h1>
-        <RequestContador />
+        <h1 className='font-exo font-bold text-xl'>Dashboard</h1>
+
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
           <Card>
             <CardHeader>
@@ -110,51 +104,7 @@ export default function Page() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Sesiones recientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Correo electrónico</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sesionesRecientes.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <span
-                          className={`inline-block w-3 h-3 rounded-full ${
-                            item.status === 'active'
-                              ? 'bg-green-500 animate-pulse'
-                              : item.status === 'idle'
-                              ? 'bg-yellow-500'
-                              : 'bg-gray-500'
-                          }`}
-                        ></span>
-                      </TableCell>
-                      <TableCell>
-                        <Avatar>
-                          <AvatarImage
-                            src={item.avatar}
-                            alt={`Avatar de ${item.email}`}
-                          />
-                          <AvatarFallback>
-                            {item.email[0].toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TableCell>
-                      <TableCell>{item.email}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <SesionesActivas />
         </div>
       </div>
     </>

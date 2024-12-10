@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -16,7 +16,7 @@ import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+import { Skeleton } from '@Components/ui/skeleton'
 
 const formSchema = z.object({
   contenido: z
@@ -29,12 +29,16 @@ const formSchema = z.object({
     })
 })
 
-export default function PreguntasForm() {
+interface PreguntasFormProps {
+  onPreguntaCreada: () => void
+}
+
+export default function PreguntasForm({
+  onPreguntaCreada
+}: PreguntasFormProps) {
   const { data: session } = useSession()
   const [preguntaCount, setPreguntaCount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const router = useRouter()
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -89,7 +93,7 @@ export default function PreguntasForm() {
         toast.success('Pregunta creada correctamente.')
         form.reset()
         setPreguntaCount(preguntaCount + 1)
-        router.refresh()
+        onPreguntaCreada()
       } else {
         toast.error('Hubo un problema al crear la pregunta.')
       }
@@ -108,7 +112,7 @@ export default function PreguntasForm() {
           name='contenido'
           render={({ field }) => (
             <FormItem>
-              <FormLabel className='text-lg'>Pregunta</FormLabel>
+              <FormLabel className='text-lg font-frances'>Pregunta</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder='Escribe tu pregunta aquí (máximo 200 caracteres)...'
@@ -122,7 +126,7 @@ export default function PreguntasForm() {
         />
         <Button
           type='submit'
-          className='w-full sm:w-auto'
+          className='w-full sm:w-auto font-exo font-semibold'
           disabled={preguntaCount >= 8 || isSubmitting}
         >
           {isSubmitting ? (

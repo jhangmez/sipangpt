@@ -43,13 +43,17 @@ const data = {
       ]
     },
     {
-      title: 'Valores predefinidos',
+      title: 'Gestión',
       url: '#',
       icon: Asterisk,
       items: [
         {
           title: 'Preguntas',
           url: '/admin/preguntas'
+        },
+        {
+          title: 'Personas',
+          url: '/admin/personas'
         }
       ]
     },

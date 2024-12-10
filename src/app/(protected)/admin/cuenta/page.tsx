@@ -1,3 +1,4 @@
+import { auth } from '@root/auth'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
@@ -7,8 +8,28 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-export default function Page() {
+import TablaSesiones from '@Components/(private)/TablaSesiones'
+import PerfilUsuario from '@Components/(private)/PerfilUsuario'
+
+export default async function Page() {
+  const session = await auth()
+
+  if (!session || !session.user) {
+    return (
+      <div className='flex flex-col gap-4 p-4 pt-0'>
+        <p>No has iniciado sesión.</p>
+      </div>
+    )
+  }
+
   return (
     <>
       <header className='flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12'>
@@ -28,13 +49,31 @@ export default function Page() {
           </Breadcrumb>
         </div>
       </header>
-      <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
-        <div className='grid auto-rows-min gap-4 md:grid-cols-3'>
-          <div className='aspect-video rounded-xl bg-muted/50' />
-          <div className='aspect-video rounded-xl bg-muted/50' />
-          <div className='aspect-video rounded-xl bg-muted/50' />
-        </div>
-        <div className='min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min' />
+      <div className='flex flex-col gap-4 p-4 pt-0'>
+        <Card className='md:max-w-lg'>
+          <CardHeader>
+            <CardTitle className='font-frances text-2xl'>Tu Perfil</CardTitle>
+            <CardDescription>
+              Aquí puedes ver y editar tu información.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PerfilUsuario session={session} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className='font-frances text-2xl'>
+              Tus Sesiones
+            </CardTitle>
+            <CardDescription>
+              Aquí puedes ver y cerrar tus sesiones activas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TablaSesiones session={session} />
+          </CardContent>
+        </Card>
       </div>
     </>
   )

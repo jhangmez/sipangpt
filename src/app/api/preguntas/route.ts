@@ -36,7 +36,6 @@ export async function POST(req: Request) {
   }
 }
 
-// Asegúrate de que la ruta para obtener las preguntas siga siendo GET
 export async function GET() {
   try {
     const preguntas = await prisma.pregunta.findMany({
