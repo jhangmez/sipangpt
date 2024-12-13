@@ -57,7 +57,7 @@ export function FeedbackModal({
   isOpen,
   setIsOpen
 }: FeedbackModalProps) {
-  const [rating, setRating] = useState(0)
+  const [rating, setRating] = useState<number>(0) // Inicializa rating como 0 o undefined
   const [feedbackText, setFeedbackText] = useState('')
   const [consent, setConsent] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -70,10 +70,7 @@ export function FeedbackModal({
   }
 
   const handleSubmit = async () => {
-    if (rating === 0) {
-      toast.error('Por favor, selecciona una puntuación.')
-      return
-    }
+    // No es necesario validar aquí, ya que el botón está deshabilitado si rating es 0
 
     setIsSubmitting(true)
 
@@ -122,9 +119,9 @@ export function FeedbackModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className='sm:max-w-[425px] max-h-[80vh] overflow-y-auto'>
+      <DialogContent className='sm:max-w-[425px] max-h-[80vh] overflow-y-auto font-exo'>
         <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogTitle className='font-frances'>{dialogTitle}</DialogTitle>
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
@@ -137,11 +134,15 @@ export function FeedbackModal({
             defaultValue='item-1'
           >
             <AccordionItem value='item-1'>
-              <AccordionTrigger>Pregunta</AccordionTrigger>
+              <AccordionTrigger className='font-frances'>
+                Pregunta
+              </AccordionTrigger>
               <AccordionContent>{userQuestion}</AccordionContent>
             </AccordionItem>
             <AccordionItem value='item-2'>
-              <AccordionTrigger>Respuesta</AccordionTrigger>
+              <AccordionTrigger className='font-frances'>
+                Respuesta
+              </AccordionTrigger>
               <AccordionContent>{assistantResponse}</AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -171,7 +172,7 @@ export function FeedbackModal({
         {/* Feedback y consentimiento */}
         <div className='grid gap-2 py-4'>
           <Label htmlFor='feedback'>
-            Feedback <span className='text-xs'>&#40;opcional&#41;</span>
+            Feedback <span className='text-xs'>(opcional)</span>
           </Label>
           <Textarea
             id='feedback'
@@ -185,7 +186,7 @@ export function FeedbackModal({
           <Switch id='consent' checked={consent} onCheckedChange={setConsent} />
           <Label htmlFor='consent'>
             Permito usar mi correo para una posterior encuesta{' '}
-            <span className='text-xs'>&#40;opcional&#41;</span>.
+            <span className='text-xs'>(opcional)</span>.
           </Label>
         </div>
 
@@ -194,7 +195,11 @@ export function FeedbackModal({
           <Button variant='outline' onClick={() => setIsOpen(false)}>
             Cancelar
           </Button>
-          <Button type='submit' onClick={handleSubmit} disabled={isSubmitting}>
+          <Button
+            type='submit'
+            onClick={handleSubmit}
+            disabled={isSubmitting || rating === 0} // Deshabilita si está enviando o si no hay rating
+          >
             {isSubmitting ? 'Enviando...' : 'Enviar'}
           </Button>
         </DialogFooter>

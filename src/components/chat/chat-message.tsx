@@ -192,7 +192,6 @@ function ChatMessage({
                   <p>Respuesta adecuada</p>
                 </TooltipContent>
               </Tooltip>
-
               <Tooltip>
                 <TooltipTrigger>
                   <Button
