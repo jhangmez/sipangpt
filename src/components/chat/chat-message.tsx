@@ -1,9 +1,13 @@
 // components/chat/chat-message.tsx
-import React from 'react'
+import React, { useState } from 'react'
 import { memo } from 'react'
 import { Message } from 'ai'
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import {
+  FeedbackModal,
+  FeedbackData
+} from '@Components/(private)/feedback-modal'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import CodeDisplayBlock from '../code-display-block'
@@ -14,7 +18,6 @@ import { Button } from '../ui/button'
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import {
@@ -24,6 +27,7 @@ import {
   CheckCircledIcon,
   CrossCircledIcon
 } from '@radix-ui/react-icons'
+import { useSession } from 'next-auth/react'
 
 interface ChatMessageProps {
   message: Message
@@ -32,6 +36,7 @@ interface ChatMessageProps {
   isLoading: boolean
   name: string
   messagesLength: number
+  messages: Message[]
 }
 
 function ChatMessage({
@@ -40,7 +45,8 @@ function ChatMessage({
   isLast,
   isLoading,
   name,
-  messagesLength
+  messagesLength,
+  messages
 }: ChatMessageProps) {
   const [isCopied, setisCopied] = React.useState(false)
   const copyToClipboard = () => {
@@ -50,6 +56,28 @@ function ChatMessage({
     setTimeout(() => {
       setisCopied(false)
     }, 1500)
+  }
+  const { data: session } = useSession()
+
+  const [feedbackType, setFeedbackType] = useState<
+    'Adecuada' | 'Inadecuada' | null
+  >(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const handleFeedbackSubmit = async (feedbackData: FeedbackData) => {
+    console.log('Feedback submitted:', feedbackData)
+    // Lógica para guardar el feedback
+  }
+
+  // Define userQuestion aquí, dentro del ámbito de la función ChatMessage
+  const userQuestion =
+    messages
+      .slice(0, index)
+      .reverse()
+      .find((m) => m.role === 'user')?.content || 'Pregunta del usuario'
+
+  const handleOpenModal = (type: 'Adecuada' | 'Inadecuada') => {
+    setFeedbackType(type)
+    setIsModalOpen(true)
   }
   return (
     <motion.div
@@ -94,14 +122,15 @@ function ChatMessage({
             </div>
             <Avatar className='flex justify-start items-center overflow-hidden'>
               <AvatarImage
-                src='/'
-                alt='user'
-                width={6}
-                height={6}
+                src={session?.user?.image ?? 'User'}
+                alt='AI'
+                width={4}
+                height={4}
                 className='object-contain'
               />
-              <AvatarFallback>
-                {name && name.substring(0, 2).toUpperCase()}
+              <AvatarFallback className='font-exo'>
+                {session?.user?.name &&
+                  session.user.name.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -150,24 +179,44 @@ function ChatMessage({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger>
-                  <Button variant='ghost' size='icon' className='self-end mt-2'>
-                    <CheckCircledIcon className='w-2 h-2 scale-100 transition-all' />
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='self-end mt-2'
+                    onClick={() => handleOpenModal('Adecuada')}
+                  >
+                    <CheckCircledIcon className='w-4 h-4' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Respuesta adecuada</p>
                 </TooltipContent>
               </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger>
-                  <Button variant='ghost' size='icon' className='self-end mt-2'>
-                    <CrossCircledIcon className='w-2 h-2 scale-100 transition-all' />
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='self-end mt-2'
+                    onClick={() => handleOpenModal('Inadecuada')}
+                  >
+                    <CrossCircledIcon className='w-4 h-4' />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Respuesta inadecuada</p>
                 </TooltipContent>
               </Tooltip>
+              <FeedbackModal
+                message={message}
+                userQuestion={userQuestion}
+                onFeedbackSubmit={handleFeedbackSubmit}
+                feedbackType={feedbackType}
+                setFeedbackType={setFeedbackType}
+                isOpen={isModalOpen}
+                setIsOpen={setIsModalOpen}
+              />
               <Tooltip>
                 <TooltipTrigger>
                   <Button

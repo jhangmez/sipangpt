@@ -16,7 +16,6 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import SesionesActivas from '@Components/(private)/SesionesActivas'
 

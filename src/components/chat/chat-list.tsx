@@ -164,6 +164,7 @@ export default function ChatList({
             isLoading={isLoading}
             name={name}
             messagesLength={messages.length}
+            messages={messages}
           />
         ))}
         {loadingSubmit && (
