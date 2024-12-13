@@ -146,96 +146,97 @@ function ChatMessage({
                 className='object-contain dark:invert'
               />
             </Avatar>
-            <span className='bg-accent p-3 rounded-md max-w-xs sm:max-w-2xl overflow-x-auto font-exo'>
-              {message.content.split('```').map((part, index) => {
-                if (index % 2 === 0) {
-                  return (
-                    <Markdown key={index} remarkPlugins={[remarkGfm]}>
-                      {part}
-                    </Markdown>
-                  )
-                } else {
-                  return (
-                    <pre className='whitespace-pre-wrap' key={index}>
-                      <CodeDisplayBlock code={part} lang='' />
-                    </pre>
-                  )
-                }
-              })}
-              {isLoading && isLast && (
-                <span className='animate-pulse' aria-label='Typing'>
-                  ...
-                </span>
-              )}
-              <Tooltip>
-                <TooltipTrigger>
-                  <Button variant='ghost' size='icon' className='self-end mt-2'>
-                    <ReloadIcon className='w-2 h-2 scale-100 transition-all' />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Regenerar</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='self-end mt-2'
-                    onClick={() => handleOpenModal('Adecuada')}
-                  >
-                    <CheckCircledIcon className='w-4 h-4' />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Respuesta adecuada</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='self-end mt-2'
-                    onClick={() => handleOpenModal('Inadecuada')}
-                  >
-                    <CrossCircledIcon className='w-4 h-4' />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Respuesta inadecuada</p>
-                </TooltipContent>
-              </Tooltip>
-              <FeedbackModal
-                message={message}
-                userQuestion={userQuestion}
-                onFeedbackSubmit={handleFeedbackSubmit}
-                feedbackType={feedbackType}
-                setFeedbackType={setFeedbackType}
-                isOpen={isModalOpen}
-                setIsOpen={setIsModalOpen}
-              />
-              <Tooltip>
-                <TooltipTrigger>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    className='self-end mt-2'
-                    onClick={copyToClipboard}
-                  >
-                    {isCopied ? (
-                      <CheckIcon className='w-2 h-2 scale-100 transition-all' />
-                    ) : (
-                      <CopyIcon className='w-2 h-2 scale-100 transition-all' />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Copiar</p>
-                </TooltipContent>
-              </Tooltip>
-            </span>
+            <section className='bg-accent p-3 rounded-md max-w-xs sm:max-w-2xl overflow-x-auto font-exo'>
+              <div className='flex flex-wrap items-end'>
+                {message.content.split('```').map((part, index) => {
+                  if (index % 2 === 0) {
+                    return (
+                      <Markdown
+                        className='w-fit'
+                        key={index}
+                        remarkPlugins={[remarkGfm]}
+                      >
+                        {part}
+                      </Markdown>
+                    )
+                  } else {
+                    return (
+                      <pre className='w-fit whitespace-pre-wrap' key={index}>
+                        <CodeDisplayBlock code={part} lang='' />
+                      </pre>
+                    )
+                  }
+                })}
+                {isLoading && isLast && (
+                  <div className='flex items-center justify-end px-1.5 py-1'>
+                    <div className='animate-pulse w-4 h-4 rounded-full bg-primary flex items-center justify-center mr-2'></div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Button
+                      disabled={isLoading}
+                      variant='ghost'
+                      size='icon'
+                      className='self-end mt-2'
+                      onClick={() => handleOpenModal('Adecuada')}
+                    >
+                      <CheckCircledIcon className='w-4 h-4' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Respuesta adecuada</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Button
+                      variant='ghost'
+                      disabled={isLoading}
+                      size='icon'
+                      className='self-end mt-2'
+                      onClick={() => handleOpenModal('Inadecuada')}
+                    >
+                      <CrossCircledIcon className='w-4 h-4' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Respuesta inadecuada</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Button
+                      disabled={isLoading}
+                      variant='ghost'
+                      size='icon'
+                      className='self-end mt-2'
+                      onClick={copyToClipboard}
+                    >
+                      {isCopied ? (
+                        <CheckIcon className='w-2 h-2 scale-100 transition-all' />
+                      ) : (
+                        <CopyIcon className='w-2 h-2 scale-100 transition-all' />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copiar</p>
+                  </TooltipContent>
+                </Tooltip>
+                <FeedbackModal
+                  message={message}
+                  userQuestion={userQuestion}
+                  onFeedbackSubmit={handleFeedbackSubmit}
+                  feedbackType={feedbackType}
+                  setFeedbackType={setFeedbackType}
+                  isOpen={isModalOpen}
+                  setIsOpen={setIsModalOpen}
+                />
+              </div>
+            </section>
           </div>
         )}
       </div>
