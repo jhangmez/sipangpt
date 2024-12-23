@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { ChatRequestOptions } from 'ai'
+import { ChatRequestOptions, ChatRequest } from 'ai'
 import { Message, useChat } from 'ai/react'
 import { ChatOllama } from '@langchain/ollama'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
@@ -38,7 +38,10 @@ export function ChatContainer({
     },
     onError: (error) => {
       setLoadingSubmit(false)
-      toast.error(`Ha ocurrido un error:${error}`)
+      // toast.error(`Ha ocurrido un error:${error}`)
+      toast.error(
+        `Nuestros servidores están saturados. Por favor, inténtelo nuevamente`
+      )
     },
     experimental_throttle: 100
   })
@@ -156,10 +159,8 @@ export function ChatContainer({
     setMessages([...messages])
 
     const requestOptions: ChatRequestOptions = {
-      options: {
-        body: {
-          selectedModel: selectedModel
-        }
+      body: {
+        selectedModel: selectedModel
       }
     }
 

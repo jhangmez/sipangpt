@@ -1,10 +1,16 @@
+// app/api/chat/route.ts
 import { createOllama } from 'ollama-ai-provider'
-import { streamText, convertToCoreMessages, UserContent } from 'ai'
+import {
+  streamText,
+  convertToCoreMessages,
+  UserContent,
+  type Message
+} from 'ai'
 import { codeBlock } from 'common-tags'
 import { auth } from '@root/auth'
 import { prisma } from '@/prisma'
 
-export const runtime = 'edge'
+// export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
@@ -26,6 +32,7 @@ export async function POST(req: Request) {
   const messageContent: UserContent = [
     { type: 'text', text: currentMessage.content }
   ]
+
   try {
     const user = await prisma.user.findUnique({
       where: {
@@ -34,6 +41,13 @@ export async function POST(req: Request) {
     })
 
     if (!user) {
+      await prisma.requestLog.create({
+        data: {
+          status: 404,
+          userId: session.user.id,
+          messageId: null // No hay messageId en un error
+        }
+      })
       return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
@@ -51,8 +65,26 @@ Si no tienes información suficiente para una consulta, responde de manera trans
       abortSignal: AbortSignal.timeout(80000)
     })
 
+    // Registrar la petición exitosa
+    await prisma.requestLog.create({
+      data: {
+        status: 200,
+        userId: session.user.id,
+        messageId: currentMessage.id // Incluir el ID del mensaje actual
+      }
+    })
+
     return result.toDataStreamResponse()
   } catch (error) {
+    // Registrar la petición fallida
+    await prisma.requestLog.create({
+      data: {
+        status: 408,
+        userId: session.user.id,
+        messageId: null // No hay messageId en un error
+      }
+    })
+
     return new Response(
       `Nuestros servidores están saturados. Por favor, inténtelo nuevamente.`,
       {

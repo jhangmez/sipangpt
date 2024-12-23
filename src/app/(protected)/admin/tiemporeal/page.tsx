@@ -7,6 +7,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
+import { RequestChart } from '@root/src/components/(private)/requestChart'
 import { Separator } from '@/components/ui/separator'
 export default function Page() {
   return (
@@ -28,13 +29,11 @@ export default function Page() {
           </Breadcrumb>
         </div>
       </header>
-      <div
-        className='flex flex-1 flex-col gap-4 p-4 pt-0'
-        title='Preguntas'
-        data-parent-title='Valores predefinidos'
-        data-link='preguntas'
-      >
-        <h1 className='font-exo font-bold text-xl'>Hola este es tiempo real</h1>
+      <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
+        <h1 className='font-frances text-2xl font-bold'>Tiempo real</h1>
+        <div className='grid grid-cols-1 gap-6'>
+          <RequestChart />
+        </div>
       </div>
     </>
   )

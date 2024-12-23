@@ -23,6 +23,7 @@ model User {
   accounts      Account[]
   createdBy     Pregunta[]
   feedback     Feedback[]
+  requestLog     RequestLog[]
   Authenticator Authenticator[]
   sessions      Session[]
 }
@@ -95,4 +96,13 @@ model Feedback {
   messageIndex Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model RequestLog {
+  id        String    @id @default(cuid())
+  messageId String? // ID del mensaje (nulo para peticiones fallidas)
+  userId    String? // ID del usuario
+  status    Int
+  timestamp DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id]) // Relación con User
 }
