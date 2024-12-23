@@ -1,6 +1,7 @@
 import './globals.css'
 import { ThemeProvider } from './providers'
 import { Toaster } from '@/components/ui/sonner'
+import { fontExo2, fontFraunces } from './fonts'
 
 export const viewport = {
   width: 'device-width',
@@ -15,7 +16,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='es' suppressHydrationWarning>
+    <html
+      lang='es'
+      suppressHydrationWarning
+      className={`${fontExo2.variable} ${fontFraunces.variable}`}
+    >
       <head>
         <meta charSet='UTF-8' />
         <meta name='description' content='SipánGPT Chatbot' />

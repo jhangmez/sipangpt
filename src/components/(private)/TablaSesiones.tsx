@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Session, Account } from 'next-auth'
+import { Session } from 'next-auth'
 import {
   Table,
   TableBody,
@@ -21,9 +21,9 @@ import Cookies from 'js-cookie'
 interface Sesion {
   sessionToken: string
   userId: string
-  expires: Date
-  createdAt: Date
-  updatedAt: Date
+  expires: string
+  createdAt: string
+  updatedAt: string
   user: {
     email: string
   }
@@ -36,12 +36,14 @@ interface TablaSesionesProps {
 export default function TablaSesiones({ session }: TablaSesionesProps) {
   const [sesiones, setSesiones] = useState<Sesion[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null) // Estado para manejar errores
   const [loadingCerrarSesion, setLoadingCerrarSesion] = useState<string | null>(
     null
   )
 
   const fetchSesiones = async () => {
-    setIsLoading(true) // Activa el indicador de carga
+    setIsLoading(true)
+    setError(null) // Reiniciar el error
     try {
       const response = await fetch('/api/sesiones')
       if (response.ok) {
@@ -51,13 +53,17 @@ export default function TablaSesiones({ session }: TablaSesionesProps) {
         )
         setSesiones(sesionesUsuario)
       } else {
-        toast.error('Error al cargar las sesiones.')
+        const errorData = await response.json()
+        const errorMessage = errorData.error || 'Error al cargar las sesiones.'
+        setError(errorMessage)
+        toast.error(errorMessage)
       }
     } catch (error) {
       console.error('Error al cargar las sesiones:', error)
-      toast.error('Error al cargar las sesiones.')
+      setError('Error al cargar las sesiones. Inténtalo de nuevo más tarde.')
+      toast.error('Error al cargar las sesiones. Inténtalo de nuevo más tarde.')
     } finally {
-      setIsLoading(false) // Desactiva el indicador de carga
+      setIsLoading(false)
     }
   }
 
@@ -77,18 +83,21 @@ export default function TablaSesiones({ session }: TablaSesionesProps) {
           sesiones.filter((sesion) => sesion.sessionToken !== sessionToken)
         )
       } else {
-        toast.error('Error al cerrar la sesión.')
+        const errorData = await response.json()
+        const errorMessage = errorData.error || 'Error al cerrar la sesión.'
+        toast.error(errorMessage)
       }
     } catch (error) {
       console.error('Error al cerrar la sesión:', error)
-      toast.error('Error al cerrar la sesión.')
+      toast.error('Error al cerrar la sesión. Inténtalo de nuevo.')
     } finally {
       setLoadingCerrarSesion(null)
     }
   }
 
-  const formatDateTime = (date: Date) => {
-    return format(date, 'dd MMM yyyy, HH:mm', { locale: es })
+  // Formato de fecha (modificado para aceptar strings)
+  const formatDateTime = (dateString: string) => {
+    return format(new Date(dateString), 'dd MMM yyyy, HH:mm', { locale: es })
   }
 
   const currentSessionToken =
@@ -109,7 +118,6 @@ export default function TablaSesiones({ session }: TablaSesionesProps) {
       </TableHeader>
       <TableBody>
         {isLoading ? (
-          // Indicador de carga
           <TableRow>
             <TableCell colSpan={4}>
               <div className='flex items-center space-x-2'>
@@ -120,6 +128,12 @@ export default function TablaSesiones({ session }: TablaSesionesProps) {
               </div>
             </TableCell>
           </TableRow>
+        ) : error ? (
+          <TableRow>
+            <TableCell colSpan={4} className='text-center text-red-500'>
+              {error}
+            </TableCell>
+          </TableRow>
         ) : sesiones.length > 0 ? (
           sesiones.map((sesion) => (
             <TableRow key={sesion.sessionToken}>
@@ -127,7 +141,6 @@ export default function TablaSesiones({ session }: TablaSesionesProps) {
               <TableCell>{formatDateTime(sesion.expires)}</TableCell>
               <TableCell>{formatDateTime(sesion.createdAt)}</TableCell>
               <TableCell className='text-right'>
-                {/* Condición para deshabilitar el botón */}
                 {sesion.sessionToken !== currentSessionToken && (
                   <Button
                     variant='ghost'

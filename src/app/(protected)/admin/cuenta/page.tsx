@@ -50,7 +50,7 @@ export default async function Page() {
         </div>
       </header>
       <div className='flex flex-col gap-4 p-4 pt-0'>
-        <Card className='md:max-w-lg'>
+        <Card className=' w-full'>
           <CardHeader>
             <CardTitle className='font-frances text-2xl'>Tu Perfil</CardTitle>
             <CardDescription>

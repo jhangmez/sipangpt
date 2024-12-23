@@ -72,8 +72,8 @@ const config: Config = {
         }
       },
       fontFamily: {
-        exo: ['"Exo 2"', 'system-ui'],
-        frances: ['"Fraunces"', 'system-ui']
+        exo: ['var(--font-exo)'],
+        frances: ['var(--font-frances)']
       },
       borderRadius: {
         lg: 'var(--radius)',
