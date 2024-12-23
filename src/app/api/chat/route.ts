@@ -1,11 +1,19 @@
 import { createOllama } from 'ollama-ai-provider'
 import { streamText, convertToCoreMessages, UserContent } from 'ai'
 import { codeBlock } from 'common-tags'
+import { auth } from '@root/auth'
+import { prisma } from '@/prisma'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
+  const session = await auth()
+
+  if (!session || !session.user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   // Destructure request data
   const { messages, selectedModel } = await req.json()
 
@@ -19,6 +27,16 @@ export async function POST(req: Request) {
     { type: 'text', text: currentMessage.content }
   ]
   try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: session.user.id
+      }
+    })
+
+    if (!user) {
+      return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
     // Stream text using the ollama model
     const result = await streamText({
       system: codeBlock`Eres SipánGPT, el asistente virtual oficial de la Universidad Señor de Sipán (USS), ubicada en Chiclayo, Perú. Tu función principal es asistir a administrativos, estudiantes, docentes y público en general con información académica, administrativa e institucional.
@@ -28,34 +46,9 @@ Si no tienes información suficiente para una consulta, responde de manera trans
       model: ollama(selectedModel),
       messages: [
         ...convertToCoreMessages(initialMessages),
-        // { role: 'user', content: messageContent.slice(-maxMessageContext) }
         { role: 'user', content: messageContent }
       ],
       abortSignal: AbortSignal.timeout(80000)
-      // onFinish({ text, finishReason, usage, response }) {
-      //   // your own logic, e.g. for saving the chat history or recording usage
-      //   console.log(response)
-      //   console.log(
-      //     JSON.stringify(
-      //       {
-      //         model: selectedModel,
-      //         id_usuario: null,
-      //         id_mensaje: response.id,
-      //         mensaje_usuario: currentMessage.content,
-      //         respuesta: text,
-      //         puntuación: null,
-      //         feedback: null,
-      //         finishReason: finishReason,
-      //         promptTokens: usage.promptTokens,
-      //         completionTokens: usage.completionTokens,
-      //         time: response.timestamp
-      //       },
-      //       null,
-      //       2
-      //     )
-      //   )
-      // }
-      // maxTokens: 2800
     })
 
     return result.toDataStreamResponse()

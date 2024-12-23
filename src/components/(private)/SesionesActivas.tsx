@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Card,
   CardContent,
@@ -19,13 +19,14 @@ import {
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface Session {
   sessionToken: string
   userId: string
-  expires: Date
-  createdAt: Date
-  updatedAt: Date
+  expires: string // Cambia a string para evitar la conversión a Date en el componente
+  createdAt: string // Cambia a string para evitar la conversión a Date en el componente
+  updatedAt: string // Cambia a string para evitar la conversión a Date en el componente
   user: {
     email: string
   }
@@ -34,13 +35,34 @@ interface Session {
 export default function SesionesActivas() {
   const [sesiones, setSesiones] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const latestSessionUpdate = useRef<number | null>(null)
 
   const fetchSesiones = async () => {
+    // No mostrar el skeleton si ya hay datos
+    if (sesiones.length === 0) {
+      setIsLoading(true)
+    }
     try {
       const response = await fetch('/api/sesiones')
       if (response.ok) {
         const data = await response.json()
-        setSesiones(data)
+
+        // Convertir las fechas a timestamps numéricos para la comparación
+        const dataWithTimestamps = data.map((session: Session) => ({
+          ...session,
+          updatedAtTimestamp: new Date(session.updatedAt).getTime()
+        }))
+
+        // Si es la primera carga, o si hay nuevas sesiones, actualiza el estado
+        if (
+          sesiones.length === 0 ||
+          dataWithTimestamps[0]?.updatedAtTimestamp !==
+            latestSessionUpdate.current
+        ) {
+          setSesiones(data)
+          latestSessionUpdate.current =
+            dataWithTimestamps[0]?.updatedAtTimestamp
+        }
       } else {
         toast.error('Error al cargar las sesiones.')
       }
@@ -62,7 +84,9 @@ export default function SesionesActivas() {
     return () => clearInterval(intervalId)
   }, [])
 
-  const formatDateTime = (date: Date) => {
+  // Función para formatear la fecha solo para la visualización
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString)
     return format(date, 'dd MMM yyyy, HH:mm', { locale: es })
   }
 
@@ -73,7 +97,12 @@ export default function SesionesActivas() {
           Sesiones activas ahora
         </CardTitle>
         <CardDescription className='font-exo'>
-          Usuarios activos: {sesiones.length}
+          Usuarios activos:{' '}
+          {isLoading && sesiones.length === 0
+            ? 'Cargando...'
+            : !isLoading && sesiones.length === 0
+            ? 'No hay usuarios activos'
+            : sesiones.length}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,10 +116,12 @@ export default function SesionesActivas() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {isLoading && sesiones.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className='text-center'>
-                  Cargando...
+                <TableCell colSpan={4}>
+                  <div className='flex items-center gap-2'>
+                    <Skeleton className='h-4 w-full' />
+                  </div>
                 </TableCell>
               </TableRow>
             ) : sesiones.length > 0 ? (

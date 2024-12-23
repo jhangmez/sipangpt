@@ -22,15 +22,16 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion'
+import { useSession } from 'next-auth/react'
 
 interface FeedbackModalProps {
   message: Message
   userQuestion: string
-  onFeedbackSubmit: (data: FeedbackData) => void
   feedbackType: 'Adecuada' | 'Inadecuada' | null
   setFeedbackType: (type: 'Adecuada' | 'Inadecuada' | null) => void
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
+  messageIndex: number
 }
 
 export interface FeedbackData {
@@ -46,21 +47,23 @@ export interface FeedbackData {
   promptTokens: number | null
   completionTokens: number | null
   time: string | null
+  messageIndex?: number
 }
 
 export function FeedbackModal({
   message,
   userQuestion,
-  onFeedbackSubmit,
   feedbackType,
   setFeedbackType,
   isOpen,
-  setIsOpen
+  setIsOpen,
+  messageIndex
 }: FeedbackModalProps) {
   const [rating, setRating] = useState<number>(0)
   const [feedbackText, setFeedbackText] = useState('')
   const [consent, setConsent] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { data: session } = useSession()
 
   const assistantResponse =
     message.role === 'assistant' ? message.content : 'Respuesta del chatbot'
@@ -70,13 +73,11 @@ export function FeedbackModal({
   }
 
   const handleSubmit = async () => {
-    // No es necesario validar aquí, ya que el botón está deshabilitado si rating es 0
-
     setIsSubmitting(true)
 
     const feedbackData: FeedbackData = {
-      model: 'modelo-placeholder',
-      id_usuario: null,
+      model: 'sipangpt-0.5',
+      id_usuario: session?.user?.id ?? null,
       id_mensaje: message.id,
       mensaje_usuario: userQuestion,
       respuesta: assistantResponse,
@@ -86,17 +87,29 @@ export function FeedbackModal({
       finishReason: 'finishReason-placeholder',
       promptTokens: null,
       completionTokens: null,
-      time: new Date().toISOString()
+      time: new Date().toISOString(),
+      messageIndex: messageIndex
     }
 
     try {
-      await onFeedbackSubmit(feedbackData)
-      toast.success('¡Gracias por tu feedback!')
-      setIsOpen(false)
-      setRating(0)
-      setFeedbackText('')
-      setConsent(false)
-      setFeedbackType(null)
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(feedbackData)
+      })
+      const result = await response.json()
+      if (result.success) {
+        toast.success('¡Gracias por tu feedback!')
+        setIsOpen(false)
+        setRating(0)
+        setFeedbackText('')
+        setConsent(false)
+        setFeedbackType(null)
+      } else {
+        toast.error(result.error || 'Hubo un error al enviar el feedback.')
+      }
     } catch (error) {
       toast.error('Hubo un error al enviar el feedback.')
     } finally {

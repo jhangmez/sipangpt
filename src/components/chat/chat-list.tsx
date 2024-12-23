@@ -15,6 +15,7 @@ export default function ChatList({
   handleSubmit,
   isLoading,
   error,
+  setSelectedModel,
   stop,
   loadingSubmit,
   formRef,

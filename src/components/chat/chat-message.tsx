@@ -23,7 +23,6 @@ import {
 import {
   CheckIcon,
   CopyIcon,
-  ReloadIcon,
   CheckCircledIcon,
   CrossCircledIcon
 } from '@radix-ui/react-icons'
@@ -63,10 +62,6 @@ function ChatMessage({
     'Adecuada' | 'Inadecuada' | null
   >(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const handleFeedbackSubmit = async (feedbackData: FeedbackData) => {
-    console.log('Feedback submitted:', feedbackData)
-    // Lógica para guardar el feedback
-  }
 
   // Define userQuestion aquí, dentro del ámbito de la función ChatMessage
   const userQuestion =
@@ -229,11 +224,11 @@ function ChatMessage({
                 <FeedbackModal
                   message={message}
                   userQuestion={userQuestion}
-                  onFeedbackSubmit={handleFeedbackSubmit}
                   feedbackType={feedbackType}
                   setFeedbackType={setFeedbackType}
                   isOpen={isModalOpen}
                   setIsOpen={setIsModalOpen}
+                  messageIndex={index}
                 />
               </div>
             </section>

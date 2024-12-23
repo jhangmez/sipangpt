@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Session } from 'next-auth'
+import { Session, Account } from 'next-auth'
 import {
   Table,
   TableBody,

@@ -6,7 +6,7 @@ export async function GET() {
   const session = await auth()
 
   if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -17,16 +17,13 @@ export async function GET() {
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Usuario no encontrado' },
-        { status: 404 }
-      )
+      return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    return NextResponse.json(user)
+    return Response.json(user)
   } catch (error) {
     console.error(error)
-    return NextResponse.json(
+    return Response.json(
       { error: 'Error al obtener los datos del usuario' },
       { status: 500 }
     )
@@ -37,7 +34,7 @@ export async function PUT(req: Request) {
   const session = await auth()
 
   if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -54,10 +51,10 @@ export async function PUT(req: Request) {
       }
     })
 
-    return NextResponse.json(updatedUser)
+    return Response.json(updatedUser)
   } catch (error) {
     console.error(error)
-    return NextResponse.json(
+    return Response.json(
       { error: 'Error al actualizar el perfil' },
       { status: 500 }
     )
