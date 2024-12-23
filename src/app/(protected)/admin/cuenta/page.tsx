@@ -50,30 +50,32 @@ export default async function Page() {
         </div>
       </header>
       <div className='flex flex-col gap-4 p-4 pt-0'>
-        <Card className=' w-full'>
-          <CardHeader>
-            <CardTitle className='font-frances text-2xl'>Tu Perfil</CardTitle>
-            <CardDescription>
-              Aquí puedes ver y editar tu información.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PerfilUsuario />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className='font-frances text-2xl'>
-              Tus Sesiones
-            </CardTitle>
-            <CardDescription>
-              Aquí puedes ver y cerrar tus sesiones activas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TablaSesiones session={session} />
-          </CardContent>
-        </Card>
+        <div className='grid grid-cols-1 gap-6'>
+          <Card className=' w-full'>
+            <CardHeader>
+              <CardTitle className='font-frances text-2xl'>Tu Perfil</CardTitle>
+              <CardDescription>
+                Aquí puedes ver y editar tu información.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PerfilUsuario />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className='font-frances text-2xl'>
+                Tus Sesiones
+              </CardTitle>
+              <CardDescription>
+                Aquí puedes ver y cerrar tus sesiones activas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TablaSesiones session={session} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </>
   )

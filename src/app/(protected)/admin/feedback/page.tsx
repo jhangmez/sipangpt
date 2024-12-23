@@ -123,121 +123,118 @@ export default function FeedbackPage() {
       </header>
       <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
         <h1 className='font-frances text-3xl font-bold'>Feedback</h1>
-        <div className='rounded-lg border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='font-frances'>Usuario</TableHead>
-                <TableHead className='font-frances'>Feedback</TableHead>
-                <TableHead className='font-frances'>Puntuación</TableHead>
-                <TableHead className='font-frances'>Fecha</TableHead>
-                <TableHead className='font-frances text-right'>
-                  Enlace
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* Mostrar skeletons solo si isLoading es true */}
-              {isLoading ? (
-                Array.from({ length: limit }).map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <div className='flex items-center gap-2'>
-                        <Skeleton className='h-8 w-8 rounded-full' />
-                        <Skeleton className='h-4 w-20' />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className='h-4 w-full' />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className='h-4 w-12' />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className='h-4 w-24' />
-                    </TableCell>
-                    <TableCell className='text-right'>
-                      <Skeleton className='h-4 w-10' />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : feedbacks.length > 0 ? (
-                feedbacks.map((feedback) => (
-                  <TableRow key={feedback.id}>
-                    <TableCell>
-                      <div className='flex items-center gap-2'>
-                        {feedback.user?.image && (
-                          <Avatar>
-                            <AvatarImage
-                              src={feedback.user.image}
-                              alt='User Avatar'
-                              width={32}
-                              height={32}
-                              className='object-contain'
-                            />
-                          </Avatar>
-                        )}
-                        <span className='font-exo'>
-                          {feedback.user?.email ?? 'Anónimo'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className='font-exo max-w-[300px] truncate'>
-                      {feedback.messageIndex &&
-                      typeof feedback.messageIndex === 'number'
-                        ? `Pregunta N° ${feedback.messageIndex}`
-                        : 'No disponible'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant='outline'>
-                        {feedback.messageIndex ?? 'N/A'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className='font-exo'>
-                      {new Date(feedback.createdAt).toLocaleString()}
-                    </TableCell>
-                    <TableCell className='text-right'>
-                      <Link href={feedback.url} target='_blank'>
-                        <Button variant='outline' size='icon'>
-                          <ExternalLinkIcon className='h-4 w-4' />
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+        <div className='grid grid-cols-1 gap-6'>
+          <div className='rounded-lg border'>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className='text-center font-exo text-muted-foreground'
-                  >
-                    No hay feedback disponible.
-                  </TableCell>
+                  <TableHead className='font-frances'>Usuario</TableHead>
+                  <TableHead className='font-frances'>N° Pregunta</TableHead>
+                  <TableHead className='font-frances'>Fecha</TableHead>
+                  <TableHead className='font-frances text-right'>
+                    Enlace
+                  </TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          {/* Paginación */}
-          <div className='flex items-center justify-center space-x-2 py-4'>
-            <Button
-              variant='outline'
-              size='icon'
-              onClick={() => handlePageChange(page - 1)}
-              disabled={!hasPreviousPage || isLoading}
-            >
-              <ChevronLeftIcon className='h-4 w-4' />
-            </Button>
-            <span className='font-exo'>
-              Página {page} de {Math.ceil(total / limit)}
-            </span>
-            <Button
-              variant='outline'
-              size='icon'
-              onClick={() => handlePageChange(page + 1)}
-              disabled={!hasNextPage || isLoading}
-            >
-              <ChevronRightIcon className='h-4 w-4' />
-            </Button>
+              </TableHeader>
+              <TableBody>
+                {/* Mostrar skeletons solo si isLoading es true */}
+                {isLoading ? (
+                  Array.from({ length: limit }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <div className='flex items-center gap-2'>
+                          <Skeleton className='h-8 w-8 rounded-full' />
+                          <Skeleton className='h-4 w-20' />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className='h-4 w-full' />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className='h-4 w-12' />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className='h-4 w-24' />
+                      </TableCell>
+                      <TableCell className='text-right'>
+                        <Skeleton className='h-4 w-10' />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : feedbacks.length > 0 ? (
+                  feedbacks.map((feedback) => (
+                    <TableRow key={feedback.id}>
+                      <TableCell>
+                        <div className='flex items-center gap-2'>
+                          {feedback.user?.image && (
+                            <Avatar>
+                              <AvatarImage
+                                src={feedback.user.image}
+                                alt='User Avatar'
+                                width={32}
+                                height={32}
+                                className='object-contain'
+                              />
+                            </Avatar>
+                          )}
+                          <span className='font-exo'>
+                            {feedback.user?.email ?? 'Anónimo'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className='font-exo max-w-[300px] truncate'>
+                        {feedback.messageIndex &&
+                        typeof feedback.messageIndex === 'number'
+                          ? `Pregunta N° ${feedback.messageIndex}`
+                          : 'No disponible'}
+                      </TableCell>
+
+                      <TableCell className='font-exo'>
+                        {new Date(feedback.createdAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell className='text-right'>
+                        <Link href={feedback.url} target='_blank'>
+                          <Button variant='outline' size='icon'>
+                            <ExternalLinkIcon className='h-4 w-4' />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className='text-center font-exo text-muted-foreground'
+                    >
+                      No hay feedback disponible.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            {/* Paginación */}
+            <div className='flex items-center justify-center space-x-2 py-4'>
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={() => handlePageChange(page - 1)}
+                disabled={!hasPreviousPage || isLoading}
+              >
+                <ChevronLeftIcon className='h-4 w-4' />
+              </Button>
+              <span className='font-exo'>
+                Página {page} de {Math.ceil(total / limit)}
+              </span>
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={() => handlePageChange(page + 1)}
+                disabled={!hasNextPage || isLoading}
+              >
+                <ChevronRightIcon className='h-4 w-4' />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

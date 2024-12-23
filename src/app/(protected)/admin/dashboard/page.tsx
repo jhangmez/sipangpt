@@ -32,12 +32,7 @@ export default function Page() {
         </div>
       </header>
 
-      <div
-        className='flex flex-1 flex-col gap-4 p-4 pt-0'
-        title='Resumen'
-        data-parent-title='Datos'
-        data-link='dashboard'
-      >
+      <div className='flex flex-1 flex-col gap-4 p-4 pt-0'>
         <h1 className='font-frances text-2xl font-bold'>Dashboard</h1>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
