@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     return new Response(csv, {
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="${fileName}"`
+        'Content-Disposition': `attachment; filename=${fileName}`
       }
     })
   } catch (error) {
