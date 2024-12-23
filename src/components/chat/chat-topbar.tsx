@@ -142,7 +142,7 @@ export default function ChatTopbar({
   }
 
   const getDisplayName = (model: string) => {
-    const match = model.match(/SipanGPT-(.*?)-Llama/)
+    const match = model.match(/v?Llama-3.2-SipanGPT-v?(\d+\.?\d*)-/) // Modificada
     return match ? `SipánGPT-${match[1]}` : model
   }
 
@@ -198,16 +198,16 @@ export default function ChatTopbar({
             aria-label='Botón para seleccionar el modelo de SipánGPT'
             role='combobox'
             aria-expanded={open}
-            className='w-[300px] justify-between font-exo'
+            className='w-[300px] justify-between font-exo active:border-primary hover:border-primary'
           >
             <span className='flex w-full justify-between'>
               {getDisplayName(currentModel || 'Escoge el modelo')}
-              {getStatusBadge()}
+              {/* {getStatusBadge()} */}
             </span>
             <CaretSortIcon className='ml-2 h-4 w-4 shrink-0 opacity-50' />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className='lg:w-[500px] md:w-[300px] w-full p-1'>
+        {/* <PopoverContent className='lg:w-[500px] md:w-[300px] w-full p-1'>
           {models.length > 0 ? (
             models.map((model) => {
               const modelInfo = getModelInfo(model)
@@ -250,7 +250,7 @@ export default function ChatTopbar({
               No hay más modelos disponibles
             </Button>
           )}
-        </PopoverContent>
+        </PopoverContent> */}
       </Popover>
     </div>
   )

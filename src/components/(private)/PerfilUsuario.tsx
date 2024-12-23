@@ -38,7 +38,7 @@ const formSchema = z.object({
   last_name: z.string().optional()
 })
 
-export default function PerfilUsuario({ session }: { session: Session }) {
+export default function PerfilUsuario() {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)

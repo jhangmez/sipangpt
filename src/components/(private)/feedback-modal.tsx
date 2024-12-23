@@ -57,7 +57,7 @@ export function FeedbackModal({
   isOpen,
   setIsOpen
 }: FeedbackModalProps) {
-  const [rating, setRating] = useState<number>(0) // Inicializa rating como 0 o undefined
+  const [rating, setRating] = useState<number>(0)
   const [feedbackText, setFeedbackText] = useState('')
   const [consent, setConsent] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)

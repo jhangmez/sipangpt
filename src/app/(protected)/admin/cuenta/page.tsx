@@ -58,7 +58,7 @@ export default async function Page() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PerfilUsuario session={session} />
+            <PerfilUsuario />
           </CardContent>
         </Card>
         <Card>

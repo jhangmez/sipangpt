@@ -28,37 +28,40 @@ export async function POST(req: Request) {
         // { role: 'user', content: messageContent.slice(-maxMessageContext) }
         { role: 'user', content: messageContent }
       ],
-      abortSignal: AbortSignal.timeout(80000),
-      onFinish({ text, finishReason, usage, response }) {
-        // your own logic, e.g. for saving the chat history or recording usage
-        console.log(response)
-        console.log(
-          JSON.stringify(
-            {
-              model: selectedModel,
-              id_usuario: null,
-              id_mensaje: response.id,
-              mensaje_usuario: currentMessage.content,
-              respuesta: text,
-              puntuación: null,
-              feedback: null,
-              finishReason: finishReason,
-              promptTokens: usage.promptTokens,
-              completionTokens: usage.completionTokens,
-              time: response.timestamp
-            },
-            null,
-            2
-          )
-        )
-      }
+      abortSignal: AbortSignal.timeout(80000)
+      // onFinish({ text, finishReason, usage, response }) {
+      //   // your own logic, e.g. for saving the chat history or recording usage
+      //   console.log(response)
+      //   console.log(
+      //     JSON.stringify(
+      //       {
+      //         model: selectedModel,
+      //         id_usuario: null,
+      //         id_mensaje: response.id,
+      //         mensaje_usuario: currentMessage.content,
+      //         respuesta: text,
+      //         puntuación: null,
+      //         feedback: null,
+      //         finishReason: finishReason,
+      //         promptTokens: usage.promptTokens,
+      //         completionTokens: usage.completionTokens,
+      //         time: response.timestamp
+      //       },
+      //       null,
+      //       2
+      //     )
+      //   )
+      // }
       // maxTokens: 2800
     })
 
     return result.toDataStreamResponse()
   } catch (error) {
-    return new Response(`Tiempo de respuesta excedido(20s)`, {
-      status: 408
-    })
+    return new Response(
+      `Nuestro servidor está saturado, porfavor intente nuevamente.`,
+      {
+        status: 408
+      }
+    )
   }
 }
