@@ -146,12 +146,9 @@ export default function UserSettings() {
                 <h3>Chatbot experimental.</h3>
                 <h4>
                   <span className='font-frances font-semibold text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text'>
-                    SipánGPT-v0.3
+                    SipánGPT-0.5
                   </span>{' '}
-                  {/* <span className='font-frances text-primary font-semibold'>
-                    SipánGPT-0.3
-                  </span>{' '} */}
-                  fue entrenado con 50k conversaciones.
+                  fue entrenado con 304k conversaciones.
                 </h4>
 
                 <h4>
