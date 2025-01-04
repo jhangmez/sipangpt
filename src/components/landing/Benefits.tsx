@@ -117,10 +117,16 @@ export default function Benefits() {
           </div>
         </div>
         <div className='mt-16 text-center'>
-          <Link href='/chat'>
+          <Link href='/login'>
             <Button
               size='lg'
-              className='w-full md:w-auto text-gray-sipan text-lg font-frances bg-primary hover:bg-primary/90'
+              className='w-full md:hidden text-gray-sipan text-lg font-frances bg-primary hover:bg-primary/90'
+            >
+              Ingresar
+            </Button>
+            <Button
+              size='lg'
+              className='hidden md:block md:w-auto text-gray-sipan text-lg font-frances bg-primary hover:bg-primary/90'
             >
               Descubre cómo SipánGPT puede ayudarte
             </Button>

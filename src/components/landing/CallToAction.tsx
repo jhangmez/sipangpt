@@ -10,8 +10,8 @@ export default function CallToAction() {
         <h2 className='text-3xl md:text-4xl font-bold text-gray-sipan mb-6 font-frances'>
           ¡Prueba SipánGPT Ahora!
         </h2>
-        <p className='text-gray-sipan text-lg md:text-xl mb-8 font-exo'>
-          Descubre cómo SipánGPT puede responder todas tus preguntas sobre la
+        <p className='text-gray-sipan font-semibold text-lg md:text-xl mb-8 font-exo'>
+          Animate a que SipánGPT responda todas tus preguntas sobre la
           Universidad Señor de Sipán.
         </p>
         <Link href='/login'>
