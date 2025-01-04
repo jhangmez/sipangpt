@@ -83,3 +83,12 @@
     @apply bg-background text-foreground;
   }
 }
+.color-change path {
+  fill: #5fed00; /* Color para modo claro */
+}
+
+@media (prefers-color-scheme: dark) {
+  .color-change path {
+    fill: #7dfa00; /* Color para modo oscuro */
+  }
+}

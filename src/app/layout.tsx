@@ -27,7 +27,7 @@ export default function RootLayout({
         <link rel='icon' type='image/svg+xml' href='/favicon.svg' />
         <meta
           property='og:image'
-          content='https://www.jhangmez.xyz/api/og2?title=SipánGPT'
+          content='https://jhangmez.vercel.app/api/og2?title=SipánGPT'
         />
         <meta property='og:url' content='https://sipangpt.xyz/' />
         <meta property='og:title' content='SipánGPT Chatbot' />

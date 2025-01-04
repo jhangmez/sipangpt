@@ -31,7 +31,7 @@ export default function Hero() {
                 href='https://www.linkedin.com/in/jhangmez'
                 target='_blank'
                 rel='noopener noreferrer'
-                className='underline hover:text-gray-100'
+                className='underline hover:text-[#5fed00]'
               >
                 @jhangmez
               </a>{' '}
@@ -40,14 +40,14 @@ export default function Hero() {
                 href='https://www.linkedin.com/in/jhangmez'
                 target='_blank'
                 rel='noopener noreferrer'
-                className='underline hover:text-gray-100'
+                className='underline hover:text-[#5fed00]'
               >
                 Universidad Señor de Sipán
               </a>
             </p>
           </div>
           <div className='w-full md:w-1/2 hidden md:block'>
-            <div className='relative w-full pt-[56.25%]'>
+            <section className='relative w-full pt-[56.25%]'>
               <div className='absolute inset-0 bg-primary opacity-20 blur-md rounded-lg'></div>
               <div
                 style={{
@@ -61,9 +61,25 @@ export default function Hero() {
                     '0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.1)' // Equivale a shadow-lg
                 }}
               >
-                <LiteYoutubeEmbed id='2LOqqknFcQg' defaultPlay mute noCookie />
+                <LiteYoutubeEmbed
+                  id='M8onMSlbeqo'
+                  desktopResolution='hqdefault'
+                  iframeTitle='SipánGPT'
+                  defaultPlay
+                  mute
+                  noCookie
+                  params={{
+                    rel: '0',
+                    modestbranding: '1',
+                    showinfo: '0',
+                    controls: '0',
+                    autoplay: '1',
+                    loop: '1',
+                    playlist: 'M8onMSlbeqo'
+                  }}
+                />
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>

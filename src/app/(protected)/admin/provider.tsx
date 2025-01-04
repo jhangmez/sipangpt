@@ -1,10 +1,10 @@
 'use client'
 
-import { Link } from '@nextui-org/link'
 import { useSession } from 'next-auth/react'
 import { AuthLayout } from '@/components/(private)/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
 export function Provider({ children }: { children: React.ReactNode }) {
   const { status } = useSession()
 

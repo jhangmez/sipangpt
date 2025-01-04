@@ -1,6 +1,11 @@
 import Header from '@Components/landing/Header'
 import Footer from '@Components/landing/Footer'
 import Hero from '@Components/landing/Hero'
+import Features from '@root/src/components/landing/Features'
+import Benefits from '@root/src/components/landing/Benefits'
+import CallToAction from '@root/src/components/landing/CallToAction'
+import AboutProject from '@root/src/components/landing/AboutProject'
+import Feedback from '@root/src/components/landing/Feedback'
 
 export default function Home() {
   return (
@@ -19,13 +24,37 @@ export default function Home() {
           fill='#F0F0F0'
         ></path>
       </svg>
-      <main className='flex-grow flex items-center justify-center bg-gray-50'>
-        <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 font-exo'>
-          <h2 className='text-2xl md:text-3xl lg:text-4xl font-bold text-center text-gray-sipan'>
-            Pregunta lo que desees sobre la Universidad Señor de Sipán
-          </h2>
-        </div>
-      </main>
+      <Features />
+      <Benefits />
+      <Feedback />
+      <svg
+        viewBox='0 0 1440 58'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+        version='1.1'
+        width='100%'
+        className='bg-gray-50 color-change'
+      >
+        <path
+          transform='rotate(180) translate(-1440, -60)'
+          d='M-100 58C-100 58 218.416 36.3297 693.5 36.3297C1168.58 36.3297 1487 58 1487 58V-3.8147e-06H-100V58Z'
+          fill='currentColor'
+        ></path>
+      </svg>
+      <CallToAction />
+      <svg
+        viewBox='0 0 1440 58'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+        width='100%'
+        className='bg-gray-50 color-change'
+      >
+        <path
+          d='M-100 58C-100 58 218.416 36.3297 693.5 36.3297C1168.58 36.3297 1487 58 1487 58V-3.8147e-06H-100V58Z'
+          fill='currentColor'
+        ></path>
+      </svg>
+      <AboutProject />
       <svg
         viewBox='0 0 1440 58'
         fill='none'

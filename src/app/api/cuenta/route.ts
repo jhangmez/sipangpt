@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server'
 import { prisma } from '@/prisma'
 import { auth } from '@root/auth'
 
