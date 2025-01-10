@@ -175,7 +175,7 @@ function ChatMessage({
                       disabled={isLoading}
                       variant='ghost'
                       size='icon'
-                      className='self-end mt-2'
+                      className='self-end mt-2 text-green-500'
                       onClick={() => handleOpenModal('Adecuada')}
                     >
                       <CheckCircledIcon className='w-4 h-4' />
@@ -191,7 +191,7 @@ function ChatMessage({
                       variant='ghost'
                       disabled={isLoading}
                       size='icon'
-                      className='self-end mt-2'
+                      className='self-end mt-2 text-red-500'
                       onClick={() => handleOpenModal('Inadecuada')}
                     >
                       <CrossCircledIcon className='w-4 h-4' />
