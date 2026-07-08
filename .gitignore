@@ -16,6 +16,8 @@
 # production
 /build
 
+SipanGPT_codigo_fuente.md
+
 # misc
 .DS_Store
 *.pem
