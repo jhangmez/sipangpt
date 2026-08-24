@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 
@@ -9,37 +9,35 @@ export async function POST(req: NextRequest) {
 
     const {
       id_mensaje,
-      mensaje_usuario,
-      respuesta,
       puntuacion,
-      tipo,
+      reasons,
       feedback,
       consentimientoCorreo,
       model,
     } = body
 
-    try {
-      const feedbackRecord = await prisma.feedback.create({
-        data: {
-          userId: session?.user?.id || null,
-          rating: typeof puntuacion === 'number' ? puntuacion : null,
-          comment: [
-            tipo ? `[Tipo: ${tipo}]` : null,
-            model ? `[Modelo: ${model}]` : null,
-            consentimientoCorreo ? `[Consentimiento Correo: Sí]` : null,
-            feedback ? `Comentario: ${feedback}` : null,
-            mensaje_usuario ? `Pregunta: ${mensaje_usuario}` : null,
-          ]
-            .filter(Boolean)
-            .join('\n'),
-        },
-      })
+    const rating = typeof puntuacion === 'number' ? Math.min(Math.max(puntuacion, 1), 5) : 5
+    const reasonsArray = Array.isArray(reasons) ? reasons : []
 
-      return NextResponse.json({ success: true, id: feedbackRecord.id })
-    } catch (dbError) {
-      console.warn('[FEEDBACK_DB_FALLBACK]', dbError)
-      return NextResponse.json({ success: true, fallback: true })
-    }
+    const formattedComment = [
+      model ? `[Modelo: ${model}]` : null,
+      consentimientoCorreo ? `[Consentimiento Encuestas: Sí]` : null,
+      feedback ? feedback.trim() : null,
+    ]
+      .filter(Boolean)
+      .join(' | ')
+
+    const feedbackRecord = await prisma.feedback.create({
+      data: {
+        userId: session?.user?.id || null,
+        messageId: id_mensaje || null,
+        rating,
+        reasons: reasonsArray,
+        comment: formattedComment || null,
+      },
+    })
+
+    return NextResponse.json({ success: true, id: feedbackRecord.id })
   } catch (error: any) {
     console.error('[FEEDBACK_API_ERROR]', error)
     return NextResponse.json(

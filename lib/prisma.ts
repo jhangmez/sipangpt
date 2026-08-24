@@ -11,6 +11,7 @@ export {
   PostStatus,
   DocumentStatus,
   InvitationStatus,
+  ResolutionStatus,
 } from '@prisma/client'
 export type {
   User,
@@ -22,6 +23,8 @@ export type {
   MessageCitation,
   Document,
   DocumentChunk,
+  TopicCategory,
+  TopicSubcategory,
   AIModelConfig,
   SystemSetting,
   UserUsage,

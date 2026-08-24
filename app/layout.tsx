@@ -37,7 +37,10 @@ export default function RootLayout({
           content='SipánGPT, Chatbot prototipo realizado por @jhangmez y la Universidad Señor de Sipán'
         />
       </head>
-      <body className='bg-gray-100 dark:bg-background selection:bg-gray-sipan selection:text-primary dark:selection:bg-primary dark:selection:text-background'>
+      <body
+        suppressHydrationWarning
+        className='bg-gray-100 dark:bg-background selection:bg-gray-sipan selection:text-primary dark:selection:bg-primary dark:selection:text-background'
+      >
         <noscript>Página realizada por Jhan Gómez P. @jhangmez</noscript>
         <ThemeProvider
           attribute='class'

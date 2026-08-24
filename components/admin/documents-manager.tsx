@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import {
   toggleDocumentStatus,
   deleteDocumentAction,
-  markDocumentAsIndexed,
+  updateDocumentCategory,
 } from '@/lib/actions/admin-documents'
 import { UploadDropzone } from '@/lib/uploadthing'
 import { Badge } from '@/components/ui/badge'
@@ -20,9 +20,17 @@ import {
   Database,
   Layers,
   Sparkles,
-  RefreshCw,
+  Tag,
 } from 'lucide-react'
 import type { DocumentStatus } from '@/lib/prisma'
+
+interface TopicCategoryItem {
+  id: string
+  name: string
+  code: string
+  description: string | null
+  order: number
+}
 
 interface DocumentItem {
   id: string
@@ -34,6 +42,12 @@ interface DocumentItem {
   sizeBytes: number
   status: DocumentStatus
   chunkCount: number
+  categoryId: string | null
+  category?: {
+    id: string
+    name: string
+    code: string
+  } | null
   createdAt: Date
   uploadedBy?: {
     name: string | null
@@ -43,6 +57,7 @@ interface DocumentItem {
 
 interface DocumentsManagerProps {
   initialDocuments: DocumentItem[]
+  topicCategories: TopicCategoryItem[]
   stats: {
     total: number
     indexed: number
@@ -52,6 +67,7 @@ interface DocumentsManagerProps {
 
 export function DocumentsManager({
   initialDocuments,
+  topicCategories,
   stats: initialStats,
 }: DocumentsManagerProps) {
   const [documents, setDocuments] = React.useState<DocumentItem[]>(initialDocuments)
@@ -82,12 +98,34 @@ export function DocumentsManager({
       toast.success(
         nextStatus === 'INDEXED'
           ? 'Documento indexado para consultas RAG'
-          : 'Documento pausado para RAG'
+          : 'Documento desindexado/pausado temporalmente'
       )
     } catch (err: any) {
       toast.error(err.message || 'Error al cambiar estado')
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const handleCategoryChange = async (docId: string, categoryId: string) => {
+    const val = categoryId === 'none' ? null : categoryId
+    try {
+      await updateDocumentCategory(docId, val)
+      const catObj = topicCategories.find((c) => c.id === val)
+      setDocuments((prev) =>
+        prev.map((doc) =>
+          doc.id === docId
+            ? {
+                ...doc,
+                categoryId: val,
+                category: catObj ? { id: catObj.id, name: catObj.name, code: catObj.code } : null,
+              }
+            : doc
+        )
+      )
+      toast.success('Categoría temática actualizada')
+    } catch (err: any) {
+      toast.error(err.message || 'Error al cambiar categoría')
     }
   }
 
@@ -126,7 +164,7 @@ export function DocumentsManager({
             Ingesta de Documentos y Base de Conocimiento RAG
           </h2>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            Sube normativas, reglamentos de matrícula, cronogramas y mallas curriculares de la USS para que los modelos de SipánGPT los consulten y citen en tiempo real.
+            Sube reglamentos de matrícula, cronogramas, normativas de grados y mallas de la USS. Asigna categorías temáticas para analítica institucional y búsquedas semánticas precisas.
           </p>
         </div>
       </div>
@@ -202,7 +240,7 @@ export function DocumentsManager({
         </div>
       </div>
 
-      {/* Listado de Documentos */}
+      {/* Listado de Documentos con Categorización Temática */}
       <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4'>
         <div className='border-b border-border/40 pb-3 flex items-center justify-between'>
           <h3 className='font-frances text-base font-bold text-foreground flex items-center gap-2'>
@@ -237,7 +275,7 @@ export function DocumentsManager({
                     <div className='h-10 w-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0'>
                       <FileText className='w-5 h-5' />
                     </div>
-                    <div className='min-w-0 flex-1 space-y-1'>
+                    <div className='min-w-0 flex-1 space-y-1.5'>
                       <div className='flex items-center gap-2 flex-wrap'>
                         <p className='font-bold text-xs text-foreground truncate'>
                           {doc.title || doc.fileName}
@@ -254,10 +292,11 @@ export function DocumentsManager({
                         )}
                         {doc.status === 'DEINDEXED' && (
                           <Badge variant='outline' className='border-muted-foreground/40 text-muted-foreground text-[9px] py-0'>
-                            Pausado
+                            Desindexado
                           </Badge>
                         )}
                       </div>
+
                       <div className='flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap'>
                         <span>{formatFileSize(doc.sizeBytes)}</span>
                         <span>•</span>
@@ -269,6 +308,25 @@ export function DocumentsManager({
                           </>
                         )}
                       </div>
+
+                      {/* Selector de Categoría Temática */}
+                      {topicCategories.length > 0 && (
+                        <div className='flex items-center gap-2 pt-1'>
+                          <Tag className='w-3 h-3 text-muted-foreground' />
+                          <select
+                            value={doc.categoryId || 'none'}
+                            onChange={(e) => handleCategoryChange(doc.id, e.target.value)}
+                            className='rounded-lg border border-border/80 bg-background px-2 py-0.5 text-[10px] font-exo text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
+                          >
+                            <option value='none'>Sin categoría temática</option>
+                            {topicCategories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name} ({cat.code})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -301,7 +359,7 @@ export function DocumentsManager({
                       className='gap-1 text-[11px] rounded-xl'
                     >
                       <Sparkles className='w-3.5 h-3.5' />
-                      {isIndexed ? 'Pausar' : 'Indexar RAG'}
+                      {isIndexed ? 'Desindexar' : 'Indexar RAG'}
                     </Button>
 
                     {/* Botón Eliminar */}

@@ -43,12 +43,13 @@ enum ModelProvider {
   OPENAI
   GEMINI  
   ANTHROPIC
+  GROQ
 }
 
 enum ModelStatus {
   ONLINE      // Activo y respondiendo con baja latencia
   DEGRADED    // Problemas de ping / latencia alta
-  OFFLINE     // Sin respuesta / no responde
+  OFFLINE     // Sin respuesta / caído
   DISABLED    // Desactivado manualmente por el administrador
 }
 
@@ -57,6 +58,14 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   REVOKED
+}
+
+enum ResolutionStatus {
+  RESOLVED_WITH_SOURCES   // Éxito: RAG encontró contexto oficial (> umbral) y generó citas
+  RESOLVED_GENERAL        // Éxito: Pregunta general/saludo respondido sin necesidad de RAG
+  NO_CONTEXT_FOUND        // Gap: No hay documentos en la base de datos sobre esta consulta
+  UNRESOLVED_BY_FALLBACK  // El modelo activó la frase de contingencia/desconocimiento
+  ERROR_OCCURRED          // Fallo técnico en el modelo o en la base de datos
 }
 
 // -------------------------------------------------------------
@@ -139,8 +148,8 @@ model Session {
   expires      DateTime
   ipAddress    String?  @map("ip_address")
   userAgent    String?  @map("user_agent")
-  deviceType   String?  @map("device_type") // Ej: "Escritorio (Windows)", "Móvil (Android)", "Móvil (iPhone)"
-  browser      String?  // Ej: "Chrome", "Safari", "Edge", "Firefox"
+  deviceType   String?  @map("device_type") // Ej: "Escritorio (Windows)", "Móvil (Android)"
+  browser      String?  // Ej: "Chrome", "Safari", "Edge"
   city         String?  // Ciudad / Ubicación aproximada
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -176,6 +185,42 @@ model Authenticator {
 }
 
 // -------------------------------------------------------------
+// CATÁLOGO DE TEMAS PARA ANALÍTICA UNIVERSITARIA
+// -------------------------------------------------------------
+
+model TopicCategory {
+  id          String         @id @default(cuid())
+  name        String         @unique // Ej: "Matrícula y Registro", "Pensiones y Pagos", "Convalidaciones"
+  code        String         @unique // Ej: "MATRICULA", "PAGOS", "CONVALIDACIONES"
+  description String?        @db.Text
+  order       Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  subcategories TopicSubcategory[]
+  messages      Message[]
+  documents     Document[]
+
+  @@map("topic_categories")
+}
+
+model TopicSubcategory {
+  id          String        @id @default(cuid())
+  categoryId  String        @map("category_id")
+  name        String        // Ej: "Matrícula Extemporánea", "Fraccionamiento", "Traslado Externo"
+  code        String        // Ej: "MAT_EXTEMPORANEA", "PAG_FRACCIONAMIENTO"
+  description String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  category    TopicCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
+  @@unique([categoryId, code])
+  @@map("topic_subcategories")
+}
+
+// -------------------------------------------------------------
 // CHATBOT, MENSAJES Y CITAS RAG
 // -------------------------------------------------------------
 
@@ -193,37 +238,44 @@ model Conversation {
 }
 
 model Message {
-  id             String      @id @default(cuid())
-  conversationId String      @map("conversation_id")
+  id             String           @id @default(cuid())
+  conversationId String           @map("conversation_id")
   role           MessageRole
-  content        String      @db.Text
+  content        String           @db.Text
   
-  // Trazabilidad de IA
-  modelUsed      String?     @map("model_used")       // Ej: "gemma-4-local", "gpt-4o-mini"
-  promptTokens   Int?        @map("prompt_tokens")
-  totalTokens    Int?        @map("total_tokens")
-  latencyMs      Int?        @map("latency_ms")
-  isVoiceInput   Boolean     @default(false) @map("is_voice_input") // Marcador de transcripción STT
+  // Analítica de la Pregunta
+  categoryId       String?          @map("category_id")
+  subcategoryId    String?          @map("subcategory_id")
+  detectedIntent   String?          @map("detected_intent") // Ej: "CONSULTA_FECHAS_PAGO"
+  resolutionStatus ResolutionStatus @default(RESOLVED_WITH_SOURCES) @map("resolution_status")
+
+  // Trazabilidad Técnica & Métricas
+  modelUsed      String?          @map("model_used")
+  promptTokens   Int?             @map("prompt_tokens")
+  totalTokens    Int?             @map("total_tokens")
+  latencyMs      Int?             @map("latency_ms")
+  isVoiceInput   Boolean          @default(false) @map("is_voice_input")
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  feedbacks    Feedback[]
-  citations    MessageCitation[] // Citas o fuentes utilizadas en esta respuesta
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  category       TopicCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategory    TopicSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  feedbacks      Feedback[]
+  citations      MessageCitation[]
 
   @@map("messages")
 }
 
-// Registro de citas/fuentes utilizadas para generar una respuesta
 model MessageCitation {
   id          String   @id @default(cuid())
   messageId   String   @map("message_id")
   documentId  String?  @map("document_id")
-  title       String   // Nombre del documento o sección
-  sourceUrl   String?  @map("source_url")   // Enlace público al PDF / Web oficial
-  pageNumber  Int?     @map("page_number")  // Página específica citada
-  snippetText String   @map("snippet_text") @db.Text // Texto exacto recuperado
-  relevance   Float?   // Score de similitud vectorial (0.0 - 1.0)
+  title       String   // Nombre del reglamento/documento citado
+  sourceUrl   String?  @map("source_url")   // URL pública al PDF institucional
+  pageNumber  Int?     @map("page_number")  // Número de página (permite enlace url#page=X)
+  snippetText String   @map("snippet_text") @db.Text // Fragmento exacto recuperado
+  relevance   Float?   // Score de similitud (0.0 - 1.0)
   createdAt   DateTime @default(now()) @map("created_at")
 
   message  Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
@@ -233,24 +285,26 @@ model MessageCitation {
 }
 
 // -------------------------------------------------------------
-// BASE DE CONOCIMIENTO (DOCUMENTOS & EMBEDDINGS)
+// BASE DE CONOCIMIENTO (DOCUMENTOS & CHUNKS)
 // -------------------------------------------------------------
 
 model Document {
-  id          String         @id @default(cuid())
-  title       String
-  fileName    String         @map("file_name")
-  fileUrl     String?        @map("file_url")    // URL en storage local / S3
-  publicUrl   String?        @map("public_url")  // Enlace público oficial universitario
-  mimeType    String         @map("mime_type")
-  sizeBytes   Int            @map("size_bytes")
-  status      DocumentStatus @default(PROCESSING)
-  chunkCount  Int            @default(0) @map("chunk_count")
-  uploadedById String?       @map("uploaded_by_id")
+  id           String         @id @default(cuid())
+  title        String
+  fileName     String         @map("file_name")
+  fileUrl      String?        @map("file_url")    // URL en storage local / S3
+  publicUrl    String?        @map("public_url")  // Enlace público oficial institucional
+  mimeType     String         @map("mime_type")
+  sizeBytes    Int            @map("size_bytes")
+  status       DocumentStatus @default(PROCESSING)
+  chunkCount   Int            @default(0) @map("chunk_count")
+  categoryId   String?        @map("category_id") // Categoría temática general del PDF
+  uploadedById String?        @map("uploaded_by_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  category   TopicCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   uploadedBy User?             @relation("AdminUploadedDocs", fields: [uploadedById], references: [id], onDelete: SetNull)
   chunks     DocumentChunk[]
   citations  MessageCitation[]
@@ -264,29 +318,47 @@ model DocumentChunk {
   chunkIndex  Int      @map("chunk_index")
   content     String   @db.Text
   pageNumber  Int?     @map("page_number")
-  metadata    Json?    // Metadatos adicionales (capítulo, sección, etc.)
+  metadata    Json?    // Metadatos (título del capítulo, sección)
   createdAt   DateTime @default(now()) @map("created_at")
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  // Nota: La columna embedding de pgvector (vector(768/1536)) se crea mediante migración SQL en PostgreSQL
   @@map("document_chunks")
 }
 
 // -------------------------------------------------------------
-// CONFIGURACIÓN DINÁMICA DE IA Y LÍMITES
+// MEMORIA A LARGO PLAZO DEL USUARIO
+// -------------------------------------------------------------
+
+model UserMemory {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  fact      String   @db.Text // Ej: "Estudia Ingeniería de Sistemas en Sede Chiclayo"
+  category  String?  // Ej: "academico", "preferencia"
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_memories")
+}
+
+// -------------------------------------------------------------
+// CONFIGURACIÓN DINÁMICA DE MODELOS Y LÍMITES
 // -------------------------------------------------------------
 
 model AIModelConfig {
   id           String        @id @default(cuid())
-  name         String        @unique // Ej: "Gemini 2.5 Flash", "Llama 3.2 SipánGPT"
-  modelCode    String        @map("model_code") // Identificador técnico: "gemini-2.5-flash"
+  name         String        @unique // Ej: "Gemma 4 Fine-Tuned (Local)", "Gemini 2.5 Flash"
+  modelCode    String        @map("model_code")
   provider     ModelProvider @default(LOCAL_MAC)
   description  String?       @db.Text
-  endpointUrl  String?       @map("endpoint_url") // p. ej: "https://ai.sipangpt.com/v1"
+  endpointUrl  String?       @map("endpoint_url")
   apiKeyEnvVar String?       @map("api_key_env_var")
-  status       ModelStatus   @default(ONLINE) // ONLINE, DEGRADED, OFFLINE, DISABLED
-  latencyMs    Int?          @map("latency_ms") // Último ping / latencia medida en ms
+  status       ModelStatus   @default(ONLINE)
+  latencyMs    Int?          @map("latency_ms")
   isActive     Boolean       @default(true) @map("is_active")
   isDefault    Boolean       @default(false) @map("is_default")
   order        Int           @default(0)
@@ -298,29 +370,13 @@ model AIModelConfig {
   @@map("ai_model_configs")
 }
 
-model UserMemory {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  fact       String   @db.Text // Ej: "Estudiante de Ingeniería de Sistemas, 6to ciclo"
-  category   String?  // Ej: "academico", "preferencia", "tramite"
-  isActive   Boolean  @default(true) @map("is_active") // Permite al usuario desactivar un recuerdo
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Nota: La columna embedding de pgvector (vector(768)) se puede crear en migración SQL
-  @@index([userId])
-  @@map("user_memories")
-}
-
 model SystemSetting {
-  id                  String   @id @default("global_config")
-  maxPromptChars      Int      @default(2000) @map("max_prompt_chars") // Límite de caracteres en la entrada
-  maxDailyTokensPerUser Int    @default(50000) @map("max_daily_tokens_per_user")
-  enableVoiceInput    Boolean  @default(true) @map("enable_voice_input")
-  maintenanceMode     Boolean  @default(false) @map("maintenance_mode")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default("global_config")
+  maxPromptChars        Int      @default(2000) @map("max_prompt_chars")
+  maxDailyTokensPerUser Int      @default(50000) @map("max_daily_tokens_per_user")
+  enableVoiceInput      Boolean  @default(true) @map("enable_voice_input")
+  maintenanceMode       Boolean  @default(false) @map("maintenance_mode")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
 }
@@ -339,7 +395,42 @@ model UserUsage {
 }
 
 // -------------------------------------------------------------
-// NOTICIAS / BLOG / FEEDBACK / LOGS
+// FEEDBACK (1 A 5 ESTRELLAS) Y AUDITORÍA
+// -------------------------------------------------------------
+
+model Feedback {
+  id        String   @id @default(cuid())
+  messageId String?  @map("message_id")
+  userId    String?  @map("user_id")
+  rating    Int      // Calificación numérica: 1 a 5 estrellas
+  comment   String?  @db.Text // Comentario opcional del estudiante/evaluador
+  reasons   String[] @default([]) // Etiquetas: ["INEXACTO", "DESACTUALIZADO", "LENTO", "MUY_UTIL"]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@map("feedbacks")
+}
+
+model RequestLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  endpoint   String?
+  method     String?
+  statusCode Int      @map("status_code")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  durationMs Int?     @map("duration_ms")
+  timestamp  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("request_logs")
+}
+
+// -------------------------------------------------------------
+// CONTENIDO EDITORIAL & PREGUNTAS FRECUENTES
 // -------------------------------------------------------------
 
 model Post {
@@ -370,37 +461,6 @@ model Category {
   posts       Post[]
 
   @@map("categories")
-}
-
-model Feedback {
-  id        String   @id @default(cuid())
-  messageId String?  @map("message_id")
-  userId    String?  @map("user_id")
-  rating    Int?     // 1 (Like), -1 (Dislike) o 1-5 estrellas
-  comment   String?  @db.Text
-  url       String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
-
-  @@map("feedbacks")
-}
-
-model RequestLog {
-  id         String   @id @default(cuid())
-  userId     String?  @map("user_id")
-  endpoint   String?
-  method     String?
-  statusCode Int      @map("status_code")
-  ipAddress  String?  @map("ip_address")
-  userAgent  String?  @map("user_agent")
-  durationMs Int?     @map("duration_ms")
-  timestamp  DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@map("request_logs")
 }
 
 model Pregunta {

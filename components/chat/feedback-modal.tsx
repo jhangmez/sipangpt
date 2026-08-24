@@ -19,7 +19,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { Star } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Star, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,7 @@ export interface FeedbackData {
   mensaje_usuario: string
   respuesta: string
   puntuacion: number
-  tipo: 'Adecuada' | 'Inadecuada' | null
+  reasons: string[]
   feedback?: string | null
   consentimientoCorreo: boolean
   time: string
@@ -44,10 +45,36 @@ interface FeedbackModalProps {
   messageId: string
   modelName: string
   userId?: string | null
-  feedbackType: 'Adecuada' | 'Inadecuada' | null
-  setFeedbackType: (type: 'Adecuada' | 'Inadecuada' | null) => void
+  feedbackType?: 'Adecuada' | 'Inadecuada' | null
+  setFeedbackType?: (type: 'Adecuada' | 'Inadecuada' | null) => void
   initialRating?: number
   onRatingChange?: (rating: number) => void
+}
+
+const NEGATIVE_REASONS = [
+  'Información incompleta',
+  'Datos desactualizados',
+  'No entendió la consulta',
+  'Respuesta confusa',
+  'Faltaron fuentes oficiales',
+  'Respuesta lenta',
+]
+
+const POSITIVE_REASONS = [
+  'Muy claro',
+  'Información precisa',
+  'Buenas citas y fuentes',
+  'Rápido y conciso',
+  'Resolvió mi duda',
+  'Excelente tono',
+]
+
+const RATING_LABELS: Record<number, string> = {
+  1: 'Muy deficiente',
+  2: 'Poco claro / Insuficiente',
+  3: 'Aceptable',
+  4: 'Buena respuesta',
+  5: 'Excelente y muy claro',
 }
 
 export function FeedbackModal({
@@ -63,7 +90,10 @@ export function FeedbackModal({
   initialRating = 0,
   onRatingChange,
 }: FeedbackModalProps) {
-  const [rating, setRating] = React.useState<number>(initialRating || (feedbackType === 'Adecuada' ? 5 : 1))
+  const [rating, setRating] = React.useState<number>(
+    initialRating || (feedbackType === 'Adecuada' ? 5 : feedbackType === 'Inadecuada' ? 1 : 5)
+  )
+  const [selectedReasons, setSelectedReasons] = React.useState<string[]>([])
   const [feedbackText, setFeedbackText] = React.useState('')
   const [consent, setConsent] = React.useState(true)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -80,10 +110,19 @@ export function FeedbackModal({
 
   const handleRatingSelect = (newRating: number) => {
     setRating(newRating)
+    setSelectedReasons([])
     if (onRatingChange) {
       onRatingChange(newRating)
     }
   }
+
+  const toggleReason = (reason: string) => {
+    setSelectedReasons((prev) =>
+      prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]
+    )
+  }
+
+  const availableReasons = rating >= 4 ? POSITIVE_REASONS : NEGATIVE_REASONS
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
@@ -95,7 +134,7 @@ export function FeedbackModal({
       mensaje_usuario: userQuestion,
       respuesta: assistantResponse,
       puntuacion: rating,
-      tipo: feedbackType,
+      reasons: selectedReasons,
       feedback: feedbackText.trim() || null,
       consentimientoCorreo: consent,
       time: new Date().toISOString(),
@@ -113,7 +152,8 @@ export function FeedbackModal({
         toast.success('¡Muchas gracias por tu feedback institucional!')
         setIsOpen(false)
         setFeedbackText('')
-        setFeedbackType(null)
+        setSelectedReasons([])
+        if (setFeedbackType) setFeedbackType(null)
       } else {
         toast.error(result.error || 'Hubo un error al enviar el feedback.')
       }
@@ -124,34 +164,21 @@ export function FeedbackModal({
     }
   }
 
-  const dialogTitle =
-    feedbackType === 'Adecuada'
-      ? 'Respuesta Adecuada'
-      : feedbackType === 'Inadecuada'
-      ? 'Respuesta Inadecuada'
-      : 'Califica la Respuesta'
-
-  const dialogDescription =
-    feedbackType === 'Adecuada'
-      ? '¡Excelente! Tu opinión nos ayuda a validar la precisión de las normativas de la USS.'
-      : feedbackType === 'Inadecuada'
-      ? 'Lamentamos que la respuesta no haya sido óptima. Por favor, indícanos cómo mejorar.'
-      : 'Ayúdanos a mejorar continuamente la inteligencia académica de SipánGPT.'
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className='sm:max-w-[460px] max-h-[85vh] overflow-y-auto font-exo rounded-3xl p-6'>
+      <DialogContent className='sm:max-w-[480px] max-h-[85vh] overflow-y-auto font-exo rounded-3xl p-6'>
         <DialogHeader className='space-y-1.5 text-left'>
-          <DialogTitle className='font-frances text-xl text-foreground'>
-            {dialogTitle}
+          <DialogTitle className='font-frances text-xl text-foreground flex items-center gap-2'>
+            <Star className='w-5 h-5 text-amber-500 fill-amber-500' />
+            Calificar Respuesta de IA
           </DialogTitle>
           <DialogDescription className='text-xs text-muted-foreground leading-relaxed'>
-            {dialogDescription}
+            Ayúdanos a evaluar la precisión y claridad de las respuestas para perfeccionar la base de conocimiento de la USS.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Acordeón con la pregunta del estudiante y la respuesta del modelo */}
-        <div className='max-h-[200px] overflow-y-auto rounded-2xl border border-border/70 p-1 bg-card/60'>
+        {/* Acordeón con la consulta y la respuesta */}
+        <div className='max-h-[160px] overflow-y-auto rounded-2xl border border-border/70 p-1 bg-card/60'>
           <Accordion defaultValue={['item-1']} className='w-full'>
             <AccordionItem value='item-1' className='border-b-0 px-2'>
               <AccordionTrigger className='font-frances text-xs py-2 hover:no-underline text-foreground'>
@@ -172,47 +199,77 @@ export function FeedbackModal({
           </Accordion>
         </div>
 
-        {/* Calificación con estrellas */}
-        <div className='space-y-1.5 text-center pt-2'>
-          <Label className='text-xs font-semibold text-foreground block'>
-            Puntuación general:
-          </Label>
-          <div className='flex items-center justify-center gap-1.5 py-1'>
+        {/* Selector de 1 a 5 Estrellas */}
+        <div className='space-y-2 text-center pt-2'>
+          <div className='flex items-center justify-center gap-2 py-1'>
             {[1, 2, 3, 4, 5].map((value) => (
               <button
                 key={value}
                 type='button'
                 onClick={() => handleRatingSelect(value)}
                 className={cn(
-                  'p-1.5 rounded-xl transition-all hover:scale-110',
-                  value <= rating ? 'text-amber-500' : 'text-muted-foreground/30 hover:text-amber-400'
+                  'p-1.5 rounded-xl transition-all hover:scale-115 cursor-pointer',
+                  value <= rating
+                    ? 'text-amber-500'
+                    : 'text-muted-foreground/30 hover:text-amber-400'
                 )}
                 aria-label={`Calificar con ${value} estrellas`}
               >
-                <Star className={cn('h-6 w-6', value <= rating ? 'fill-current' : '')} />
+                <Star className={cn('h-7 w-7', value <= rating ? 'fill-current' : '')} />
               </button>
             ))}
           </div>
+          <p className='text-xs font-semibold text-foreground font-mono'>
+            {rating} de 5 estrellas • <span className='text-primary'>{RATING_LABELS[rating] || ''}</span>
+          </p>
         </div>
 
-        {/* Textarea de Comentarios / Feedback */}
-        <div className='grid gap-2 py-1'>
+        {/* Etiquetas de Motivo de Calificación (Chips Multi-Select) */}
+        <div className='space-y-2 pt-1'>
+          <Label className='text-xs font-semibold text-foreground block'>
+            ¿Qué motivos describen mejor esta respuesta?
+          </Label>
+          <div className='flex flex-wrap gap-1.5'>
+            {availableReasons.map((reason) => {
+              const isSelected = selectedReasons.includes(reason)
+              return (
+                <button
+                  key={reason}
+                  type='button'
+                  onClick={() => toggleReason(reason)}
+                  className={cn(
+                    'inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-xl border transition-all cursor-pointer select-none font-exo',
+                    isSelected
+                      ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                      : 'bg-muted/40 border-border/70 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                  )}
+                >
+                  {isSelected && <Check className='w-3 h-3' />}
+                  {reason}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Textarea de Comentarios Adicionales */}
+        <div className='grid gap-1.5 py-1'>
           <Label htmlFor='feedback-text' className='text-xs font-medium text-foreground'>
-            Comentarios o sugerencias <span className='text-[10px] text-muted-foreground font-normal'>(opcional)</span>
+            Comentarios adicionales <span className='text-[10px] text-muted-foreground font-normal'>(opcional)</span>
           </Label>
           <Textarea
             id='feedback-text'
-            placeholder='Escribe tus observaciones para mejorar las respuestas de SipánGPT...'
+            placeholder='Detalla observaciones para el equipo académico y de sistemas...'
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
-            className='min-h-[85px] rounded-2xl border-border/80 text-xs font-exo placeholder:text-muted-foreground/60'
+            className='min-h-[75px] rounded-2xl border-border/80 text-xs font-exo placeholder:text-muted-foreground/60'
           />
         </div>
 
-        {/* Switch de consentimiento para encuestas */}
+        {/* Switch de consentimiento */}
         <div className='flex items-center justify-between rounded-2xl border border-border/60 p-3 bg-muted/20'>
           <Label htmlFor='consent-switch' className='text-xs text-muted-foreground font-normal pr-3 leading-snug cursor-pointer'>
-            Permitir que el equipo de soporte me contacte por correo para encuestas de calidad USS.
+            Permitir contacto por correo para encuestas de satisfacción institucional USS.
           </Label>
           <Switch
             id='consent-switch'
@@ -221,7 +278,7 @@ export function FeedbackModal({
           />
         </div>
 
-        {/* Botones del Footer */}
+        {/* Footer */}
         <DialogFooter className='gap-2 pt-2 sm:justify-end'>
           <Button
             variant='outline'
@@ -236,9 +293,9 @@ export function FeedbackModal({
             size='sm'
             onClick={handleSubmit}
             disabled={isSubmitting || rating === 0}
-            className='rounded-xl text-xs'
+            className='rounded-xl text-xs font-semibold shadow-xs'
           >
-            {isSubmitting ? 'Enviando...' : 'Enviar Feedback'}
+            {isSubmitting ? 'Enviando...' : 'Enviar Calificación'}
           </Button>
         </DialogFooter>
       </DialogContent>
