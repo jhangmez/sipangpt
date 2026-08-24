@@ -1,56 +1,39 @@
-﻿import { requireRole } from '@/lib/session'
+import * as React from 'react'
+import { requireRole } from '@/lib/session'
 import { Role } from '@/lib/prisma'
-import Link from 'next/link'
-import { LayoutDashboard, Sparkles, HelpCircle, FileText } from 'lucide-react'
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import { AdminSidebar } from '@/components/admin-sidebar'
+import { AdminHeader } from '@/components/admin/admin-header'
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Guard de rol de Server Component: solo permite el acceso a usuarios con rol ADMIN
-  await requireRole(Role.ADMIN)
+  // Guard de rol estricto: solo permite acceso a usuarios con rol ADMIN
+  const user = await requireRole(Role.ADMIN)
 
   return (
-    <div className='flex-1 container mx-auto px-4 py-6 max-w-6xl flex flex-col md:flex-row gap-6'>
-      {/* Navegación Administrativa (RSC) */}
-      <aside className='w-full md:w-64 rounded-2xl border border-border/60 bg-card p-4 space-y-2 shrink-0 h-fit'>
-        <div className='pb-3 mb-2 border-b border-border/40'>
-          <h2 className='font-frances font-bold text-lg text-foreground'>
-            Panel de Control
-          </h2>
-          <p className='text-xs text-muted-foreground font-exo'>
-            Gestión Institucional SipánGPT
-          </p>
-        </div>
+    <SidebarProvider defaultOpen>
+      <div className='flex h-screen w-screen overflow-hidden bg-background'>
+        {/* Sidebar Especializado de Administración */}
+        <AdminSidebar user={user} />
 
-        <nav className='space-y-1 font-exo text-sm'>
-          <Link
-            href='/admin/dashboard'
-            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-foreground/80 hover:bg-muted/60 hover:text-foreground transition font-medium'
-          >
-            <LayoutDashboard className='w-4 h-4 text-primary' />
-            Dashboard y Métricas
-          </Link>
-          <Link
-            href='/admin/models'
-            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-foreground/80 hover:bg-muted/60 hover:text-foreground transition font-medium'
-          >
-            <Sparkles className='w-4 h-4 text-primary' />
-            Modelos y Estados de Salud
-          </Link>
-          <Link
-            href='/admin/questions'
-            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-foreground/80 hover:bg-muted/60 hover:text-foreground transition font-medium'
-          >
-            <HelpCircle className='w-4 h-4 text-primary' />
-            Preguntas Frecuentes
-          </Link>
-        </nav>
-      </aside>
+        {/* Contenido Principal con Header de Administración */}
+        <SidebarInset className='flex flex-1 flex-col h-full overflow-hidden'>
+          <div className='flex flex-1 flex-col h-full overflow-hidden p-3 sm:p-4'>
+            {/* Header sin selector de modelos */}
+            <AdminHeader />
 
-      {/* Contenido Principal de Administración (RSC) */}
-      <div className='flex-1'>{children}</div>
-    </div>
+            {/* Vista activa con scroll independiente */}
+            <main className='flex-1 overflow-y-auto pt-4 px-2 sm:px-6 pb-12 font-exo'>
+              <div className='max-w-5xl mx-auto space-y-6'>
+                {children}
+              </div>
+            </main>
+          </div>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   )
 }

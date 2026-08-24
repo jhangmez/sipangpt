@@ -15,5 +15,9 @@ export const ROUTES = {
   },
   ADMIN: {
     DASHBOARD: '/admin/dashboard',
+    MODELS: '/admin/models',
+    QUESTIONS: '/admin/questions',
+    ADMINISTRADORES: '/admin/administradores',
+    INVITACION: (token: string) => `/invitacion/${token}`,
   },
 } as const

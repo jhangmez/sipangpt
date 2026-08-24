@@ -10,6 +10,7 @@ export {
   MessageRole,
   PostStatus,
   DocumentStatus,
+  InvitationStatus,
 } from '@prisma/client'
 export type {
   User,
@@ -29,6 +30,7 @@ export type {
   Feedback,
   RequestLog,
   Pregunta,
+  AdminInvitation,
 } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }

@@ -5,14 +5,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog'
 import { signOut } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -28,14 +28,18 @@ import {
   Copy,
   Check,
   Moon,
-  Sun,
+  Sun
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { SessionsManager } from '../sessions-manager'
 import { useSidebar } from '@/components/ui/sidebar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
@@ -120,7 +124,6 @@ export function UserSettings({ user }: UserSettingsProps) {
         side={isCollapsed ? 'right' : 'top'}
         sideOffset={12}
       >
-        {/* Cabecera con Avatar, Nombre y Correo clickeable para copiar */}
         <div
           onClick={handleCopyEmail}
           className='flex items-center gap-3 p-2.5 w-full rounded-2xl bg-muted/40 hover:bg-muted/70 transition cursor-pointer text-left group/email mb-1.5 select-none'
@@ -170,18 +173,27 @@ export function UserSettings({ user }: UserSettingsProps) {
           </DialogTrigger>
           <DialogContent className='max-w-lg rounded-3xl p-6'>
             <DialogHeader className='space-y-1 font-exo'>
-              <DialogTitle className='font-frances text-xl'>Modelos Disponibles</DialogTitle>
+              <DialogTitle className='font-frances text-xl'>
+                Modelos Disponibles
+              </DialogTitle>
             </DialogHeader>
             <div className='space-y-3 pt-2 font-exo'>
               {SYSTEM_MODELS.map((m) => (
-                <div key={m.id} className='rounded-2xl border border-border/70 p-3.5 space-y-1 bg-card/60'>
+                <div
+                  key={m.id}
+                  className='rounded-2xl border border-border/70 p-3.5 space-y-1 bg-card/60'
+                >
                   <div className='flex items-center justify-between gap-2'>
-                    <span className='font-semibold text-xs text-foreground'>{m.name}</span>
+                    <span className='font-semibold text-xs text-foreground'>
+                      {m.name}
+                    </span>
                     <span className='rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary'>
                       {m.provider}
                     </span>
                   </div>
-                  <p className='text-xs text-muted-foreground'>{m.description}</p>
+                  <p className='text-xs text-muted-foreground'>
+                    {m.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -201,10 +213,14 @@ export function UserSettings({ user }: UserSettingsProps) {
               </DialogTitle>
               <div className='text-xs space-y-3 text-muted-foreground pt-2'>
                 <p>
-                  Asistente inteligente oficial de la Universidad Señor de Sipán entrenado con base de conocimiento y normativas institucionales.
+                  Asistente inteligente oficial de la Universidad Señor de Sipán
+                  entrenado con base de conocimiento y normativas
+                  institucionales.
                 </p>
                 <p>
-                  Desarrollado con arquitectura moderna RAG (Retrieval-Augmented Generation) para responder dudas sobre matrícula, planes de estudio y trámites universitarios.
+                  Desarrollado con arquitectura moderna RAG (Retrieval-Augmented
+                  Generation) para responder dudas sobre matrícula, planes de
+                  estudio y trámites universitarios.
                 </p>
               </div>
             </DialogHeader>

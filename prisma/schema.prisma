@@ -52,6 +52,13 @@ enum ModelStatus {
   DISABLED    // Desactivado manualmente por el administrador
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 // -------------------------------------------------------------
 // AUTENTICACIÓN & USUARIOS
 // -------------------------------------------------------------
@@ -76,16 +83,33 @@ model User {
   Authenticator Authenticator[]
 
   // Relaciones del Sistema
-  memories      UserMemory[]
-  posts         Post[]
-  conversations Conversation[]
-  feedbacks     Feedback[]
-  requestLogs   RequestLog[]
-  preguntas     Pregunta[]
-  uploadedDocs  Document[]     @relation("AdminUploadedDocs")
-  usage         UserUsage?
+  memories        UserMemory[]
+  posts           Post[]
+  conversations   Conversation[]
+  feedbacks       Feedback[]
+  requestLogs     RequestLog[]
+  preguntas       Pregunta[]
+  uploadedDocs    Document[]        @relation("AdminUploadedDocs")
+  sentInvitations AdminInvitation[] @relation("SentAdminInvitations")
+  usage           UserUsage?
 
   @@map("users")
+}
+
+model AdminInvitation {
+  id          String           @id @default(cuid())
+  email       String           @unique
+  token       String           @unique
+  role        Role             @default(ADMIN)
+  status      InvitationStatus @default(PENDING)
+  invitedById String?          @map("invited_by_id")
+  expiresAt   DateTime         @map("expires_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  invitedBy   User?            @relation("SentAdminInvitations", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@map("admin_invitations")
 }
 
 model Account {

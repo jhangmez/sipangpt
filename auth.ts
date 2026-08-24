@@ -1,4 +1,4 @@
-﻿import NextAuth from 'next-auth'
+import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma, Role } from '@/lib/prisma'
@@ -29,46 +29,58 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   events: {
     async signIn({ user }) {
-      // Auto-promoción garantizada a ADMIN para correos pre-registrados
-      if (user.email && isInitialAdminEmail(user.email)) {
-        await prisma.user.updateMany({
-          where: { email: user.email, role: { not: Role.ADMIN } },
-          data: { role: Role.ADMIN },
+      if (!user.email) return
+
+      const isInitial = isInitialAdminEmail(user.email)
+
+      try {
+        const pendingInvitation = await prisma.adminInvitation.findFirst({
+          where: {
+            email: user.email.toLowerCase(),
+            status: 'PENDING',
+            expiresAt: { gt: new Date() },
+          },
         })
+
+        if (isInitial || pendingInvitation) {
+          await prisma.user.updateMany({
+            where: { email: user.email, role: { not: Role.ADMIN } },
+            data: { role: Role.ADMIN },
+          })
+
+          if (pendingInvitation) {
+            await prisma.adminInvitation.update({
+              where: { id: pendingInvitation.id },
+              data: { status: 'ACCEPTED' },
+            })
+          }
+        }
+      } catch (e) {
+        console.error('[AUTH_SIGNIN_INVITATION_ERROR]', e)
       }
     },
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const isAdmin = isInitialAdminEmail(user.email)
         token.id = user.id as string
-        token.role = isAdmin ? Role.ADMIN : ((user.role as Role) || Role.USER)
+        token.role = (user.role as Role) || Role.USER
         token.firstName = user.firstName ?? null
         token.lastName = user.lastName ?? null
-      } else if (token.email) {
-        const isAdmin = isInitialAdminEmail(token.email)
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email },
-          select: { id: true, role: true, firstName: true, lastName: true },
-        })
-
-        if (dbUser) {
-          // Si el correo es de admin inicial y en BD aún figura como USER, lo promovemos
-          if (isAdmin && dbUser.role !== Role.ADMIN) {
-            await prisma.user.update({
-              where: { id: dbUser.id },
-              data: { role: Role.ADMIN },
-            })
-            token.role = Role.ADMIN
-          } else {
+      } else if (!token.id && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true, role: true, firstName: true, lastName: true },
+          })
+          if (dbUser) {
+            token.id = dbUser.id
             token.role = dbUser.role
+            token.firstName = dbUser.firstName
+            token.lastName = dbUser.lastName
           }
-          token.id = dbUser.id
-          token.firstName = dbUser.firstName
-          token.lastName = dbUser.lastName
-        } else if (isAdmin) {
-          token.role = Role.ADMIN
+        } catch (e) {
+          console.error('[AUTH_JWT_ERROR]', e)
         }
       }
       return token
@@ -76,7 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as Role
+        session.user.role = (token.role as Role) || Role.USER
         session.user.firstName = token.firstName as string | null | undefined
         session.user.lastName = token.lastName as string | null | undefined
       }
