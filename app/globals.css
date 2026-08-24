@@ -7,9 +7,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-exo), ui-sans-serif, system-ui, sans-serif;
+  --font-exo: var(--font-exo), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-frances), ui-serif, Georgia, serif;
+  --font-frances: var(--font-frances), ui-serif, Georgia, serif;
+  --font-fraunces: var(--font-frances), ui-serif, Georgia, serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

@@ -1,16 +1,15 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { House, ArrowLeftIcon } from 'lucide-react'
+import Link from 'next/link'
+import { House, ArrowLeft } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import type { Metadata } from 'next'
 
 const shortTitle = 'Página no encontrada 🤔'
 const description = 'No se ha encontrado esta página, intenta con otra.'
-const jhangmez = ' | SipánGPT'
-const title = `${shortTitle}${jhangmez}`
-const imageUrl = `https://jhangmez.vercel.app/api/og2?title=${shortTitle}&description=${description}`
+const title = `${shortTitle} | SipánGPT`
+const imageUrl = `https://jhangmez.vercel.app/api/og2?title=${encodeURIComponent(shortTitle)}&description=${encodeURIComponent(description)}`
 
-export const metadata = {
+export const metadata: Metadata = {
   title,
   description,
   openGraph: {
@@ -18,18 +17,17 @@ export const metadata = {
     description,
     type: 'article',
     url: 'https://sipangpt.xyz/',
-    images: [{ url: imageUrl }]
+    images: [{ url: imageUrl }],
   },
   twitter: {
     card: 'summary_large_image',
     title,
     description,
-    images: [imageUrl]
-  }
+    images: [imageUrl],
+  },
 }
 
 export default function NotFound() {
-  const router = useRouter()
   return (
     <main className='flex flex-col items-center justify-center min-h-screen px-4 bg-background'>
       <div className='text-center space-y-5 w-full max-w-md font-exo'>
@@ -41,21 +39,26 @@ export default function NotFound() {
           Lo sentimos, la página que estás buscando no existe o ha sido movida.
         </p>
         <div className='flex flex-col gap-4 mt-8 w-full'>
-          <Button
-            onClick={() => router.push('/')}
-            className='flex items-center justify-center gap-2 w-full font-semibold'
+          <Link
+            href='/'
+            className={cn(
+              buttonVariants({ variant: 'default' }),
+              'flex items-center justify-center gap-2 w-full font-semibold h-10'
+            )}
           >
             <House className='w-4 h-4' />
             Ir a Inicio
-          </Button>
-          <Button
-            onClick={() => router.back()}
-            variant='outline'
-            className='flex items-center justify-center gap-2 w-full font-semibold'
+          </Link>
+          <Link
+            href='/'
+            className={cn(
+              buttonVariants({ variant: 'outline' }),
+              'flex items-center justify-center gap-2 w-full font-semibold h-10'
+            )}
           >
-            <ArrowLeftIcon className='w-4 h-4' />
+            <ArrowLeft className='w-4 h-4' />
             Regresar
-          </Button>
+          </Link>
         </div>
       </div>
     </main>

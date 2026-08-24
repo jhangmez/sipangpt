@@ -81,3 +81,45 @@ Este comando únicamente ejecuta los scripts `.sql` pendientes sin alterar la es
   npx prisma studio
   ```
 
+---
+
+# 🎨 Guía de Tipografías y Fuentes (Tailwind CSS v4 + Next.js)
+
+El proyecto utiliza dos fuentes locales variables configuradas en `app/fonts.ts` e inyectadas globalmente en `app/layout.tsx` y `app/globals.css`:
+
+| Propósito | Fuente | Variable CSS | Clases Tailwind disponibles |
+| :--- | :--- | :--- | :--- |
+| **Texto general / Letras normales** | **Exo 2** (`Exo2-*.ttf`) | `--font-exo` | `font-sans`, `font-exo` *(por defecto en todo el body)* |
+| **Títulos / Encabezados** | **Fraunces** (`Fraunces-*.ttf`) | `--font-frances` | `font-frances`, `font-fraunces`, `font-heading` |
+
+### 📌 Reglas de Uso en Componentes y Páginas:
+
+1. **Textos y Párrafos:**
+   - La fuente por defecto de todo el documento es **Exo 2** (`font-sans`), por lo que no es estrictamente obligatorio añadir una clase para textos base, pero puedes usar `font-exo` o `font-sans` para ser explícito.
+   ```tsx
+   <p className="text-muted-foreground text-sm font-exo">
+     Texto del párrafo usando Exo 2
+   </p>
+   ```
+
+2. **Títulos y Encabezados:**
+   - Siempre que se creen encabezados (`h1`, `h2`, `h3`, badges destacados, etc.), utilizar la clase `font-frances` o `font-heading`:
+   ```tsx
+   <h1 className="font-frances text-3xl font-bold tracking-tight text-foreground">
+     Título Destacado con Fraunces
+   </h1>
+   ```
+
+3. **Definición en Tailwind v4 (`app/globals.css`):**
+   Las variables se encuentran mapeadas en `@theme inline` para que cualquier utilidad de fuente resuelva directamente a las fuentes locales de Next.js:
+   ```css
+   @theme inline {
+     --font-sans: var(--font-exo), ui-sans-serif, system-ui, sans-serif;
+     --font-exo: var(--font-exo), ui-sans-serif, system-ui, sans-serif;
+     --font-heading: var(--font-frances), ui-serif, Georgia, serif;
+     --font-frances: var(--font-frances), ui-serif, Georgia, serif;
+     --font-fraunces: var(--font-frances), ui-serif, Georgia, serif;
+   }
+   ```
+
+
