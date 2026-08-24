@@ -148,11 +148,12 @@ model Session {
   sessionToken String   @unique @map("session_token")
   userId       String   @map("user_id")
   expires      DateTime
-  ipAddress    String?  @map("ip_address")
   userAgent    String?  @map("user_agent")
-  deviceType   String?  @map("device_type") // Ej: "Escritorio (Windows)", "Móvil (Android)"
-  browser      String?  // Ej: "Chrome", "Safari", "Edge"
-  city         String?  // Ciudad / Ubicación aproximada
+  ipAddress    String?  @map("ip_address")
+  deviceType   String?  @map("device_type") // "desktop", "mobile", "tablet"
+  browserName  String?  @map("browser_name") // "Chrome", "Firefox", "Safari", etc.
+  osName       String?  @map("os_name") // "Windows", "macOS", "Android", etc.
+  location     String?  // Ciudad / País real
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

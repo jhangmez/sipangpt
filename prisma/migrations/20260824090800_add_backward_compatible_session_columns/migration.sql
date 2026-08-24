@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "sessions" ADD COLUMN IF NOT EXISTS "browser" TEXT;
+ALTER TABLE "sessions" ADD COLUMN IF NOT EXISTS "browser_name" TEXT;
+ALTER TABLE "sessions" ADD COLUMN IF NOT EXISTS "city" TEXT;
+ALTER TABLE "sessions" ADD COLUMN IF NOT EXISTS "location" TEXT;
+ALTER TABLE "sessions" ADD COLUMN IF NOT EXISTS "os_name" TEXT;

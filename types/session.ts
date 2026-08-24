@@ -1,4 +1,4 @@
-﻿export interface ActiveSessionItem {
+export interface ActiveSessionItem {
   sessionToken: string
   userId: string
   userEmail: string
@@ -8,6 +8,9 @@
   ipAddress?: string | null
   userAgent?: string | null
   deviceType?: string | null
+  browserName?: string | null
+  osName?: string | null
+  location?: string | null
   browser?: string | null
   city?: string | null
   expires: string

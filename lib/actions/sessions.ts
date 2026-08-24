@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { prisma, Role } from '@/lib/prisma'
 import { requireAuth } from '@/lib/session'
@@ -29,6 +29,7 @@ export async function closeSessionAction(sessionToken: string) {
   })
 
   revalidatePath('/admin/dashboard')
+  revalidatePath('/configuraciones/sesiones')
   revalidatePath('/chat')
 
   return { success: true, message: 'Sesión finalizada correctamente.' }
@@ -47,6 +48,8 @@ export async function closeOtherSessionsAction(keepSessionToken?: string) {
     },
   })
 
+  revalidatePath('/configuraciones/sesiones')
+  revalidatePath('/admin/dashboard')
   revalidatePath('/chat')
   return { success: true, message: 'Se han cerrado todas las demás sesiones.' }
 }

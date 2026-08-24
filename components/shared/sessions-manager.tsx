@@ -4,8 +4,11 @@ import * as React from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { Laptop, Smartphone, Globe, Shield, LogOut, RefreshCw, Clock, MapPin } from 'lucide-react'
+import { Laptop, Smartphone, Globe, Shield, LogOut, RefreshCw, Clock, MapPin, CheckCircle2 } from 'lucide-react'
 import { closeSessionAction, closeOtherSessionsAction } from '@/lib/actions/sessions'
+import { performSafeLogout } from '@/lib/auth/multi-tab-sync'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { getErrorMessage } from '@/lib/utils'
 import type { ActiveSessionItem } from '@/types/session'
 
@@ -34,14 +37,23 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
   }
 
   React.useEffect(() => {
-    if (sessions.length === 0) {
+    if (initialSessions.length > 0) {
+      setSessions(initialSessions)
+    } else {
       fetchSessions()
     }
     const interval = setInterval(fetchSessions, 15000)
     return () => clearInterval(interval)
-  }, [])
+  }, [initialSessions])
 
-  const handleCloseSession = async (sessionToken: string) => {
+  const handleCloseSession = async (sessionToken: string, isCurrent: boolean) => {
+    if (isCurrent) {
+      if (confirm('¿Deseas cerrar la sesión en este dispositivo? Serás redirigido al inicio de sesión.')) {
+        await performSafeLogout('/login')
+      }
+      return
+    }
+
     try {
       const res = await closeSessionAction(sessionToken)
       if (res.success) {
@@ -76,14 +88,14 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
   const getDeviceIcon = (deviceType?: string | null) => {
     const lower = (deviceType || '').toLowerCase()
     if (lower.includes('móvil') || lower.includes('android') || lower.includes('iphone')) {
-      return <Smartphone className='w-4 h-4 text-primary' />
+      return <Smartphone className='w-5 h-5 text-primary' />
     }
-    return <Laptop className='w-4 h-4 text-primary' />
+    return <Laptop className='w-5 h-5 text-primary' />
   }
 
   return (
     <div className='space-y-4 font-exo'>
-      <div className='flex items-center justify-between'>
+      <div className='flex items-center justify-between gap-4 flex-wrap'>
         <div>
           <h3 className='font-frances font-bold text-lg text-foreground'>
             {isAdminView ? 'Sesiones Activas en el Sistema' : 'Dispositivos y Sesiones Conectadas'}
@@ -94,81 +106,93 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
         </div>
 
         <div className='flex items-center gap-2'>
-          <button
-            type='button'
+          <Button
+            variant='outline'
+            size='icon-sm'
             onClick={fetchSessions}
             disabled={isLoading}
-            className='rounded-xl border border-border/80 bg-background p-2 text-muted-foreground hover:text-foreground transition'
+            className='rounded-xl cursor-pointer'
             title='Actualizar lista'
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
+          </Button>
 
           {!isAdminView && sessions.length > 1 && (
-            <button
-              type='button'
+            <Button
+              variant='outline'
+              size='sm'
               onClick={handleCloseOtherSessions}
-              className='rounded-xl bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/20 transition'
+              className='rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 cursor-pointer'
             >
-              Cerrar todas las demás
-            </button>
+              <LogOut className='w-3.5 h-3.5 mr-1.5' /> Cerrar todas las demás
+            </Button>
           )}
         </div>
       </div>
 
       <div className='space-y-2.5'>
         {sessions.length === 0 ? (
-          <div className='rounded-2xl border border-border/60 p-6 text-center text-xs text-muted-foreground'>
+          <div className='rounded-2xl border border-border/60 p-8 text-center text-xs text-muted-foreground'>
             No hay sesiones activas registradas.
           </div>
         ) : (
           sessions.map((s) => (
             <div
               key={s.sessionToken}
-              className='rounded-2xl border border-border/70 bg-card/60 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs'
+              className={`rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs transition-all ${
+                s.isCurrent
+                  ? 'border-primary/40 bg-primary/5'
+                  : 'border-border/70 bg-card/60'
+              }`}
             >
-              <div className='flex items-start gap-3'>
+              <div className='flex items-start gap-3.5'>
                 <div className='rounded-xl bg-primary/10 p-2.5 shrink-0 mt-0.5'>
                   {getDeviceIcon(s.deviceType)}
                 </div>
 
-                <div className='space-y-1 text-xs'>
+                <div className='space-y-1.5 text-xs'>
                   <div className='flex items-center gap-2 flex-wrap'>
                     <span className='font-semibold text-foreground text-sm'>
                       {s.deviceType || 'Dispositivo'}
                     </span>
-                    <span className='rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground'>
+                    <Badge variant='outline' className='text-[10px] py-0 font-normal'>
                       {s.browser || 'Navegador Web'}
-                    </span>
-                    {isAdminView && (
-                      <span className='rounded-md bg-primary/10 px-2 py-0.5 text-[11px] text-primary font-medium'>
+                    </Badge>
+                    {s.isCurrent && (
+                      <Badge className='text-[10px] py-0 bg-emerald-600 hover:bg-emerald-600 text-white gap-1'>
+                        <CheckCircle2 className='w-3 h-3' /> Este Dispositivo (Actual)
+                      </Badge>
+                    )}
+                    {isAdminView && s.userEmail && (
+                      <Badge variant='secondary' className='text-[10px] py-0 font-mono'>
                         {s.userEmail}
-                      </span>
+                      </Badge>
                     )}
                   </div>
 
                   <div className='flex items-center gap-3 text-muted-foreground flex-wrap text-[11px]'>
                     <span className='flex items-center gap-1'>
                       <MapPin className='w-3 h-3 text-muted-foreground' />
-                      {s.city || 'Chiclayo, PE'} ({s.ipAddress})
+                      {s.city ? `${s.city} • IP: ${s.ipAddress}` : `IP: ${s.ipAddress}`}
                     </span>
                     <span className='flex items-center gap-1'>
                       <Clock className='w-3 h-3 text-muted-foreground' />
-                      Activo: {formatDateTime(s.updatedAt)}
+                      Última actividad: {formatDateTime(s.updatedAt)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className='self-end sm:self-center'>
-                <button
-                  type='button'
-                  onClick={() => handleCloseSession(s.sessionToken)}
-                  className='inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-500/20 transition'
+              <div className='self-end sm:self-center shrink-0'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => handleCloseSession(s.sessionToken, !!s.isCurrent)}
+                  className='rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 cursor-pointer'
                 >
-                  <LogOut className='w-3.5 h-3.5' />
-                  Cerrar sesión
-                </button>
+                  <LogOut className='w-3.5 h-3.5 mr-1.5' />
+                  {s.isCurrent ? 'Cerrar esta sesión' : 'Cerrar sesión'}
+                </Button>
               </div>
             </div>
           ))

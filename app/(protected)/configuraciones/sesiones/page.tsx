@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import * as React from 'react'
 import { getAuthenticatedUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
-import { SessionsManager } from '@/components/shared/sessions-manager'
+import { ActiveSessionsManager } from '@/components/configuraciones/active-sessions-manager'
 
 export const metadata: Metadata = {
   title: 'Dispositivos y Sesiones • Configuraciones',
@@ -24,9 +24,7 @@ export default async function SesionesSettingsPage() {
         </p>
       </div>
 
-      <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs font-exo'>
-        <SessionsManager />
-      </div>
+      <ActiveSessionsManager />
     </div>
   )
 }

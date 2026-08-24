@@ -88,16 +88,82 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.error('[AUTH_JWT_ERROR]', e)
         }
       }
+
+      if (!token.sessionToken) {
+        token.sessionToken = (token.jti as string) || `auth_sess_${token.id || 'usr'}`
+      }
+
       return token
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
+        const userId = token.id as string
+        session.user.id = userId
         session.user.role = (token.role as Role) || Role.USER
         session.user.firstName = token.firstName as string | null | undefined
         session.user.lastName = token.lastName as string | null | undefined
+        ;(session.user as { sessionToken?: string }).sessionToken = token.sessionToken as string
+
+        // Control de límite de sesiones activas en base de datos
+        try {
+          const maxSessions = session.user.role === Role.ADMIN ? 5 : 3
+          const userSessions = await prisma.session.findMany({
+            where: {
+              userId,
+              expires: { gt: new Date() },
+            },
+            orderBy: { updatedAt: 'asc' },
+          })
+
+          if (userSessions.length > maxSessions) {
+            const sessionsToDelete = userSessions.slice(0, userSessions.length - maxSessions)
+            if (sessionsToDelete.length > 0) {
+              await prisma.session.deleteMany({
+                where: {
+                  sessionToken: {
+                    in: sessionsToDelete.map((s) => s.sessionToken),
+                  },
+                },
+              })
+            }
+          }
+
+          const activeCount = await prisma.session.count({
+            where: {
+              userId,
+              expires: { gt: new Date() },
+            },
+          })
+
+          ;(session.user as { activeSessionsCount?: number }).activeSessionsCount = activeCount
+          ;(session.user as { maxAllowedSessions?: number }).maxAllowedSessions = maxSessions
+        } catch (err) {
+          console.error('[AUTH_SESSION_LIMIT_ERROR]', err)
+        }
       }
       return session
     },
   },
 })
+
+/**
+ * Función auxiliar para actualizar información de sesión desde endpoints de API o Server Actions.
+ */
+export async function updateSessionInfo(
+  sessionToken: string,
+  userAgent?: string,
+  ipAddress?: string
+) {
+  try {
+    await prisma.session.update({
+      where: { sessionToken },
+      data: {
+        userAgent: userAgent || null,
+        ipAddress: ipAddress || null,
+        updatedAt: new Date(),
+      },
+    })
+  } catch (error) {
+    console.error('[UPDATE_SESSION_INFO_ERROR]', error)
+  }
+}
