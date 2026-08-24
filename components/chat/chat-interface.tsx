@@ -3,8 +3,8 @@
 import * as React from 'react'
 import { Bot, User, Sparkles, AlertCircle, ArrowUp, RefreshCw } from 'lucide-react'
 import { ModelSelector } from './model-selector'
-import { SYSTEM_MODELS, type ModelDefinition } from '@/constants/models'
-import { INITIAL_QUESTIONS } from '@/constants/questions'
+import type { ModelDefinition } from '@/constants/models'
+import type { AIModelConfig, Pregunta } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 
 interface ChatMessage {
@@ -17,12 +17,40 @@ interface ChatMessage {
 interface ChatInterfaceProps {
   initialConversationId?: string
   userName?: string | null
+  models?: AIModelConfig[]
+  questions?: Pregunta[]
 }
 
-export function ChatInterface({ initialConversationId, userName }: ChatInterfaceProps) {
-  const [selectedModel, setSelectedModel] = React.useState<ModelDefinition>(
-    SYSTEM_MODELS.find((m) => m.isDefault) || SYSTEM_MODELS[0]
-  )
+export function ChatInterface({
+  initialConversationId,
+  userName,
+  models = [],
+  questions = [],
+}: ChatInterfaceProps) {
+  // Mapear los modelos de la base de datos a la estructura del selector
+  const mappedModels: ModelDefinition[] = models.map((m) => ({
+    id: m.id,
+    name: m.name,
+    modelCode: m.modelCode,
+    provider: m.provider,
+    description: m.description || '',
+    status: m.status,
+    latencyMs: m.latencyMs ?? undefined,
+    isDefault: m.isDefault,
+  }))
+
+  const defaultModel = mappedModels.find((m) => m.isDefault) || mappedModels[0] || {
+    id: 'default',
+    name: 'Gemini 2.5 Flash',
+    modelCode: 'gemini-2.5-flash',
+    provider: 'GEMINI' as const,
+    description: 'Modelo oficial por defecto',
+    status: 'ONLINE' as const,
+    latencyMs: 180,
+    isDefault: true,
+  }
+
+  const [selectedModel, setSelectedModel] = React.useState<ModelDefinition>(defaultModel)
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [input, setInput] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
@@ -60,7 +88,6 @@ export function ChatInterface({ initialConversationId, userName }: ChatInterface
     setIsLoading(true)
 
     try {
-      // Formato UIMessage para el endpoint con AI SDK
       const payloadMessages = updatedMessages.map((m) => ({
         id: m.id,
         role: m.role,
@@ -95,8 +122,6 @@ export function ChatInterface({ initialConversationId, userName }: ChatInterface
         if (done) break
 
         const chunk = decoder.decode(value, { stream: true })
-        // El stream UI de AI SDK envía fragmentos serializados
-        // Extraemos texto limpio acumulativo
         const lines = chunk.split('\n')
         for (const line of lines) {
           if (!line) continue
@@ -141,7 +166,7 @@ export function ChatInterface({ initialConversationId, userName }: ChatInterface
           <ModelSelector
             selectedModel={selectedModel}
             onSelectModel={setSelectedModel}
-            models={SYSTEM_MODELS}
+            models={mappedModels.length > 0 ? mappedModels : undefined}
           />
         </div>
         <div className='text-xs text-muted-foreground font-exo hidden sm:block'>
@@ -166,20 +191,22 @@ export function ChatInterface({ initialConversationId, userName }: ChatInterface
               </p>
             </div>
 
-            {/* Preguntas Sugeridas Iniciales */}
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left pt-2'>
-              {INITIAL_QUESTIONS.map((q) => (
-                <button
-                  key={q.id}
-                  type='button'
-                  onClick={() => handleSendMessage(q.text)}
-                  className='flex items-start gap-2.5 rounded-2xl border border-border/70 bg-card/60 p-3 text-xs font-exo text-foreground hover:border-primary/50 hover:bg-primary/5 transition-all shadow-xs'
-                >
-                  <span className='text-base shrink-0'>{q.icon}</span>
-                  <span className='line-clamp-2 leading-relaxed'>{q.text}</span>
-                </button>
-              ))}
-            </div>
+            {/* Preguntas Sugeridas Iniciales Dinámicas desde Base de Datos */}
+            {questions.length > 0 && (
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left pt-2'>
+                {questions.map((q) => (
+                  <button
+                    key={q.id}
+                    type='button'
+                    onClick={() => handleSendMessage(q.text)}
+                    className='flex items-start gap-2.5 rounded-2xl border border-border/70 bg-card/60 p-3 text-xs font-exo text-foreground hover:border-primary/50 hover:bg-primary/5 transition-all shadow-xs'
+                  >
+                    <span className='text-base shrink-0'>{q.icon}</span>
+                    <span className='line-clamp-2 leading-relaxed'>{q.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           messages.map((message) => {

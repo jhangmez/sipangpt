@@ -1,7 +1,7 @@
 ﻿import { requireRole } from '@/lib/session'
 import { Role } from '@/lib/prisma'
 import Link from 'next/link'
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, Sparkles, HelpCircle, FileText } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -12,9 +12,9 @@ export default async function AdminLayout({
   await requireRole(Role.ADMIN)
 
   return (
-    <div className='flex-1 container mx-auto px-4 py-8 max-w-6xl flex flex-col md:flex-row gap-6'>
-      {/* Navegación Administrativa */}
-      <aside className='w-full md:w-64 rounded-2xl border border-border/60 bg-card p-4 space-y-2 shrink-0'>
+    <div className='flex-1 container mx-auto px-4 py-6 max-w-6xl flex flex-col md:flex-row gap-6'>
+      {/* Navegación Administrativa (RSC) */}
+      <aside className='w-full md:w-64 rounded-2xl border border-border/60 bg-card p-4 space-y-2 shrink-0 h-fit'>
         <div className='pb-3 mb-2 border-b border-border/40'>
           <h2 className='font-frances font-bold text-lg text-foreground'>
             Panel de Control
@@ -27,15 +27,29 @@ export default async function AdminLayout({
         <nav className='space-y-1 font-exo text-sm'>
           <Link
             href='/admin/dashboard'
-            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-primary bg-primary/10 font-medium'
+            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-foreground/80 hover:bg-muted/60 hover:text-foreground transition font-medium'
           >
-            <LayoutDashboard className='w-4 h-4' />
+            <LayoutDashboard className='w-4 h-4 text-primary' />
             Dashboard y Métricas
+          </Link>
+          <Link
+            href='/admin/models'
+            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-foreground/80 hover:bg-muted/60 hover:text-foreground transition font-medium'
+          >
+            <Sparkles className='w-4 h-4 text-primary' />
+            Modelos y Estados de Salud
+          </Link>
+          <Link
+            href='/admin/questions'
+            className='flex items-center gap-2.5 rounded-xl px-3 py-2 text-foreground/80 hover:bg-muted/60 hover:text-foreground transition font-medium'
+          >
+            <HelpCircle className='w-4 h-4 text-primary' />
+            Preguntas Frecuentes
           </Link>
         </nav>
       </aside>
 
-      {/* Contenido Principal de Administración */}
+      {/* Contenido Principal de Administración (RSC) */}
       <div className='flex-1'>{children}</div>
     </div>
   )

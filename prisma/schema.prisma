@@ -250,15 +250,17 @@ model DocumentChunk {
 
 model AIModelConfig {
   id           String        @id @default(cuid())
-  name         String        @unique // Ej: "Gemma 4 Fine-Tuned (Local)", "GPT-4o Mini"
-  modelCode    String        @map("model_code") // Identificador técnico: "gemma-4-local"
+  name         String        @unique // Ej: "Gemini 2.5 Flash", "Llama 3.2 SipánGPT"
+  modelCode    String        @map("model_code") // Identificador técnico: "gemini-2.5-flash"
   provider     ModelProvider @default(LOCAL_MAC)
+  description  String?       @db.Text
   endpointUrl  String?       @map("endpoint_url") // p. ej: "https://ai.sipangpt.com/v1"
   apiKeyEnvVar String?       @map("api_key_env_var")
   status       ModelStatus   @default(ONLINE) // ONLINE, DEGRADED, OFFLINE, DISABLED
   latencyMs    Int?          @map("latency_ms") // Último ping / latencia medida en ms
   isActive     Boolean       @default(true) @map("is_active")
   isDefault    Boolean       @default(false) @map("is_default")
+  order        Int           @default(0)
   maxTokens    Int           @default(2048) @map("max_tokens")
   temperature  Float         @default(0.3)
   createdAt    DateTime      @default(now()) @map("created_at")
@@ -373,13 +375,17 @@ model RequestLog {
 }
 
 model Pregunta {
-  id          Int      @id @default(autoincrement())
-  contenido   String   @db.Text
-  creadoPorId String   @map("creado_por_id")
+  id          String   @id @default(cuid())
+  text        String   @map("contenido") @db.Text
+  icon        String   @default("📋")
+  category    String?  @default("general")
+  order       Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String?  @map("creado_por_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  creadoPor User @relation(fields: [creadoPorId], references: [id], onDelete: Cascade)
+  creadoPor User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@map("preguntas")
 }

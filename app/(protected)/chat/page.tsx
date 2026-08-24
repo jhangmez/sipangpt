@@ -1,6 +1,7 @@
 ﻿import { requireAuth } from '@/lib/session'
 import { getUserConversations } from '@/lib/db/conversations'
-import { MessageSquare, Plus, Bot } from 'lucide-react'
+import { getActiveAIModels, getActiveSuggestedQuestions } from '@/lib/db/system'
+import { MessageSquare, Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { ChatInterface } from '@/components/chat/chat-interface'
 import { cn } from '@/lib/utils'
@@ -8,7 +9,13 @@ import Link from 'next/link'
 
 export default async function ChatPage() {
   const user = await requireAuth()
-  const conversations = await getUserConversations(user.id)
+
+  // Consultas paralelas en Server Components (RSC) directas a Neon
+  const [conversations, aiModels, suggestedQuestions] = await Promise.all([
+    getUserConversations(user.id),
+    getActiveAIModels(),
+    getActiveSuggestedQuestions(),
+  ])
 
   return (
     <div className='flex-1 container mx-auto px-4 py-4 max-w-6xl grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-5rem)]'>
@@ -50,9 +57,13 @@ export default async function ChatPage() {
         </div>
       </aside>
 
-      {/* Interfaz de Chat con AI SDK (Client Component con RSC Props) */}
+      {/* Interfaz de Chat con Modelos y Preguntas Dinámicas */}
       <main className='md:col-span-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs flex flex-col h-full overflow-hidden shadow-xs'>
-        <ChatInterface userName={user.firstName || user.name} />
+        <ChatInterface
+          userName={user.firstName || user.name}
+          models={aiModels}
+          questions={suggestedQuestions}
+        />
       </main>
     </div>
   )
