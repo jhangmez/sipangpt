@@ -26,13 +26,7 @@ export default async function ChatPage() {
   return (
     <SidebarProvider>
       <AppSidebar conversations={sidebarChats} user={user} />
-      <SidebarInset className='flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-background'>
-        <header className='flex h-12 shrink-0 items-center gap-2 border-b border-border/40 px-4'>
-          <SidebarTrigger className='-ml-1' />
-          <div className='h-4 w-px bg-border/60' />
-          <span className='font-frances font-bold text-sm text-foreground'>SipánGPT</span>
-        </header>
-
+      <SidebarInset className='flex flex-col h-full overflow-hidden bg-background'>
         <div className='flex-1 overflow-hidden p-4'>
           <ChatInterface
             user={user}

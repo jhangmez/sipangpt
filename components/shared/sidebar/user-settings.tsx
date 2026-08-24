@@ -29,6 +29,7 @@ import {
 import Link from 'next/link'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { SessionsManager } from '../sessions-manager'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import type { User } from 'next-auth'
 
 interface UserSettingsProps {
@@ -130,6 +131,12 @@ export function UserSettings({ user }: UserSettingsProps) {
             </DialogHeader>
           </DialogContent>
         </Dialog>
+
+        {/* Selector de Modo Noche / Modo Claro */}
+        <div className='flex items-center justify-between px-2.5 py-2 text-xs font-exo rounded-xl hover:bg-muted/60 transition'>
+          <span className='text-foreground'>Modo Noche</span>
+          <ThemeToggle />
+        </div>
 
         {/* Enlace para Administradores */}
         {isAdmin && (

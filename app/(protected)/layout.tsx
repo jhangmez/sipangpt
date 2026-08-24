@@ -1,5 +1,4 @@
-﻿import { requireAuth } from '@/lib/session'
-import { Navbar } from '@/components/shared/navbar'
+import { requireAuth } from '@/lib/session'
 
 export default async function ProtectedLayout({
   children,
@@ -10,9 +9,8 @@ export default async function ProtectedLayout({
   await requireAuth()
 
   return (
-    <div className='flex min-h-screen flex-col bg-background text-foreground font-exo'>
-      <Navbar />
-      <div className='flex-1 flex flex-col'>{children}</div>
+    <div className='flex h-screen w-full overflow-hidden bg-background text-foreground font-exo'>
+      {children}
     </div>
   )
 }

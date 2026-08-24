@@ -28,6 +28,7 @@ import {
 import { formatTimeAgo } from '@/lib/timeago'
 import { FeedbackModal } from './feedback-modal'
 import { ModelSelector } from './model-selector'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -328,7 +329,7 @@ export function ChatInterface({
 
   const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text)
-    toast.success('Texto copiado al portapapeles.')
+    toast.success('Mensaje copiado!')
   }
 
   const clearMessages = () => {
@@ -341,9 +342,11 @@ export function ChatInterface({
 
   return (
     <div className='flex flex-col h-full w-full max-w-4xl mx-auto select-text'>
-      {/* Barra Superior de Controles: Selector de Modelo con Drawer */}
+      {/* Barra Superior de Controles: SidebarTrigger + Selector de Modelo con Drawer */}
       <header className='flex items-center justify-between border-b border-border/40 pb-3 px-4 shrink-0'>
-        <div className='flex items-center gap-3'>
+        <div className='flex items-center gap-2'>
+          <SidebarTrigger className='-ml-1 h-8 w-8 rounded-xl' />
+          <div className='h-4 w-px bg-border/60 mx-1' />
           <ModelSelector
             selectedModel={selectedModel}
             onSelectModel={setSelectedModel}
@@ -427,262 +430,6 @@ export function ChatInterface({
                     second: '2-digit',
                   })
 
-                  const messageComponent = (
-                    <Message align={isUser ? 'end' : 'start'} className='font-exo'>
-                      {/* Avatar con soporte para imagen del usuario actual */}
-                      <MessageAvatar>
-                        <Avatar className='h-8 w-8 rounded-xl border border-border/70'>
-                          {isUser ? (
-                            <>
-                              <AvatarImage src={userImage} alt={userDisplayName} />
-                              <AvatarFallback className='bg-primary text-primary-foreground text-xs font-bold rounded-xl'>
-                                {userDisplayName.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </>
-                          ) : (
-                            <AvatarFallback className='bg-muted border border-border text-primary rounded-xl'>
-                              <Bot className='h-4 w-4' />
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                      </MessageAvatar>
-
-                      <MessageContent className={cn(
-                        'space-y-2 max-w-[88%] sm:max-w-2xl',
-                        !isUser && 'bg-assistant-bg border border-assistant-border rounded-3xl p-4 sm:p-5 shadow-xs'
-                      )}>
-                        {/* Header del Mensaje: Nombre del Modelo de IA y Tiempo Relativo */}
-                        {!isUser && (
-                          <MessageHeader className='flex items-center justify-between pb-1 border-b border-border/30'>
-                            <div className='flex items-center gap-2'>
-                              <span className='font-frances font-bold text-xs text-foreground'>
-                                {message.modelName || selectedModel.name}
-                              </span>
-                              <Badge variant='secondary' className='text-[9px] font-mono py-0 px-1.5'>
-                                {message.modelProvider || selectedModel.provider}
-                              </Badge>
-                            </div>
-                            <span
-                              className='text-[10px] text-muted-foreground font-mono cursor-default'
-                              title={`${formattedDate} - ${formattedTime}`}
-                            >
-                              {formatTimeAgo(message.createdAt)}
-                            </span>
-                          </MessageHeader>
-                        )}
-
-                        {/* Pasos de Razonamiento CoT (si aplica) */}
-                        {message.reasoning && (
-                          <Collapsible className='rounded-2xl border border-border/60 bg-muted/30 p-2.5 text-xs'>
-                            <CollapsibleTrigger className='flex items-center gap-1.5 font-semibold text-primary hover:underline'>
-                              <BrainCircuit className='h-3.5 w-3.5' />
-                              <span>Proceso de Razonamiento</span>
-                              <ChevronDown className='h-3 w-3 ml-auto' />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className='pt-2 text-muted-foreground whitespace-pre-wrap leading-relaxed'>
-                              {message.reasoning}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        )}
-
-                        {/* Adjuntos del Mensaje con Attachment de Shadcn */}
-                        {message.attachments && message.attachments.length > 0 && (
-                          <AttachmentGroup className='py-1'>
-                            {message.attachments.map((att) => (
-                              <Attachment key={att.id} size='sm' className='rounded-2xl border border-border/80'>
-                                <AttachmentMedia>
-                                  <FileText className='h-4 w-4 text-primary' />
-                                </AttachmentMedia>
-                                <AttachmentContent>
-                                  <AttachmentTitle>{att.name}</AttachmentTitle>
-                                  <AttachmentDescription>{att.size} • {att.type}</AttachmentDescription>
-                                </AttachmentContent>
-                              </Attachment>
-                            ))}
-                          </AttachmentGroup>
-                        )}
-
-                        {/* Superficie del Mensaje usando Bubble de Shadcn UI */}
-                        <Bubble variant={isUser ? 'default' : 'ghost'} className='rounded-2xl'>
-                          <BubbleContent className={cn(
-                            'text-sm leading-relaxed whitespace-pre-wrap',
-                            isUser ? 'p-3.5' : 'p-0 font-normal'
-                          )}>
-                            {message.content}
-                          </BubbleContent>
-
-                          {/* Reacciones de Burbuja con Calificación de Estrellas */}
-                          {!isUser && message.rating && (
-                            <BubbleReactions
-                              role='img'
-                              aria-label={`Calificación: ${message.rating} de 5 estrellas`}
-                              className='pt-2'
-                            >
-                              <Badge
-                                variant='outline'
-                                onClick={() => handleOpenFeedback(message, null, message.rating)}
-                                className='border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1 text-[10px] font-bold cursor-pointer hover:bg-amber-500/20 transition'
-                              >
-                                {'⭐'.repeat(message.rating)} ({message.rating}/5)
-                              </Badge>
-                            </BubbleReactions>
-                          )}
-                        </Bubble>
-
-                        {/* Footer del Mensaje del Asistente: Feedback, Acciones, Rating y Diálogo de Información */}
-                        {!isUser && message.content && (
-                          <MessageFooter className='flex items-center justify-between gap-1 pt-2 border-t border-border/30 flex-wrap'>
-                            <div className='flex items-center gap-1'>
-                              {/* Botón Respuesta Adecuada (ThumbsUp) */}
-                              <Button
-                                variant='ghost'
-                                size='icon-xs'
-                                onClick={() => handleOpenFeedback(message, 'Adecuada', 5)}
-                                aria-label='Respuesta adecuada'
-                                className='h-7 w-7 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
-                                title='Respuesta adecuada'
-                              >
-                                <ThumbsUp className='h-3.5 w-3.5' />
-                              </Button>
-
-                              {/* Botón Respuesta Inadecuada (ThumbsDown) */}
-                              <Button
-                                variant='ghost'
-                                size='icon-xs'
-                                onClick={() => handleOpenFeedback(message, 'Inadecuada', 1)}
-                                aria-label='Respuesta inadecuada'
-                                className='h-7 w-7 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400'
-                                title='Respuesta inadecuada'
-                              >
-                                <ThumbsDown className='h-3.5 w-3.5' />
-                              </Button>
-
-                              {/* Botón Copiar */}
-                              <Button
-                                variant='ghost'
-                                size='icon-xs'
-                                onClick={() => copyToClipboard(message.content)}
-                                aria-label='Copiar mensaje'
-                                className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
-                                title='Copiar texto'
-                              >
-                                <Copy className='h-3.5 w-3.5' />
-                              </Button>
-
-                              {/* Selector de Calificación / Estrellas */}
-                              <div className='flex items-center gap-0.5 px-1'>
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <button
-                                    key={star}
-                                    type='button'
-                                    onClick={() => handleOpenFeedback(message, null, star)}
-                                    className={cn(
-                                      'p-1 text-muted-foreground/50 hover:text-amber-500 transition-colors',
-                                      message.rating && star <= message.rating ? 'text-amber-500' : ''
-                                    )}
-                                    aria-label={`Puntuar con ${star} estrellas`}
-                                    title={`Calificar con ${star} estrellas`}
-                                  >
-                                    <Star className='h-3.5 w-3.5 fill-current' />
-                                  </button>
-                                ))}
-                              </div>
-
-                              {/* Botón Regenerar Respuesta */}
-                              <Button
-                                variant='ghost'
-                                size='icon-xs'
-                                onClick={() => handleSendMessage()}
-                                aria-label='Regenerar respuesta'
-                                className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
-                                title='Regenerar respuesta'
-                              >
-                                <RefreshCw className='h-3.5 w-3.5' />
-                              </Button>
-                            </div>
-
-                            {/* Diálogo Modal de Información del Mensaje */}
-                            <Dialog>
-                              <DialogTrigger
-                                render={
-                                  <Button
-                                    variant='ghost'
-                                    size='icon-xs'
-                                    aria-label='Ver información del mensaje'
-                                    className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
-                                    title='Metadatos e información'
-                                  >
-                                    <Info className='h-3.5 w-3.5' />
-                                  </Button>
-                                }
-                              />
-                              <DialogContent className='max-w-md rounded-3xl p-6 font-exo'>
-                                <DialogHeader className='space-y-2'>
-                                  <DialogTitle className='font-frances text-xl'>
-                                    Información del Mensaje
-                                  </DialogTitle>
-                                  <DialogDescription className='text-xs text-muted-foreground'>
-                                    Metadatos registrados en el motor de inferencia y la base de datos de SipánGPT.
-                                  </DialogDescription>
-                                </DialogHeader>
-
-                                <div className='space-y-3 pt-3 text-xs'>
-                                  <div className='rounded-2xl border border-border/70 p-3.5 space-y-2 bg-card/60'>
-                                    <div className='flex justify-between items-center'>
-                                      <span className='text-muted-foreground'>Modelo de IA:</span>
-                                      <span className='font-bold text-foreground'>{message.modelName || selectedModel.name}</span>
-                                    </div>
-                                    <div className='flex justify-between items-center'>
-                                      <span className='text-muted-foreground'>Proveedor:</span>
-                                      <Badge variant='outline'>{message.modelProvider || selectedModel.provider}</Badge>
-                                    </div>
-                                    <div className='flex justify-between items-center'>
-                                      <span className='text-muted-foreground'>Tiempo de respuesta:</span>
-                                      <span className='font-mono font-medium'>{message.latencyMs ? `${message.latencyMs} ms` : '180 ms'}</span>
-                                    </div>
-                                    <div className='flex justify-between items-center'>
-                                      <span className='text-muted-foreground'>Emitido:</span>
-                                      <span className='font-mono font-medium'>{formatTimeAgo(message.createdAt)} ({formattedDate} {formattedTime})</span>
-                                    </div>
-                                  </div>
-
-                                  {/* Fuentes y Citas RAG de la USS */}
-                                  {message.sources && message.sources.length > 0 && (
-                                    <div className='space-y-2'>
-                                      <span className='font-bold text-xs text-foreground block'>
-                                        Fuentes y Normativas Consultadas:
-                                      </span>
-                                      {message.sources.map((src, i) => (
-                                        <div key={i} className='rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-1'>
-                                          <div className='flex items-center justify-between'>
-                                            <span className='font-semibold text-primary'>{src.title}</span>
-                                            {src.url && (
-                                              <a
-                                                href={src.url}
-                                                target='_blank'
-                                                rel='noreferrer'
-                                                className='text-primary hover:underline flex items-center gap-1 text-[11px]'
-                                              >
-                                                Ver <ExternalLink className='h-3 w-3' />
-                                              </a>
-                                            )}
-                                          </div>
-                                          {src.snippet && (
-                                            <p className='text-[11px] text-muted-foreground'>{src.snippet}</p>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          </MessageFooter>
-                        )}
-                      </MessageContent>
-                    </Message>
-                  )
-
                   return (
                     <MessageScrollerItem
                       key={message.id}
@@ -690,56 +437,282 @@ export function ChatInterface({
                       scrollAnchor={isUser}
                       className='py-3'
                     >
-                      {/* ContextMenu aplicado exclusivamente sobre el mensaje de respuesta */}
-                      {!isUser ? (
-                        <ContextMenu>
-                          <ContextMenuTrigger>
-                            {messageComponent}
-                          </ContextMenuTrigger>
-                          <ContextMenuContent className='w-56 font-exo'>
-                            <ContextMenuItem
-                              onSelect={() => copyToClipboard(message.content)}
-                              className='gap-2'
-                            >
-                              <Copy className='w-4 h-4 text-primary' />
-                              <span>Copiar respuesta</span>
-                            </ContextMenuItem>
+                      <Message align={isUser ? 'end' : 'start'} className='font-exo'>
+                        {/* Avatar con soporte para imagen del usuario actual */}
+                        <MessageAvatar>
+                          <Avatar className='h-8 w-8 rounded-xl border border-border/70'>
+                            {isUser ? (
+                              <>
+                                <AvatarImage src={userImage} alt={userDisplayName} />
+                                <AvatarFallback className='bg-primary text-primary-foreground text-xs font-bold rounded-xl'>
+                                  {userDisplayName.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </>
+                            ) : (
+                              <AvatarFallback className='bg-muted border border-border text-primary rounded-xl'>
+                                <Bot className='h-4 w-4' />
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                        </MessageAvatar>
 
-                            <ContextMenuItem
-                              onSelect={() => handleOpenFeedback(message, 'Adecuada', 5)}
-                              className='gap-2 text-emerald-600 dark:text-emerald-400'
-                            >
-                              <ThumbsUp className='w-4 h-4' />
-                              <span>Respuesta adecuada (👍)</span>
-                            </ContextMenuItem>
+                        <MessageContent className={cn(
+                          'space-y-2 max-w-[88%] sm:max-w-2xl',
+                          !isUser && 'bg-assistant-bg border border-assistant-border rounded-3xl p-4 sm:p-5 shadow-xs'
+                        )}>
+                          {/* Header del Mensaje: Nombre del Modelo de IA y Tiempo Relativo */}
+                          {!isUser && (
+                            <MessageHeader className='flex items-center justify-between pb-1 border-b border-border/30'>
+                              <div className='flex items-center gap-2'>
+                                <span className='font-frances font-bold text-xs text-foreground'>
+                                  {message.modelName || selectedModel.name}
+                                </span>
+                                <Badge variant='secondary' className='text-[9px] font-mono py-0 px-1.5'>
+                                  {message.modelProvider || selectedModel.provider}
+                                </Badge>
+                              </div>
+                              <span
+                                className='text-[10px] text-muted-foreground font-mono cursor-default'
+                                title={`${formattedDate} - ${formattedTime}`}
+                              >
+                                {formatTimeAgo(message.createdAt)}
+                              </span>
+                            </MessageHeader>
+                          )}
 
-                            <ContextMenuItem
-                              onSelect={() => handleOpenFeedback(message, 'Inadecuada', 1)}
-                              className='gap-2 text-rose-600 dark:text-rose-400'
-                            >
-                              <ThumbsDown className='w-4 h-4' />
-                              <span>Respuesta inadecuada (👎)</span>
-                            </ContextMenuItem>
+                          {/* Pasos de Razonamiento CoT (si aplica) */}
+                          {message.reasoning && (
+                            <Collapsible className='rounded-2xl border border-border/60 bg-muted/30 p-2.5 text-xs'>
+                              <CollapsibleTrigger className='flex items-center gap-1.5 font-semibold text-primary hover:underline'>
+                                <BrainCircuit className='h-3.5 w-3.5' />
+                                <span>Proceso de Razonamiento</span>
+                                <ChevronDown className='h-3 w-3 ml-auto' />
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className='pt-2 text-muted-foreground whitespace-pre-wrap leading-relaxed'>
+                                {message.reasoning}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          )}
 
-                            <ContextMenuItem onSelect={() => handleSendMessage()} className='gap-2'>
-                              <RefreshCw className='w-4 h-4 text-primary' />
-                              <span>Regenerar respuesta</span>
-                            </ContextMenuItem>
+                          {/* Adjuntos del Mensaje con Attachment de Shadcn */}
+                          {message.attachments && message.attachments.length > 0 && (
+                            <AttachmentGroup className='py-1'>
+                              {message.attachments.map((att) => (
+                                <Attachment key={att.id} size='sm' className='rounded-2xl border border-border/80'>
+                                  <AttachmentMedia>
+                                    <FileText className='h-4 w-4 text-primary' />
+                                  </AttachmentMedia>
+                                  <AttachmentContent>
+                                    <AttachmentTitle>{att.name}</AttachmentTitle>
+                                    <AttachmentDescription>{att.size} • {att.type}</AttachmentDescription>
+                                  </AttachmentContent>
+                                </Attachment>
+                              ))}
+                            </AttachmentGroup>
+                          )}
 
-                            <ContextMenuSeparator />
+                          {/* Superficie del Mensaje usando Bubble con Context Menu exclusivo dentro del texto */}
+                          {!isUser ? (
+                            <ContextMenu>
+                              <ContextMenuTrigger className='block cursor-default select-text'>
+                                <Bubble variant='ghost' className='rounded-2xl'>
+                                  <BubbleContent className='text-sm leading-relaxed whitespace-pre-wrap p-0 font-normal'>
+                                    {message.content}
+                                  </BubbleContent>
 
-                            <ContextMenuItem
-                              onSelect={() => window.open('https://www.uss.edu.pe', '_blank')}
-                              className='gap-2'
-                            >
-                              <BookOpen className='w-4 h-4 text-primary' />
-                              <span>Portal Oficial USS</span>
-                            </ContextMenuItem>
-                          </ContextMenuContent>
-                        </ContextMenu>
-                      ) : (
-                        messageComponent
-                      )}
+                                  {/* Reacciones de Burbuja con Calificación de Estrellas */}
+                                  {message.rating && (
+                                    <BubbleReactions
+                                      role='img'
+                                      aria-label={`Calificación: ${message.rating} de 5 estrellas`}
+                                      className='pt-2'
+                                    >
+                                      <Badge
+                                        variant='outline'
+                                        onClick={() => handleOpenFeedback(message, null, message.rating)}
+                                        className='border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1 text-[10px] font-bold cursor-pointer hover:bg-amber-500/20 transition'
+                                      >
+                                        {'⭐'.repeat(message.rating)} ({message.rating}/5)
+                                      </Badge>
+                                    </BubbleReactions>
+                                  )}
+                                </Bubble>
+                              </ContextMenuTrigger>
+
+                              <ContextMenuContent className='w-56 font-exo'>
+                                <ContextMenuItem
+                                  onSelect={() => copyToClipboard(message.content)}
+                                  className='gap-2'
+                                >
+                                  <Copy className='w-4 h-4 text-primary' />
+                                  <span>Copiar respuesta</span>
+                                </ContextMenuItem>
+
+                                <ContextMenuItem
+                                  onSelect={() => handleOpenFeedback(message, null, message.rating || 0)}
+                                  className='gap-2 text-amber-600 dark:text-amber-400'
+                                >
+                                  <Star className='w-4 h-4 text-amber-500 fill-amber-500' />
+                                  <span>Puntuar respuesta</span>
+                                </ContextMenuItem>
+
+                                <ContextMenuItem onSelect={() => handleSendMessage()} className='gap-2'>
+                                  <RefreshCw className='w-4 h-4 text-primary' />
+                                  <span>Regenerar respuesta</span>
+                                </ContextMenuItem>
+
+                                <ContextMenuSeparator />
+
+                                <ContextMenuItem
+                                  onSelect={() => window.open('https://www.uss.edu.pe', '_blank')}
+                                  className='gap-2'
+                                >
+                                  <BookOpen className='w-4 h-4 text-primary' />
+                                  <span>Portal Oficial USS</span>
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          ) : (
+                            <Bubble variant='default' className='rounded-2xl'>
+                              <BubbleContent className='text-sm leading-relaxed whitespace-pre-wrap p-3.5 font-normal'>
+                                {message.content}
+                              </BubbleContent>
+                            </Bubble>
+                          )}
+
+                          {/* Footer del Mensaje del Asistente: Feedback (Thumbs), Copiar, Regenerar y Diálogo de Información */}
+                          {!isUser && message.content && (
+                            <MessageFooter className='flex items-center justify-between gap-1 pt-2 border-t border-border/30 flex-wrap'>
+                              <div className='flex items-center gap-1'>
+                                {/* Botón Respuesta Adecuada (ThumbsUp) */}
+                                <Button
+                                  variant='ghost'
+                                  size='icon-xs'
+                                  onClick={() => handleOpenFeedback(message, 'Adecuada', 5)}
+                                  aria-label='Respuesta adecuada'
+                                  className='h-7 w-7 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                                  title='Respuesta adecuada'
+                                >
+                                  <ThumbsUp className='h-3.5 w-3.5' />
+                                </Button>
+
+                                {/* Botón Respuesta Inadecuada (ThumbsDown) */}
+                                <Button
+                                  variant='ghost'
+                                  size='icon-xs'
+                                  onClick={() => handleOpenFeedback(message, 'Inadecuada', 1)}
+                                  aria-label='Respuesta inadecuada'
+                                  className='h-7 w-7 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400'
+                                  title='Respuesta inadecuada'
+                                >
+                                  <ThumbsDown className='h-3.5 w-3.5' />
+                                </Button>
+
+                                {/* Botón Copiar */}
+                                <Button
+                                  variant='ghost'
+                                  size='icon-xs'
+                                  onClick={() => copyToClipboard(message.content)}
+                                  aria-label='Copiar mensaje'
+                                  className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                                  title='Copiar texto'
+                                >
+                                  <Copy className='h-3.5 w-3.5' />
+                                </Button>
+
+                                {/* Botón Regenerar Respuesta */}
+                                <Button
+                                  variant='ghost'
+                                  size='icon-xs'
+                                  onClick={() => handleSendMessage()}
+                                  aria-label='Regenerar respuesta'
+                                  className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                                  title='Regenerar respuesta'
+                                >
+                                  <RefreshCw className='h-3.5 w-3.5' />
+                                </Button>
+                              </div>
+
+                              {/* Diálogo Modal de Información del Mensaje */}
+                              <Dialog>
+                                <DialogTrigger
+                                  render={
+                                    <Button
+                                      variant='ghost'
+                                      size='icon-xs'
+                                      aria-label='Ver información del mensaje'
+                                      className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                                      title='Metadatos e información'
+                                    >
+                                      <Info className='h-3.5 w-3.5' />
+                                    </Button>
+                                  }
+                                />
+                                <DialogContent className='max-w-md rounded-3xl p-6 font-exo'>
+                                  <DialogHeader className='space-y-2'>
+                                    <DialogTitle className='font-frances text-xl'>
+                                      Información del Mensaje
+                                    </DialogTitle>
+                                    <DialogDescription className='text-xs text-muted-foreground'>
+                                      Metadatos registrados en el motor de inferencia y la base de datos de SipánGPT.
+                                    </DialogDescription>
+                                  </DialogHeader>
+
+                                  <div className='space-y-3 pt-3 text-xs'>
+                                    <div className='rounded-2xl border border-border/70 p-3.5 space-y-2 bg-card/60'>
+                                      <div className='flex justify-between items-center'>
+                                        <span className='text-muted-foreground'>Modelo de IA:</span>
+                                        <span className='font-bold text-foreground'>{message.modelName || selectedModel.name}</span>
+                                      </div>
+                                      <div className='flex justify-between items-center'>
+                                        <span className='text-muted-foreground'>Proveedor:</span>
+                                        <Badge variant='outline'>{message.modelProvider || selectedModel.provider}</Badge>
+                                      </div>
+                                      <div className='flex justify-between items-center'>
+                                        <span className='text-muted-foreground'>Tiempo de respuesta:</span>
+                                        <span className='font-mono font-medium'>{message.latencyMs ? `${message.latencyMs} ms` : '180 ms'}</span>
+                                      </div>
+                                      <div className='flex justify-between items-center'>
+                                        <span className='text-muted-foreground'>Emitido:</span>
+                                        <span className='font-mono font-medium'>{formatTimeAgo(message.createdAt)} ({formattedDate} {formattedTime})</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Fuentes y Citas RAG de la USS */}
+                                    {message.sources && message.sources.length > 0 && (
+                                      <div className='space-y-2'>
+                                        <span className='font-bold text-xs text-foreground block'>
+                                          Fuentes y Normativas Consultadas:
+                                        </span>
+                                        {message.sources.map((src, i) => (
+                                          <div key={i} className='rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-1'>
+                                            <div className='flex items-center justify-between'>
+                                              <span className='font-semibold text-primary'>{src.title}</span>
+                                              {src.url && (
+                                                <a
+                                                  href={src.url}
+                                                  target='_blank'
+                                                  rel='noreferrer'
+                                                  className='text-primary hover:underline flex items-center gap-1 text-[11px]'
+                                                >
+                                                  Ver <ExternalLink className='h-3 w-3' />
+                                                </a>
+                                              )}
+                                            </div>
+                                            {src.snippet && (
+                                              <p className='text-[11px] text-muted-foreground'>{src.snippet}</p>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </MessageFooter>
+                          )}
+                        </MessageContent>
+                      </Message>
                     </MessageScrollerItem>
                   )
                 })

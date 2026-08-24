@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import * as React from 'react'
 import { Sparkles, Check, ChevronDown, Cpu, Activity } from 'lucide-react'
@@ -75,8 +75,10 @@ export function ModelSelector({
     }
   }
 
+  const swipeDirection = isMobile ? 'down' : 'right'
+
   return (
-    <Drawer open={open} onOpenChange={setOpen} showSwipeHandle={isMobile} swipeDirection='down'>
+    <Drawer open={open} onOpenChange={setOpen} showSwipeHandle={isMobile} swipeDirection={swipeDirection}>
       {/* Botón Disparador del Selector con Drawer de Shadcn */}
       <DrawerTrigger
         render={
@@ -97,7 +99,7 @@ export function ModelSelector({
         }
       />
 
-      <DrawerContent className='max-h-[85vh]'>
+      <DrawerContent className='max-h-[85vh] sm:max-h-none sm:h-full sm:w-[420px]'>
         <DrawerHeader className='text-left font-exo'>
           <DrawerTitle className='font-frances text-xl'>
             Seleccionar Modelo de Inteligencia Artificial
