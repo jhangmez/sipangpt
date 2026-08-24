@@ -1,4 +1,4 @@
-﻿import { cache } from 'react'
+import { cache } from 'react'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import type { Role } from '@/lib/prisma'
@@ -11,6 +11,8 @@ export const getCurrentUser = cache(async () => {
   const session = await auth()
   return session?.user ?? null
 })
+
+export const getAuthenticatedUser = getCurrentUser
 
 /**
  * Guard de autenticación para Server Components y Server Actions.

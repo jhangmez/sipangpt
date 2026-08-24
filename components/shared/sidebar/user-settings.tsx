@@ -150,19 +150,16 @@ export function UserSettings({ user }: UserSettingsProps) {
 
         <div className='my-1 border-t border-border/40' />
 
-        {/* Diálogo de Dispositivos y Sesiones Activas */}
-        <Dialog>
-          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left cursor-pointer select-none'>
-            <Smartphone className='w-4 h-4 text-primary' />
-            Dispositivos y Sesiones
-          </DialogTrigger>
-          <DialogContent className='max-w-xl rounded-3xl p-6'>
-            <DialogHeader className='space-y-1'>
-              <DialogTitle className='font-frances text-xl'>Sesiones y Dispositivos</DialogTitle>
-            </DialogHeader>
-            <SessionsManager />
-          </DialogContent>
-        </Dialog>
+        {/* Enlace a Configuraciones */}
+        <DropdownMenuItem className='p-0'>
+          <Link
+            href='/configuraciones/usuario'
+            className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left cursor-pointer select-none'
+          >
+            <Settings className='w-4 h-4 text-primary' />
+            Configuraciones
+          </Link>
+        </DropdownMenuItem>
 
         {/* Diálogo de Modelos de IA Disponibles */}
         <Dialog>
