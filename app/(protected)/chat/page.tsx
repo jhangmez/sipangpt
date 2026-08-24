@@ -1,4 +1,4 @@
-﻿import { requireAuth } from '@/lib/session'
+import { requireAuth } from '@/lib/session'
 import { getUserConversations } from '@/lib/db/conversations'
 import { getActiveAIModels, getActiveSuggestedQuestions } from '@/lib/db/system'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
@@ -35,6 +35,7 @@ export default async function ChatPage() {
 
         <div className='flex-1 overflow-hidden p-4'>
           <ChatInterface
+            user={user}
             userName={user.firstName || user.name}
             models={aiModels}
             questions={suggestedQuestions}
