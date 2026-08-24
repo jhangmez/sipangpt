@@ -12,7 +12,7 @@ import {
   Calendar,
   PanelRightClose,
   PanelRightOpen,
-  ArrowLeft,
+  ArrowLeft
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,7 @@ export function ChatSidePanel({
   activeTab = 'posts',
   onTabChange,
   isOpen = true,
-  onToggleOpen,
+  onToggleOpen
 }: ChatSidePanelProps) {
   const isShowingSources = activeTab === 'sources' && activeSources.length > 0
 
@@ -57,9 +57,6 @@ export function ChatSidePanel({
         >
           <PanelRightOpen className='w-4 h-4' />
         </Button>
-        <div className='flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground writing-vertical-rl rotate-180 text-[11px] font-semibold tracking-wider pt-6 select-none'>
-          <span>{isShowingSources ? 'FUENTES CITADAS' : 'NOVEDADES USS'}</span>
-        </div>
       </aside>
     )
   }
@@ -76,7 +73,9 @@ export function ChatSidePanel({
               <Newspaper className='w-4 h-4 text-primary' />
             )}
             <span className='font-frances font-bold text-sm text-foreground'>
-              {isShowingSources ? 'Fuentes Oficiales Citadas' : 'Novedades y Publicaciones'}
+              {isShowingSources
+                ? 'Fuentes Oficiales Citadas'
+                : 'Novedades y Publicaciones'}
             </span>
           </div>
 
@@ -118,7 +117,8 @@ export function ChatSidePanel({
           <div className='space-y-3'>
             <div className='p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1'>
               <p className='font-bold text-primary flex items-center gap-1.5 text-[11px]'>
-                <FileText className='w-3.5 h-3.5' /> Citas Normativas RAG ({activeSources.length})
+                <FileText className='w-3.5 h-3.5' /> Citas Normativas RAG (
+                {activeSources.length})
               </p>
               <p className='text-[10px] text-muted-foreground leading-snug'>
                 Información oficial verificada en la base documental de la USS:
@@ -154,70 +154,76 @@ export function ChatSidePanel({
               </div>
             ))}
           </div>
+        ) : /* MODO LISTA DE PUBLICACIONES / POSTS CON REDIRECCIÓN */
+        posts.length === 0 ? (
+          <div className='py-12 text-center text-xs text-muted-foreground space-y-2'>
+            <Newspaper className='w-7 h-7 mx-auto text-muted-foreground/50' />
+            <p className='font-semibold text-foreground'>
+              Sin publicaciones recientes
+            </p>
+            <p className='text-[11px] leading-relaxed'>
+              Los comunicados académicos oficiales aparecerán en este panel.
+            </p>
+          </div>
         ) : (
-          /* MODO LISTA DE PUBLICACIONES / POSTS CON REDIRECCIÓN */
-          posts.length === 0 ? (
-            <div className='py-12 text-center text-xs text-muted-foreground space-y-2'>
-              <Newspaper className='w-7 h-7 mx-auto text-muted-foreground/50' />
-              <p className='font-semibold text-foreground'>Sin publicaciones recientes</p>
-              <p className='text-[11px] leading-relaxed'>
-                Los comunicados académicos oficiales aparecerán en este panel.
-              </p>
-            </div>
-          ) : (
-            <div className='space-y-3'>
-              {posts.map((post) => {
-                const targetHref = post.externalUrl || `/posts/${post.slug}`
+          <div className='space-y-3'>
+            {posts.map((post) => {
+              const targetHref = post.externalUrl || `/posts/${post.slug}`
 
-                return (
-                  <a
-                    key={post.id}
-                    href={targetHref}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='group block rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer space-y-2'
-                  >
-                    <div className='flex items-center justify-between gap-2 flex-wrap'>
-                      {post.category ? (
-                        <Badge
-                          variant='outline'
-                          className='text-[9px] uppercase font-bold text-primary border-primary/30 bg-primary/10 py-0'
-                        >
-                          {post.category.name}
-                        </Badge>
-                      ) : (
-                        <Badge variant='outline' className='text-[9px] py-0'>
-                          Oficial
-                        </Badge>
-                      )}
-                      <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
-                        <Calendar className='w-3 h-3' />
-                        {new Date(post.publishedAt || post.createdAt).toLocaleDateString('es-PE', {
-                          day: '2-digit',
-                          month: 'short',
-                        })}
-                      </span>
-                    </div>
-
-                    <h4 className='font-frances text-xs font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-snug'>
-                      {post.title}
-                    </h4>
-
-                    {post.excerpt && (
-                      <p className='text-[11px] text-muted-foreground line-clamp-2 leading-relaxed'>
-                        {post.excerpt}
-                      </p>
+              return (
+                <a
+                  key={post.id}
+                  href={targetHref}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='group block rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer space-y-2'
+                >
+                  <div className='flex items-center justify-between gap-2 flex-wrap'>
+                    {post.category ? (
+                      <Badge
+                        variant='outline'
+                        className='text-[9px] uppercase font-bold text-primary border-primary/30 bg-primary/10 py-0'
+                      >
+                        {post.category.name}
+                      </Badge>
+                    ) : (
+                      <Badge variant='outline' className='text-[9px] py-0'>
+                        Oficial
+                      </Badge>
                     )}
+                    <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
+                      <Calendar className='w-3 h-3' />
+                      {new Date(
+                        post.publishedAt || post.createdAt
+                      ).toLocaleDateString('es-PE', {
+                        day: '2-digit',
+                        month: 'short'
+                      })}
+                    </span>
+                  </div>
 
-                    <div className='flex items-center justify-between pt-1 text-[10px] text-primary font-semibold'>
-                      <span>{post.externalUrl ? 'Abrir enlace oficial' : 'Leer comunicado completo'}</span>
-                      <ChevronRight className='w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform' />
-                    </div>
-                  </a>
-                )
-              })}
-            </div>
-          )
+                  <h4 className='font-frances text-xs font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-snug'>
+                    {post.title}
+                  </h4>
+
+                  {post.excerpt && (
+                    <p className='text-[11px] text-muted-foreground line-clamp-2 leading-relaxed'>
+                      {post.excerpt}
+                    </p>
+                  )}
+
+                  <div className='flex items-center justify-between pt-1 text-[10px] text-primary font-semibold'>
+                    <span>
+                      {post.externalUrl
+                        ? 'Abrir enlace oficial'
+                        : 'Leer comunicado completo'}
+                    </span>
+                    <ChevronRight className='w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform' />
+                  </div>
+                </a>
+              )
+            })}
+          </div>
         )}
       </div>
     </aside>

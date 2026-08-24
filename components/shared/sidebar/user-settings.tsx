@@ -43,29 +43,43 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
-import type { User } from 'next-auth'
+import type { User as AuthUser } from 'next-auth'
+import { logoutAction } from '@/lib/actions/auth'
 
 interface UserSettingsProps {
-  user?: (User & { role?: string }) | null
+  user?: (AuthUser & { role?: string }) | null
 }
 
 export function UserSettings({ user }: UserSettingsProps) {
-  const isAdmin = user?.role === 'ADMIN'
   const { state } = useSidebar()
   const isCollapsed = state === 'collapsed'
-  const { theme, setTheme } = useTheme()
   const [copied, setCopied] = React.useState(false)
+  const { theme, setTheme } = useTheme()
 
-  const userDisplayName = user?.name || 'Estudiante USS'
+  const userDisplayName = user?.name || user?.email?.split('@')[0] || 'Estudiante USS'
   const userEmail = user?.email || 'estudiante@uss.edu.pe'
+  const userImage = user?.image || undefined
+  const isAdmin = user?.role === 'ADMIN'
   const userRoleLabel = isAdmin ? 'Administrador' : 'Estudiante USS'
 
   const handleCopyEmail = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    await navigator.clipboard.writeText(userEmail)
-    setCopied(true)
-    toast.success('Correo copiado al portapapeles')
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(userEmail)
+      setCopied(true)
+      toast.success('Correo copiado al portapapeles')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('No se pudo copiar el correo')
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await logoutAction()
+    } catch {
+      await signOut({ callbackUrl: '/login', redirect: true })
+    }
   }
 
   const triggerContent = (
@@ -266,7 +280,7 @@ export function UserSettings({ user }: UserSettingsProps) {
 
         {/* Cerrar Sesión */}
         <DropdownMenuItem
-          onSelect={() => signOut({ redirectTo: '/login' })}
+          onSelect={handleSignOut}
           className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition text-left font-semibold cursor-pointer select-none'
         >
           <LogOut className='w-4 h-4' />
