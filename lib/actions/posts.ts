@@ -5,47 +5,32 @@ import type { PostItem } from '@/types'
 
 /**
  * Obtiene los posts publicados con información de autor y categoría.
- * Si no existen posts publicados, auto-inicializa comunicados institucionales USS.
+ * Si la base de datos no tiene ninguna publicación registrada, auto-inicializa el comunicado de bienvenida USS.
  */
 export async function getPublishedPosts(): Promise<PostItem[]> {
   try {
-    let posts = await prisma.post.findMany({
-      where: { status: 'PUBLISHED' },
-      include: {
-        author: {
-          select: { name: true, email: true, image: true },
-        },
-        category: {
-          select: { id: true, name: true, slug: true },
-        },
-      },
-      orderBy: { publishedAt: 'desc' },
-      take: 10,
-    })
+    const totalCount = await prisma.post.count()
 
-    if (posts.length === 0) {
-      // Auto-inicialización de comunicado institucional de bienvenida USS
-      const firstAdmin = await prisma.user.findFirst({
-        where: { role: 'ADMIN' },
-      }) || await prisma.user.findFirst()
+    if (totalCount === 0) {
+      // Solo auto-inicializar si la tabla de publicaciones está totalmente vacía
+      const firstAdmin =
+        (await prisma.user.findFirst({ where: { role: 'ADMIN' } })) ||
+        (await prisma.user.findFirst())
 
       if (firstAdmin) {
-        let generalCategory = await prisma.category.findUnique({
+        const generalCategory = await prisma.category.upsert({
           where: { slug: 'comunicados-uss' },
+          create: {
+            name: 'Comunicados USS',
+            slug: 'comunicados-uss',
+            description: 'Avisos y comunicados oficiales de la Universidad Señor de Sipán',
+          },
+          update: {},
         })
 
-        if (!generalCategory) {
-          generalCategory = await prisma.category.create({
-            data: {
-              name: 'Comunicados USS',
-              slug: 'comunicados-uss',
-              description: 'Avisos y comunicados oficiales de la Universidad Señor de Sipán',
-            },
-          })
-        }
-
-        const defaultPost = await prisma.post.create({
-          data: {
+        await prisma.post.upsert({
+          where: { slug: 'inicio-de-clases-y-guia-rag-2026' },
+          create: {
             title: 'Inicio de Clases y Guía RAG de Trámites Oficiales 2026',
             slug: 'inicio-de-clases-y-guia-rag-2026',
             excerpt: 'Conoce los cronogramas académicos, proceso de matrícula y cómo usar SipánGPT para consultar los reglamentos oficiales.',
@@ -65,15 +50,24 @@ Para mayor información o consultas presenciales, acércate a la Dirección de S
             categoryId: generalCategory.id,
             publishedAt: new Date(),
           },
-          include: {
-            author: { select: { name: true, email: true, image: true } },
-            category: { select: { id: true, name: true, slug: true } },
-          },
+          update: {},
         })
-
-        posts = [defaultPost]
       }
     }
+
+    const posts = await prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      include: {
+        author: {
+          select: { name: true, email: true, image: true },
+        },
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 10,
+    })
 
     return posts as PostItem[]
   } catch (err) {
