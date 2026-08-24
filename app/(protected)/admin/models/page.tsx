@@ -1,4 +1,5 @@
-﻿import { getAllAIModels } from '@/lib/db/system'
+import type { Metadata } from 'next'
+import { getAllAIModels } from '@/lib/db/system'
 import { requireRole } from '@/lib/session'
 import { Role, ModelStatus } from '@/lib/prisma'
 import {
@@ -7,6 +8,11 @@ import {
   toggleModelActiveAction,
 } from '@/lib/actions/admin-models'
 import { Sparkles, CheckCircle2, Activity, Server, AlertTriangle, XCircle } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Modelos de IA • Panel Administrador',
+  description: 'Supervisión de salud, latencia en tiempo real y configuración de modelos de IA en SipánGPT.',
+}
 
 export default async function AdminModelsPage() {
   await requireRole(Role.ADMIN)

@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import * as React from 'react'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { AcceptInvitationCard } from '@/components/admin/accept-invitation-card'
+
+export const metadata: Metadata = {
+  title: 'Aceptar Invitación de Administrador',
+  description: 'Acepta la invitación institucional para incorporarte al equipo de administración de SipánGPT.',
+}
 
 export default async function InvitacionPage({
   params,

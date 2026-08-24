@@ -1,8 +1,14 @@
-﻿import { getCurrentUser } from '@/lib/session'
+import type { Metadata } from 'next'
+import { getCurrentUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { signIn } from '@/auth'
 import { Button } from '@/components/ui/button'
 import { Bot, LogIn } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Iniciar Sesión • Acceso Institucional',
+  description: 'Inicia sesión con tu cuenta de Google o correo institucional para acceder a SipánGPT.',
+}
 
 interface LoginPageProps {
   searchParams: Promise<{ callbackUrl?: string }>

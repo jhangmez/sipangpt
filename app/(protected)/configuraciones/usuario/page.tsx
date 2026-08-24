@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import * as React from 'react'
 import { getAuthenticatedUser } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
@@ -5,6 +6,11 @@ import { redirect } from 'next/navigation'
 import { UserProfileForm } from '@/components/configuraciones/user-profile-form'
 import { verifyEmailWithTokenAction } from '@/lib/actions/user-settings'
 import type { UserProfileData } from '@/types'
+
+export const metadata: Metadata = {
+  title: 'Perfil de Usuario • Configuraciones',
+  description: 'Gestiona tu perfil, datos de estudiante USS, validación de correo electrónico y contraseña en SipánGPT.',
+}
 
 interface UsuarioSettingsPageProps {
   searchParams: Promise<{

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import * as React from 'react'
 import { getAuthenticatedUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
@@ -5,6 +6,11 @@ import { getUserSettingsData } from '@/lib/actions/user-settings'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { Badge } from '@/components/ui/badge'
 import { Cpu, Zap, MessageSquare, Flame, Sparkles, BarChart3 } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Consumo y Tokens • Configuraciones',
+  description: 'Monitorea tu uso de tokens, límites diarios y actividad en los modelos de IA de SipánGPT.',
+}
 
 export default async function ConsumoSettingsPage() {
   const authUser = await getAuthenticatedUser()

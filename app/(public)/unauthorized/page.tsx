@@ -1,7 +1,13 @@
-﻿import Link from 'next/link'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { ShieldAlert, ArrowLeft, House } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
+export const metadata: Metadata = {
+  title: 'Acceso Denegado (403)',
+  description: 'No cuentas con los permisos requeridos para acceder a este recurso institucional.',
+}
 
 export default function UnauthorizedPage() {
   return (

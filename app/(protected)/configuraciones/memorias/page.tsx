@@ -1,8 +1,14 @@
+import type { Metadata } from 'next'
 import * as React from 'react'
 import { getAuthenticatedUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { getUserMemories } from '@/lib/actions/user-settings'
 import { MemoriesManager } from '@/components/configuraciones/memories-manager'
+
+export const metadata: Metadata = {
+  title: 'Memorias y Recuerdos • Configuraciones',
+  description: 'Gestiona la memoria personalizada y preferencias contextuales de SipánGPT.',
+}
 
 export default async function MemoriasSettingsPage() {
   const authUser = await getAuthenticatedUser()

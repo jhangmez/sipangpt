@@ -1,4 +1,5 @@
-﻿import { requireAuth } from '@/lib/session'
+import type { Metadata } from 'next'
+import { requireAuth, getCurrentUser } from '@/lib/session'
 import { getConversationById, getUserConversations } from '@/lib/db/conversations'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -8,6 +9,18 @@ import { cn } from '@/lib/utils'
 
 interface ChatIdPageProps {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: ChatIdPageProps): Promise<Metadata> {
+  const { id } = await params
+  const user = await getCurrentUser()
+  if (!user) return { title: 'Conversación • SipánGPT' }
+
+  const conversation = await getConversationById(id, user.id)
+  return {
+    title: conversation ? `${conversation.title} • Chat` : 'Conversación • Chat',
+    description: 'Consulta y seguimiento conversacional en SipánGPT.',
+  }
 }
 
 export default async function ChatIdPage({ params }: ChatIdPageProps) {

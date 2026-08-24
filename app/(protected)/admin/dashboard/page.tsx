@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import * as React from 'react'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
@@ -20,6 +21,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { ActiveSessionItem } from '@/types/session'
+
+export const metadata: Metadata = {
+  title: 'Dashboard y Métricas • Panel Administrador',
+  description: 'Métricas institucionales, inferencias de IA, sesiones activas y estadísticas de SipánGPT.',
+}
 
 export default async function AdminDashboardPage() {
   const [totalUsers, totalConversations, totalMessages, documents, activeSessions, totalAdmins] =

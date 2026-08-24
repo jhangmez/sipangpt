@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import * as React from 'react'
 import { getAuthenticatedUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { SessionsManager } from '@/components/shared/sessions-manager'
+
+export const metadata: Metadata = {
+  title: 'Dispositivos y Sesiones • Configuraciones',
+  description: 'Revisa y gestiona los dispositivos y sesiones activas de tu cuenta en SipánGPT.',
+}
 
 export default async function SesionesSettingsPage() {
   const authUser = await getAuthenticatedUser()

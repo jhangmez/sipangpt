@@ -1,8 +1,14 @@
-﻿import Link from 'next/link'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { getCurrentUser } from '@/lib/session'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { MessageSquare, Sparkles, BookOpen, ShieldCheck, Zap } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Inicio • Inteligencia Artificial Universitaria USS',
+  description: 'Asistente inteligente con RAG para consultas sobre matrículas, reglamentos, trámites y vida académica en la Universidad Señor de Sipán.',
+}
 
 export default async function HomePage() {
   const user = await getCurrentUser()

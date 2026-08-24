@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { requireAuth } from '@/lib/session'
 import { getUserConversations } from '@/lib/db/conversations'
 import { getActiveAIModels, getActiveSuggestedQuestions } from '@/lib/db/system'
@@ -5,6 +6,11 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/app-sidebar'
 import { ChatInterface } from '@/components/chat/chat-interface'
 import type { SidebarChat } from '@/types/chat'
+
+export const metadata: Metadata = {
+  title: 'Chat • Asistente Inteligente USS',
+  description: 'Consulta reglamentos, cronogramas, mallas curriculares y trámites académicos con citas oficiales de la USS.',
+}
 
 export default async function ChatPage() {
   const user = await requireAuth()
