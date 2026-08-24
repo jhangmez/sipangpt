@@ -7,7 +7,7 @@ import {
   MessageScrollerButton,
   MessageScrollerContent,
   MessageScrollerProvider,
-  MessageScrollerViewport,
+  MessageScrollerViewport
 } from '@/components/ui/message-scroller'
 import { ChatHeader } from './chat-header'
 import { ChatEmptyState } from './chat-empty-state'
@@ -20,18 +20,24 @@ import { FeedbackModal } from './feedback-modal'
 import {
   SYSTEM_MODELS,
   DEFAULT_MODEL_CODE,
-  type ModelDefinition,
+  type ModelDefinition
 } from '@/constants/models'
 import {
   INITIAL_QUESTIONS,
-  type SuggestedQuestionDefinition,
+  type SuggestedQuestionDefinition
 } from '@/constants/questions'
 import type { ChatMessage, AttachedFile, FeedbackState } from '@/types/chat'
 import type { User } from 'next-auth'
 
 interface ChatInterfaceProps {
   initialMessages?: ChatMessage[]
-  user?: (User & { role?: string; firstName?: string | null; lastName?: string | null }) | null
+  user?:
+    | (User & {
+        role?: string
+        firstName?: string | null
+        lastName?: string | null
+      })
+    | null
   userName?: string | null
   conversationId?: string
   models?: Array<{
@@ -59,7 +65,7 @@ export function ChatInterface({
   userName = 'Estudiante USS',
   conversationId,
   models = [],
-  questions = [],
+  questions = []
 }: ChatInterfaceProps) {
   // Mapeo defensivo de modelos de IA
   const mappedModels: ModelDefinition[] = React.useMemo(() => {
@@ -72,7 +78,7 @@ export function ChatInterface({
       description: m.description || '',
       status: m.status,
       latencyMs: m.latencyMs ?? undefined,
-      isDefault: m.isDefault,
+      isDefault: m.isDefault
     }))
   }, [models])
 
@@ -83,25 +89,32 @@ export function ChatInterface({
       id: q.id,
       text: q.text,
       category: q.category || 'general',
-      icon: q.icon,
+      icon: q.icon
     }))
   }, [questions])
 
   // Estado del modelo activo seleccionado
-  const [selectedModel, setSelectedModel] = React.useState<ModelDefinition>(() => {
-    const defaultModel = mappedModels.find((m) => m.isDefault && m.status === 'ONLINE')
-    if (defaultModel) return defaultModel
-    const firstOnline = mappedModels.find((m) => m.status === 'ONLINE')
-    if (firstOnline) return firstOnline
-    return mappedModels[0] || SYSTEM_MODELS[0]
-  })
+  const [selectedModel, setSelectedModel] = React.useState<ModelDefinition>(
+    () => {
+      const defaultModel = mappedModels.find(
+        (m) => m.isDefault && m.status === 'ONLINE'
+      )
+      if (defaultModel) return defaultModel
+      const firstOnline = mappedModels.find((m) => m.status === 'ONLINE')
+      if (firstOnline) return firstOnline
+      return mappedModels[0] || SYSTEM_MODELS[0]
+    }
+  )
 
   // Sincronización si cambian los modelos
   React.useEffect(() => {
     if (mappedModels.length > 0) {
-      const currentStillExists = mappedModels.find((m) => m.id === selectedModel.id)
+      const currentStillExists = mappedModels.find(
+        (m) => m.id === selectedModel.id
+      )
       if (!currentStillExists) {
-        const nextDefault = mappedModels.find((m) => m.isDefault) || mappedModels[0]
+        const nextDefault =
+          mappedModels.find((m) => m.isDefault) || mappedModels[0]
         setSelectedModel(nextDefault)
       }
     }
@@ -116,7 +129,9 @@ export function ChatInterface({
 
   // Estados del modal de feedback
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false)
-  const [feedbackData, setFeedbackData] = React.useState<FeedbackState | null>(null)
+  const [feedbackData, setFeedbackData] = React.useState<FeedbackState | null>(
+    null
+  )
 
   // Abrir modal de feedback interactivo
   const handleOpenFeedback = (
@@ -136,7 +151,7 @@ export function ChatInterface({
       assistantResponse: message.content,
       modelName: message.modelName || selectedModel.name,
       type: type || (rating && rating >= 4 ? 'Adecuada' : 'Inadecuada'),
-      initialRating: rating || (type === 'Adecuada' ? 5 : 1),
+      initialRating: rating || (type === 'Adecuada' ? 5 : 1)
     })
     setFeedbackModalOpen(true)
   }
@@ -164,7 +179,7 @@ export function ChatInterface({
       name: file.name,
       size: `${(file.size / 1024).toFixed(1)} KB`,
       type: file.type || 'documento',
-      file,
+      file
     }))
 
     setAttachedFiles((prev) => [...prev, ...newFiles])
@@ -188,7 +203,7 @@ export function ChatInterface({
       id: att.id,
       name: att.name,
       size: att.size,
-      type: att.type,
+      type: att.type
     }))
 
     const newUserMessage: ChatMessage = {
@@ -196,7 +211,8 @@ export function ChatInterface({
       role: 'user',
       content: textToSend,
       createdAt: nowIso,
-      attachments: attachmentsForMessage.length > 0 ? attachmentsForMessage : undefined,
+      attachments:
+        attachmentsForMessage.length > 0 ? attachmentsForMessage : undefined
     }
 
     setMessages((prev) => [...prev, newUserMessage])
@@ -213,8 +229,8 @@ export function ChatInterface({
           conversationId,
           modelCode: selectedModel.modelCode,
           provider: selectedModel.provider,
-          attachments: attachmentsForMessage,
-        }),
+          attachments: attachmentsForMessage
+        })
       })
 
       if (!response.ok) {
@@ -233,7 +249,7 @@ export function ChatInterface({
         modelProvider: selectedModel.provider,
         reasoning: data.reasoning,
         latencyMs: data.latencyMs || selectedModel.latencyMs || 180,
-        sources: data.sources,
+        sources: data.sources
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -245,94 +261,97 @@ export function ChatInterface({
     }
   }
 
-  const userDisplayName = user?.firstName || user?.name || userName || 'Estudiante USS'
+  const userDisplayName =
+    user?.firstName || user?.name || userName || 'Estudiante USS'
   const userImage = user?.image || undefined
 
   return (
-    <div className='flex flex-col h-full w-full max-w-4xl mx-auto select-text font-exo'>
-      {/* 1. Header de Controles y Selector de Modelo */}
+    <>
       <ChatHeader
         selectedModel={selectedModel}
         onSelectModel={setSelectedModel}
         models={mappedModels.length > 0 ? mappedModels : undefined}
       />
+      <div className='flex flex-col h-full w-full max-w-4xl mx-auto select-text font-exo'>
+        {/* 1. Header de Controles y Selector de Modelo */}
 
-      {/* 2. Scroll de Mensajes con MessageScroller */}
-      <MessageScrollerProvider autoScroll defaultScrollPosition='last-anchor'>
-        <MessageScroller className='flex-1 overflow-hidden'>
-          <MessageScrollerViewport className='p-4'>
-            <MessageScrollerContent>
-              {messages.length === 0 ? (
-                <ChatEmptyState
-                  userDisplayName={userDisplayName}
-                  questions={mappedQuestions}
-                  onSelectQuestion={handleSendMessage}
-                />
-              ) : (
-                messages.map((message) => (
-                  <ChatMessageItem
-                    key={message.id}
-                    message={message}
+        {/* 2. Scroll de Mensajes con MessageScroller */}
+        <MessageScrollerProvider autoScroll defaultScrollPosition='last-anchor'>
+          <MessageScroller className='flex-1 overflow-hidden'>
+            <MessageScrollerViewport className='p-4'>
+              <MessageScrollerContent>
+                {messages.length === 0 ? (
+                  <ChatEmptyState
                     userDisplayName={userDisplayName}
-                    userImage={userImage}
-                    selectedModel={selectedModel}
-                    onCopy={copyToClipboard}
-                    onRegenerate={() => handleSendMessage()}
-                    onOpenFeedback={handleOpenFeedback}
+                    questions={mappedQuestions}
+                    onSelectQuestion={handleSendMessage}
                   />
-                ))
-              )}
+                ) : (
+                  messages.map((message) => (
+                    <ChatMessageItem
+                      key={message.id}
+                      message={message}
+                      userDisplayName={userDisplayName}
+                      userImage={userImage}
+                      selectedModel={selectedModel}
+                      onCopy={copyToClipboard}
+                      onRegenerate={() => handleSendMessage()}
+                      onOpenFeedback={handleOpenFeedback}
+                    />
+                  ))
+                )}
 
-              {/* Indicador de Carga */}
-              {isLoading && <ChatLoadingItem />}
+                {/* Indicador de Carga */}
+                {isLoading && <ChatLoadingItem />}
 
-              {/* Alerta de Error */}
-              {error && (
-                <ChatErrorAlert
-                  error={error}
-                  onRetry={() => handleSendMessage()}
-                />
-              )}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton />
-        </MessageScroller>
-      </MessageScrollerProvider>
+                {/* Alerta de Error */}
+                {error && (
+                  <ChatErrorAlert
+                    error={error}
+                    onRetry={() => handleSendMessage()}
+                  />
+                )}
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
 
-      {/* 3. Previsualización de Archivos Adjuntos antes del envío */}
-      <ChatAttachmentsPreview
-        files={attachedFiles}
-        onRemove={removeAttachment}
-      />
-
-      {/* 4. Formulario de Consulta con InputGroup auto-expandible */}
-      <ChatInputForm
-        input={input}
-        setInput={setInput}
-        isLoading={isLoading}
-        hasAttachments={attachedFiles.length > 0}
-        onSubmit={() => handleSendMessage()}
-        onFileUpload={handleFileUpload}
-      />
-
-      {/* 5. Modal de Feedback Oficial USS */}
-      {feedbackData && (
-        <FeedbackModal
-          isOpen={feedbackModalOpen}
-          setIsOpen={setFeedbackModalOpen}
-          userQuestion={feedbackData.userQuestion}
-          assistantResponse={feedbackData.assistantResponse}
-          messageId={feedbackData.messageId}
-          modelName={feedbackData.modelName}
-          userId={user?.id}
-          feedbackType={feedbackData.type}
-          setFeedbackType={(t) =>
-            setFeedbackData((prev) => (prev ? { ...prev, type: t } : null))
-          }
-          initialRating={feedbackData.initialRating}
-          onRatingChange={(r) => handleRateMessage(feedbackData.messageId, r)}
+        {/* 3. Previsualización de Archivos Adjuntos antes del envío */}
+        <ChatAttachmentsPreview
+          files={attachedFiles}
+          onRemove={removeAttachment}
         />
-      )}
-    </div>
+
+        {/* 4. Formulario de Consulta con InputGroup auto-expandible */}
+        <ChatInputForm
+          input={input}
+          setInput={setInput}
+          isLoading={isLoading}
+          hasAttachments={attachedFiles.length > 0}
+          onSubmit={() => handleSendMessage()}
+          onFileUpload={handleFileUpload}
+        />
+
+        {/* 5. Modal de Feedback Oficial USS */}
+        {feedbackData && (
+          <FeedbackModal
+            isOpen={feedbackModalOpen}
+            setIsOpen={setFeedbackModalOpen}
+            userQuestion={feedbackData.userQuestion}
+            assistantResponse={feedbackData.assistantResponse}
+            messageId={feedbackData.messageId}
+            modelName={feedbackData.modelName}
+            userId={user?.id}
+            feedbackType={feedbackData.type}
+            setFeedbackType={(t) =>
+              setFeedbackData((prev) => (prev ? { ...prev, type: t } : null))
+            }
+            initialRating={feedbackData.initialRating}
+            onRatingChange={(r) => handleRateMessage(feedbackData.messageId, r)}
+          />
+        )}
+      </div>
+    </>
   )
 }

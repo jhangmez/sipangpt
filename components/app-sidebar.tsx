@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import * as React from 'react'
 import Link from 'next/link'
@@ -74,14 +74,14 @@ export function AppSidebar({
   return (
     <Sidebar collapsible='icon' className='border-r border-border/60 bg-card font-exo'>
       {/* Header Oficial: Logo USS + Botón Nuevo Chat */}
-      <SidebarHeader className='p-3 border-b border-border/40'>
+      <SidebarHeader className='p-3 border-b border-border/40 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center'>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               render={<Link href='/chat' />}
-              className='flex items-center gap-2.5 font-frances font-bold text-base text-primary'
+              className='flex items-center gap-2.5 font-frances font-bold text-base text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0'
             >
-              <div className='flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs shrink-0'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs shrink-0'>
                 <Bot className='h-4 w-4' />
               </div>
               <span className='group-data-[collapsible=icon]:hidden'>SipánGPT</span>
@@ -101,7 +101,7 @@ export function AppSidebar({
       </SidebarHeader>
 
       {/* Content: Historial de Consultas */}
-      <SidebarContent className='px-2 py-2'>
+      <SidebarContent className='px-2 py-2 group-data-[collapsible=icon]:px-1'>
         <SidebarGroup>
           <SidebarGroupLabel className='px-2 text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5'>
             <Clock className='w-3.5 h-3.5' />
@@ -178,7 +178,7 @@ export function AppSidebar({
       </SidebarContent>
 
       {/* Footer: UserSettings Reutilizable */}
-      <SidebarFooter className='p-2 border-t border-border/40'>
+      <SidebarFooter className='p-2 border-t border-border/40 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center'>
         <UserSettings user={user} />
       </SidebarFooter>
 

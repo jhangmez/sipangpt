@@ -30,6 +30,8 @@ import Link from 'next/link'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { SessionsManager } from '../sessions-manager'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
+import { useSidebar } from '@/components/ui/sidebar'
+import { cn } from '@/lib/utils'
 import type { User } from 'next-auth'
 
 interface UserSettingsProps {
@@ -38,24 +40,32 @@ interface UserSettingsProps {
 
 export function UserSettings({ user }: UserSettingsProps) {
   const isAdmin = user?.role === 'ADMIN'
+  const { state } = useSidebar()
+  const isCollapsed = state === 'collapsed'
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className='flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-muted/70 transition-colors text-left focus:outline-none'>
-        <Avatar className='h-9 w-9 rounded-xl border border-border/80'>
+      <DropdownMenuTrigger
+        className={cn(
+          'flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-muted/70 transition-colors text-left focus:outline-none cursor-pointer',
+          'group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'
+        )}
+        aria-label='Configuración de usuario'
+      >
+        <Avatar className='h-8 w-8 rounded-xl border border-border/80 shrink-0'>
           <AvatarImage src={user?.image || undefined} alt={user?.name || 'Usuario'} />
           <AvatarFallback className='rounded-xl font-exo text-xs font-semibold bg-primary/10 text-primary'>
             {user?.name ? user.name.slice(0, 2).toUpperCase() : 'USS'}
           </AvatarFallback>
         </Avatar>
 
-        <div className='flex-1 min-w-0 font-exo'>
+        <div className='flex-1 min-w-0 font-exo group-data-[collapsible=icon]:hidden'>
           <div className='flex items-center gap-1.5'>
             <p className='truncate text-xs font-bold text-foreground'>
               {user?.name || 'Estudiante USS'}
             </p>
             {isAdmin && (
-              <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary'>
+              <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary shrink-0'>
                 ADMIN
               </span>
             )}
@@ -65,10 +75,15 @@ export function UserSettings({ user }: UserSettingsProps) {
           </p>
         </div>
 
-        <ChevronUp className='w-4 h-4 text-muted-foreground shrink-0' />
+        <ChevronUp className='w-4 h-4 text-muted-foreground shrink-0 group-data-[collapsible=icon]:hidden' />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className='w-64 p-2 rounded-2xl border border-border/80 shadow-xl' align='start' side='top'>
+      <DropdownMenuContent
+        className='w-64 p-2 rounded-2xl border border-border/80 shadow-xl font-exo'
+        align={isCollapsed ? 'center' : 'start'}
+        side={isCollapsed ? 'right' : 'top'}
+        sideOffset={12}
+      >
         {/* Diálogo de Dispositivos y Sesiones Activas */}
         <Dialog>
           <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left'>

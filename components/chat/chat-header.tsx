@@ -14,7 +14,7 @@ interface ChatHeaderProps {
 export function ChatHeader({
   selectedModel,
   onSelectModel,
-  models,
+  models
 }: ChatHeaderProps) {
   return (
     <header className='flex items-center justify-between border-b border-border/40 pb-3 px-4 shrink-0 font-exo'>
@@ -28,7 +28,7 @@ export function ChatHeader({
         />
       </div>
       <div className='text-xs text-muted-foreground font-exo hidden sm:block'>
-        IA Institucional USS
+        Tesis de Grado
       </div>
     </header>
   )
