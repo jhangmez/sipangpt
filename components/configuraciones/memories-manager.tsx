@@ -20,7 +20,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Brain, Plus, Trash2, Sparkles, AlertCircle } from 'lucide-react'
+import { Brain, Plus, Trash2, Sparkles, AlertCircle, ShieldCheck } from 'lucide-react'
+import { getErrorMessage } from '@/lib/utils'
 
 interface UserMemoryItem {
   id: string
@@ -52,11 +53,11 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
       toast.success(
         nextState ? 'Recuerdo activado' : 'Recuerdo pausado para inferencias'
       )
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMemories((prev) =>
         prev.map((m) => (m.id === id ? { ...m, isActive: currentActive } : m))
       )
-      toast.error('Error al actualizar el recuerdo')
+      toast.error(getErrorMessage(err) || 'Error al actualizar el recuerdo')
     }
   }
 
@@ -65,8 +66,8 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
       await deleteUserMemory(id)
       setMemories((prev) => prev.filter((m) => m.id !== id))
       toast.success('Recuerdo eliminado')
-    } catch (err: any) {
-      toast.error('Error al eliminar el recuerdo')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al eliminar el recuerdo')
     }
   }
 
@@ -83,8 +84,8 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
         setIsDialogOpen(false)
         toast.success('Nuevo recuerdo registrado')
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar el recuerdo')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al guardar el recuerdo')
     } finally {
       setIsSubmitting(false)
     }

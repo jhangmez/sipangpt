@@ -41,7 +41,7 @@ export function ModelSelector({
   const [open, setOpen] = React.useState(false)
   const isMobile = useIsMobile()
 
-  const getStatusBadge = (status: ModelStatus, latencyMs?: number) => {
+  const getStatusBadge = (status: ModelStatus, latencyMs?: number | null) => {
     switch (status) {
       case 'ONLINE':
         return (

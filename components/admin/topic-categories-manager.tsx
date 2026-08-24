@@ -31,30 +31,8 @@ import {
   Layers,
   CornerDownRight,
 } from 'lucide-react'
-
-interface SubcategoryItem {
-  id: string
-  categoryId: string
-  name: string
-  code: string
-  description: string | null
-  _count?: {
-    messages: number
-  }
-}
-
-interface TopicCategoryItem {
-  id: string
-  name: string
-  code: string
-  description: string | null
-  order: number
-  subcategories: SubcategoryItem[]
-  _count?: {
-    documents: number
-    messages: number
-  }
-}
+import { getErrorMessage } from '@/lib/utils'
+import type { TopicCategoryItem, TopicSubcategoryItem } from '@/types'
 
 interface TopicCategoriesManagerProps {
   initialCategories: TopicCategoryItem[]
@@ -76,7 +54,7 @@ export function TopicCategoriesManager({
   // Modal para Subcategoría
   const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = React.useState(false)
   const [parentCategoryId, setParentCategoryId] = React.useState<string | null>(null)
-  const [editingSubcategory, setEditingSubcategory] = React.useState<SubcategoryItem | null>(null)
+  const [editingSubcategory, setEditingSubcategory] = React.useState<TopicSubcategoryItem | null>(null)
   const [subName, setSubName] = React.useState('')
   const [subCode, setSubCode] = React.useState('')
   const [subDesc, setSubDesc] = React.useState('')
@@ -110,7 +88,7 @@ export function TopicCategoriesManager({
     setIsSubcategoryModalOpen(true)
   }
 
-  const openEditSubcategory = (sub: SubcategoryItem) => {
+  const openEditSubcategory = (sub: TopicSubcategoryItem) => {
     setParentCategoryId(sub.categoryId)
     setEditingSubcategory(sub)
     setSubName(sub.name)
@@ -148,8 +126,8 @@ export function TopicCategoriesManager({
         toast.success('Categoría temática creada')
       }
       setIsCategoryModalOpen(false)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar categoría')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al guardar categoría')
     } finally {
       setIsSubmitting(false)
     }
@@ -201,8 +179,8 @@ export function TopicCategoriesManager({
         toast.success('Subtema agregado con éxito')
       }
       setIsSubcategoryModalOpen(false)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar subtema')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al guardar subtema')
     } finally {
       setIsSubmitting(false)
     }
@@ -217,8 +195,8 @@ export function TopicCategoriesManager({
       await deleteTopicCategoryAction(id)
       setCategories((prev) => prev.filter((c) => c.id !== id))
       toast.success('Categoría eliminada')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al eliminar categoría')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al eliminar categoría')
     }
   }
 
@@ -238,8 +216,8 @@ export function TopicCategoriesManager({
         )
       )
       toast.success('Subtema eliminado')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al eliminar subtema')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al eliminar subtema')
     }
   }
 

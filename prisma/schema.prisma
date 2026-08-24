@@ -202,6 +202,7 @@ model TopicCategory {
   subcategories TopicSubcategory[]
   messages      Message[]
   documents     Document[]
+  preguntas     Pregunta[]
 
   @@map("topic_categories")
 }
@@ -217,6 +218,7 @@ model TopicSubcategory {
 
   category    TopicCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   messages    Message[]
+  preguntas   Pregunta[]
 
   @@unique([categoryId, code])
   @@map("topic_subcategories")
@@ -466,17 +468,21 @@ model Category {
 }
 
 model Pregunta {
-  id          String   @id @default(cuid())
-  text        String   @map("contenido") @db.Text
-  icon        String   @default("📋")
-  category    String?  @default("general")
-  order       Int      @default(0)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdById String?  @map("creado_por_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  text          String   @map("contenido") @db.Text
+  icon          String   @default("📋")
+  category      String?  @default("general") // Fallback / nombre legible
+  categoryId    String?  @map("category_id")
+  subcategoryId String?  @map("subcategory_id")
+  order         Int      @default(0)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdById   String?  @map("creado_por_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  creadoPor User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  categoryRel    TopicCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subcategoryRel TopicSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  creadoPor      User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@map("preguntas")
 }

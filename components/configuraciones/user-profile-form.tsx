@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { User, Mail, Shield, Calendar, Save, Check } from 'lucide-react'
+import { getErrorMessage } from '@/lib/utils'
 
 interface UserProfileFormProps {
   user: {
@@ -39,8 +40,8 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
       if (res.success) {
         toast.success('Perfil actualizado correctamente')
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar los cambios')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al guardar los cambios')
     } finally {
       setIsSaving(false)
     }

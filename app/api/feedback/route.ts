@@ -55,10 +55,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, id: feedbackRecord.id })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al procesar el feedback'
     console.error('[FEEDBACK_API_ERROR]', error)
     return NextResponse.json(
-      { success: false, error: error?.message || 'Error al procesar el feedback' },
+      { success: false, error: message },
       { status: 500 }
     )
   }

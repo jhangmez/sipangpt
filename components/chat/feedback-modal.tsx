@@ -22,34 +22,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Star, Check } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
-
-export interface FeedbackData {
-  model: string
-  id_usuario?: string | null
-  id_mensaje: string
-  mensaje_usuario: string
-  respuesta: string
-  puntuacion: number
-  reasons: string[]
-  feedback?: string | null
-  consentimientoCorreo: boolean
-  time: string
-}
-
-interface FeedbackModalProps {
-  isOpen: boolean
-  setIsOpen: (open: boolean) => void
-  userQuestion: string
-  assistantResponse: string
-  messageId: string
-  modelName: string
-  userId?: string | null
-  feedbackType?: 'Adecuada' | 'Inadecuada' | null
-  setFeedbackType?: (type: 'Adecuada' | 'Inadecuada' | null) => void
-  initialRating?: number
-  onRatingChange?: (rating: number) => void
-}
+import { cn, getErrorMessage } from '@/lib/utils'
+import type { FeedbackData, FeedbackModalProps } from '@/types'
 
 const NEGATIVE_REASONS = [
   'Información incompleta',
@@ -157,8 +131,8 @@ export function FeedbackModal({
       } else {
         toast.error(result.error || 'Hubo un error al enviar el feedback.')
       }
-    } catch {
-      toast.error('Hubo un error al enviar tu feedback.')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Hubo un error al enviar tu feedback.')
     } finally {
       setIsSubmitting(false)
     }

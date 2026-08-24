@@ -1,13 +1,13 @@
-﻿import type { ModelProvider, ModelStatus } from '@/lib/prisma'
+import type { ModelProvider, ModelStatus } from '@/lib/prisma'
 
 export interface ModelDefinition {
   id: string
   name: string
   modelCode: string
   provider: ModelProvider
-  description: string
+  description?: string | null
   status: ModelStatus
-  latencyMs?: number
+  latencyMs?: number | null
   isDefault: boolean
 }
 

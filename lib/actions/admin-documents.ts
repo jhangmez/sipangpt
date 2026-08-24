@@ -29,6 +29,7 @@ export async function getAdminDocuments() {
     prisma.topicCategory.findMany({
       orderBy: { order: 'asc' },
       include: {
+        subcategories: true,
         _count: {
           select: { documents: true, messages: true },
         },

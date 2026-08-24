@@ -22,6 +22,7 @@ import {
   DEFAULT_MODEL_CODE,
   type ModelDefinition
 } from '@/constants/models'
+import { getErrorMessage } from '@/lib/utils'
 import {
   INITIAL_QUESTIONS,
   type SuggestedQuestionDefinition
@@ -40,16 +41,7 @@ interface ChatInterfaceProps {
     | null
   userName?: string | null
   conversationId?: string
-  models?: Array<{
-    id: string
-    name: string
-    modelCode: string
-    provider: any
-    description?: string | null
-    status: any
-    latencyMs?: number | null
-    isDefault: boolean
-  }>
+  models?: ModelDefinition[]
   questions?: Array<{
     id: string
     text: string
@@ -70,16 +62,7 @@ export function ChatInterface({
   // Mapeo defensivo de modelos de IA
   const mappedModels: ModelDefinition[] = React.useMemo(() => {
     if (!models || models.length === 0) return SYSTEM_MODELS
-    return models.map((m) => ({
-      id: m.id,
-      name: m.name,
-      modelCode: m.modelCode,
-      provider: m.provider,
-      description: m.description || '',
-      status: m.status,
-      latencyMs: m.latencyMs ?? undefined,
-      isDefault: m.isDefault
-    }))
+    return models
   }, [models])
 
   // Mapeo defensivo de preguntas sugeridas
@@ -253,9 +236,9 @@ export function ChatInterface({
       }
 
       setMessages((prev) => [...prev, assistantMessage])
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[CHAT_ERROR]', err)
-      setError(err?.message || 'Ocurrió un error al procesar tu consulta.')
+      setError(getErrorMessage(err) || 'Ocurrió un error al procesar tu consulta.')
     } finally {
       setIsLoading(false)
     }

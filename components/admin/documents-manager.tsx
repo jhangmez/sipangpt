@@ -22,38 +22,9 @@ import {
   Sparkles,
   Tag,
 } from 'lucide-react'
+import { getErrorMessage } from '@/lib/utils'
 import type { DocumentStatus } from '@/lib/prisma'
-
-interface TopicCategoryItem {
-  id: string
-  name: string
-  code: string
-  description: string | null
-  order: number
-}
-
-interface DocumentItem {
-  id: string
-  title: string
-  fileName: string
-  fileUrl: string | null
-  publicUrl: string | null
-  mimeType: string
-  sizeBytes: number
-  status: DocumentStatus
-  chunkCount: number
-  categoryId: string | null
-  category?: {
-    id: string
-    name: string
-    code: string
-  } | null
-  createdAt: Date
-  uploadedBy?: {
-    name: string | null
-    email: string
-  } | null
-}
+import type { DocumentItem, TopicCategoryItem } from '@/types'
 
 interface DocumentsManagerProps {
   initialDocuments: DocumentItem[]
@@ -100,8 +71,8 @@ export function DocumentsManager({
           ? 'Documento indexado para consultas RAG'
           : 'Documento desindexado/pausado temporalmente'
       )
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cambiar estado')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al cambiar estado')
     } finally {
       setIsUpdating(false)
     }
@@ -124,8 +95,8 @@ export function DocumentsManager({
         )
       )
       toast.success('Categoría temática actualizada')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cambiar categoría')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al cambiar categoría')
     }
   }
 
@@ -149,8 +120,8 @@ export function DocumentsManager({
         }))
       }
       toast.success('Documento eliminado correctamente')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al eliminar el documento')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al eliminar el documento')
     }
   }
 
@@ -300,7 +271,7 @@ export function DocumentsManager({
                       <div className='flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap'>
                         <span>{formatFileSize(doc.sizeBytes)}</span>
                         <span>•</span>
-                        <span>Subido el {dateStr}</span>
+                        <span suppressHydrationWarning>Subido el {dateStr}</span>
                         {doc.uploadedBy?.email && (
                           <>
                             <span>•</span>

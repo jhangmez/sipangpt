@@ -33,35 +33,12 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { isInitialAdminEmail } from '@/constants/admin'
-
-interface AdminUserItem {
-  id: string
-  name: string | null
-  firstName: string | null
-  lastName: string | null
-  email: string
-  image: string | null
-  role: string
-  createdAt: Date
-}
-
-interface InvitationItem {
-  id: string
-  email: string
-  token: string
-  role: string
-  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED'
-  expiresAt: Date
-  createdAt: Date
-  invitedBy?: {
-    name: string | null
-    email: string
-  } | null
-}
+import { getErrorMessage } from '@/lib/utils'
+import type { AdminUserItem, AdminInvitationItem } from '@/types'
 
 interface AdministratorsManagerProps {
   initialAdmins: AdminUserItem[]
-  initialInvitations: InvitationItem[]
+  initialInvitations: AdminInvitationItem[]
 }
 
 export function AdministratorsManager({
@@ -69,14 +46,13 @@ export function AdministratorsManager({
   initialInvitations,
 }: AdministratorsManagerProps) {
   const [admins, setAdmins] = React.useState<AdminUserItem[]>(initialAdmins)
-  const [invitations, setInvitations] = React.useState<InvitationItem[]>(initialInvitations)
-
+  const [invitations, setInvitations] = React.useState<AdminInvitationItem[]>(initialInvitations)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [email, setEmail] = React.useState('')
   const [daysValid, setDaysValid] = React.useState(7)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [createdInviteLink, setCreatedInviteLink] = React.useState<string | null>(null)
   const [copiedLink, setCopiedLink] = React.useState(false)
+  const [createdInviteLink, setCreatedInviteLink] = React.useState<string | null>(null)
 
   const getInviteUrl = (token: string) => {
     if (typeof window !== 'undefined') {
@@ -86,10 +62,14 @@ export function AdministratorsManager({
   }
 
   const handleCopyLink = async (url: string) => {
-    await navigator.clipboard.writeText(url)
-    setCopiedLink(true)
-    toast.success('Enlace de invitación copiado al portapapeles')
-    setTimeout(() => setCopiedLink(false), 2000)
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedLink(true)
+      toast.success('Enlace de invitación copiado al portapapeles')
+      setTimeout(() => setCopiedLink(false), 2000)
+    } catch {
+      toast.error('No se pudo copiar el enlace')
+    }
   }
 
   const handleCreateInvitation = async (e: React.FormEvent) => {
@@ -106,13 +86,13 @@ export function AdministratorsManager({
           {
             ...res.invitation,
             invitedBy: null,
-          } as InvitationItem,
+          } as AdminInvitationItem,
           ...prev.filter((i) => i.id !== res.invitation.id),
         ])
         toast.success('Invitación y pre-registro generados exitosamente')
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al generar la invitación')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al generar la invitación')
     } finally {
       setIsSubmitting(false)
     }
@@ -125,8 +105,8 @@ export function AdministratorsManager({
         prev.map((inv) => (inv.id === id ? { ...inv, status: 'REVOKED' } : inv))
       )
       toast.success('Invitación cancelada')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cancelar la invitación')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al cancelar la invitación')
     }
   }
 
@@ -144,8 +124,8 @@ export function AdministratorsManager({
       await removeAdminRole(userId)
       setAdmins((prev) => prev.filter((a) => a.id !== userId))
       toast.success(`Rol de administrador revocado a ${adminEmail}`)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al revocar el rol')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al revocar el rol')
     }
   }
 

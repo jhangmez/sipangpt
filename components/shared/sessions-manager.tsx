@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import * as React from 'react'
 import { format } from 'date-fns'
@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { Laptop, Smartphone, Globe, Shield, LogOut, RefreshCw, Clock, MapPin } from 'lucide-react'
 import { closeSessionAction, closeOtherSessionsAction } from '@/lib/actions/sessions'
+import { getErrorMessage } from '@/lib/utils'
 import type { ActiveSessionItem } from '@/types/session'
 
 interface SessionsManagerProps {
@@ -47,8 +48,8 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
         toast.success(res.message)
         setSessions((prev) => prev.filter((s) => s.sessionToken !== sessionToken))
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cerrar la sesión.')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al cerrar la sesión.')
     }
   }
 
@@ -59,8 +60,8 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
         toast.success(res.message)
         fetchSessions()
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cerrar otras sesiones.')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al cerrar otras sesiones.')
     }
   }
 

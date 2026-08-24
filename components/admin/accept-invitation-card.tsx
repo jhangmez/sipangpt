@@ -8,6 +8,7 @@ import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { ShieldCheck, LogIn, CheckCircle2, AlertCircle, Bot } from 'lucide-react'
 import Link from 'next/link'
+import { getErrorMessage } from '@/lib/utils'
 
 interface AcceptInvitationCardProps {
   token: string
@@ -42,8 +43,8 @@ export function AcceptInvitationCard({
         router.push('/admin/dashboard')
         router.refresh()
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al aceptar la invitación')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al aceptar la invitación')
       setIsAccepting(false)
     }
   }

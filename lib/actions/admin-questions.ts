@@ -4,12 +4,38 @@ import { prisma, Role } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 
+export async function getAllQuestionsWithTopics() {
+  await requireRole(Role.ADMIN)
+
+  return prisma.pregunta.findMany({
+    include: {
+      categoryRel: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
+      subcategoryRel: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
+    },
+    orderBy: { order: 'asc' },
+  })
+}
+
 export async function createQuestionAction(formData: FormData) {
   const admin = await requireRole(Role.ADMIN)
 
   const text = formData.get('text')?.toString().trim()
   const icon = formData.get('icon')?.toString().trim() || '📋'
   const category = formData.get('category')?.toString().trim() || 'general'
+  const categoryId = formData.get('categoryId')?.toString().trim() || null
+  const subcategoryId = formData.get('subcategoryId')?.toString().trim() || null
   const order = parseInt(formData.get('order')?.toString() || '0', 10)
 
   if (!text) {
@@ -21,6 +47,8 @@ export async function createQuestionAction(formData: FormData) {
       text,
       icon,
       category,
+      categoryId,
+      subcategoryId,
       order,
       isActive: true,
       createdById: admin.id,
@@ -34,7 +62,9 @@ export async function createQuestionAction(formData: FormData) {
 export async function createQuestionDirect(data: {
   text: string
   icon: string
-  category: string
+  category?: string
+  categoryId?: string | null
+  subcategoryId?: string | null
   order?: number
 }) {
   const admin = await requireRole(Role.ADMIN)
@@ -50,9 +80,19 @@ export async function createQuestionDirect(data: {
       text: data.text.trim(),
       icon: data.icon || '📋',
       category: data.category || 'general',
+      categoryId: data.categoryId || null,
+      subcategoryId: data.subcategoryId || null,
       order: data.order !== undefined ? data.order : count,
       isActive: true,
       createdById: admin.id,
+    },
+    include: {
+      categoryRel: {
+        select: { id: true, name: true, code: true },
+      },
+      subcategoryRel: {
+        select: { id: true, name: true, code: true },
+      },
     },
   })
 
@@ -65,7 +105,9 @@ export async function updateQuestionAction(data: {
   id: string
   text: string
   icon: string
-  category: string
+  category?: string
+  categoryId?: string | null
+  subcategoryId?: string | null
   order: number
 }) {
   await requireRole(Role.ADMIN)
@@ -80,7 +122,17 @@ export async function updateQuestionAction(data: {
       text: data.text.trim(),
       icon: data.icon || '📋',
       category: data.category || 'general',
+      categoryId: data.categoryId || null,
+      subcategoryId: data.subcategoryId || null,
       order: data.order,
+    },
+    include: {
+      categoryRel: {
+        select: { id: true, name: true, code: true },
+      },
+      subcategoryRel: {
+        select: { id: true, name: true, code: true },
+      },
     },
   })
 
