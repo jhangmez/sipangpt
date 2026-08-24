@@ -17,6 +17,7 @@ import { ChatErrorAlert } from './chat-error-alert'
 import { ChatAttachmentsPreview } from './chat-attachments-preview'
 import { ChatInputForm } from './chat-input-form'
 import { FeedbackModal } from './feedback-modal'
+import { ChatSidePanel } from './chat-side-panel'
 import {
   SYSTEM_MODELS,
   DEFAULT_MODEL_CODE,
@@ -27,7 +28,8 @@ import {
   INITIAL_QUESTIONS,
   type SuggestedQuestionDefinition
 } from '@/constants/questions'
-import type { ChatMessage, AttachedFile, FeedbackState } from '@/types/chat'
+import type { ChatMessage, AttachedFile, FeedbackState, MessageSource } from '@/types/chat'
+import type { PostItem } from '@/types'
 import type { User } from 'next-auth'
 
 interface ChatInterfaceProps {
@@ -42,6 +44,7 @@ interface ChatInterfaceProps {
   userName?: string | null
   conversationId?: string
   models?: ModelDefinition[]
+  posts?: PostItem[]
   questions?: Array<{
     id: string
     text: string
@@ -57,6 +60,7 @@ export function ChatInterface({
   userName = 'Estudiante USS',
   conversationId,
   models = [],
+  posts = [],
   questions = []
 }: ChatInterfaceProps) {
   // Mapeo defensivo de modelos de IA
@@ -115,6 +119,19 @@ export function ChatInterface({
   const [feedbackData, setFeedbackData] = React.useState<FeedbackState | null>(
     null
   )
+
+  // Estados del panel lateral derecho reutilizable (Novedades USS & Fuentes RAG)
+  const [sidePanelOpen, setSidePanelOpen] = React.useState(true)
+  const [sidePanelTab, setSidePanelTab] = React.useState<'posts' | 'sources'>('posts')
+  const [activeSources, setActiveSources] = React.useState<MessageSource[]>([])
+
+  // Sincronizar fuentes si el último mensaje del asistente las contiene
+  React.useEffect(() => {
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && m.sources && m.sources.length > 0)
+    if (lastAssistant?.sources) {
+      setActiveSources(lastAssistant.sources)
+    }
+  }, [messages])
 
   // Abrir modal de feedback interactivo
   const handleOpenFeedback = (
@@ -235,6 +252,12 @@ export function ChatInterface({
         sources: data.sources
       }
 
+      if (data.sources && data.sources.length > 0) {
+        setActiveSources(data.sources)
+        setSidePanelTab('sources')
+        setSidePanelOpen(true)
+      }
+
       setMessages((prev) => [...prev, assistantMessage])
     } catch (err: unknown) {
       console.error('[CHAT_ERROR]', err)
@@ -255,85 +278,96 @@ export function ChatInterface({
         onSelectModel={setSelectedModel}
         models={mappedModels.length > 0 ? mappedModels : undefined}
       />
-      <div className='flex flex-col h-full w-full max-w-4xl mx-auto select-text font-exo'>
-        {/* 1. Header de Controles y Selector de Modelo */}
-
-        {/* 2. Scroll de Mensajes con MessageScroller */}
-        <MessageScrollerProvider autoScroll defaultScrollPosition='last-anchor'>
-          <MessageScroller className='flex-1 overflow-hidden'>
-            <MessageScrollerViewport className='p-4'>
-              <MessageScrollerContent>
-                {messages.length === 0 ? (
-                  <ChatEmptyState
-                    userDisplayName={userDisplayName}
-                    questions={mappedQuestions}
-                    onSelectQuestion={handleSendMessage}
-                  />
-                ) : (
-                  messages.map((message) => (
-                    <ChatMessageItem
-                      key={message.id}
-                      message={message}
+      <div className='flex flex-1 h-full w-full overflow-hidden min-h-0'>
+        {/* Contenedor Central del Chat */}
+        <div className='flex flex-col h-full w-full max-w-4xl mx-auto select-text font-exo flex-1 min-w-0'>
+          {/* Scroll de Mensajes con MessageScroller */}
+          <MessageScrollerProvider autoScroll defaultScrollPosition='last-anchor'>
+            <MessageScroller className='flex-1 overflow-hidden'>
+              <MessageScrollerViewport className='p-4'>
+                <MessageScrollerContent>
+                  {messages.length === 0 ? (
+                    <ChatEmptyState
                       userDisplayName={userDisplayName}
-                      userImage={userImage}
-                      selectedModel={selectedModel}
-                      onCopy={copyToClipboard}
-                      onRegenerate={() => handleSendMessage()}
-                      onOpenFeedback={handleOpenFeedback}
+                      questions={mappedQuestions}
+                      onSelectQuestion={handleSendMessage}
                     />
-                  ))
-                )}
+                  ) : (
+                    messages.map((message) => (
+                      <ChatMessageItem
+                        key={message.id}
+                        message={message}
+                        userDisplayName={userDisplayName}
+                        userImage={userImage}
+                        selectedModel={selectedModel}
+                        onCopy={copyToClipboard}
+                        onRegenerate={() => handleSendMessage()}
+                        onOpenFeedback={handleOpenFeedback}
+                      />
+                    ))
+                  )}
 
-                {/* Indicador de Carga */}
-                {isLoading && <ChatLoadingItem />}
+                  {/* Indicador de Carga */}
+                  {isLoading && <ChatLoadingItem />}
 
-                {/* Alerta de Error */}
-                {error && (
-                  <ChatErrorAlert
-                    error={error}
-                    onRetry={() => handleSendMessage()}
-                  />
-                )}
-              </MessageScrollerContent>
-            </MessageScrollerViewport>
-            <MessageScrollerButton />
-          </MessageScroller>
-        </MessageScrollerProvider>
+                  {/* Alerta de Error */}
+                  {error && (
+                    <ChatErrorAlert
+                      error={error}
+                      onRetry={() => handleSendMessage()}
+                    />
+                  )}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton />
+            </MessageScroller>
+          </MessageScrollerProvider>
 
-        {/* 3. Previsualización de Archivos Adjuntos antes del envío */}
-        <ChatAttachmentsPreview
-          files={attachedFiles}
-          onRemove={removeAttachment}
-        />
-
-        {/* 4. Formulario de Consulta con InputGroup auto-expandible */}
-        <ChatInputForm
-          input={input}
-          setInput={setInput}
-          isLoading={isLoading}
-          hasAttachments={attachedFiles.length > 0}
-          onSubmit={() => handleSendMessage()}
-          onFileUpload={handleFileUpload}
-        />
-
-        {/* 5. Modal de Feedback Oficial USS */}
-        {feedbackData && (
-          <FeedbackModal
-            isOpen={feedbackModalOpen}
-            setIsOpen={setFeedbackModalOpen}
-            userQuestion={feedbackData.userQuestion}
-            assistantResponse={feedbackData.assistantResponse}
-            messageId={feedbackData.messageId}
-            modelName={feedbackData.modelName}
-            userId={user?.id}
-            feedbackType={feedbackData.type}
-            setFeedbackType={(t) =>
-              setFeedbackData((prev) => (prev ? { ...prev, type: t } : null))
-            }
-            initialRating={feedbackData.initialRating}
-            onRatingChange={(r) => handleRateMessage(feedbackData.messageId, r)}
+          {/* Previsualización de Archivos Adjuntos antes del envío */}
+          <ChatAttachmentsPreview
+            files={attachedFiles}
+            onRemove={removeAttachment}
           />
-        )}
+
+          {/* Formulario de Consulta con InputGroup auto-expandible */}
+          <ChatInputForm
+            input={input}
+            setInput={setInput}
+            isLoading={isLoading}
+            hasAttachments={attachedFiles.length > 0}
+            onSubmit={() => handleSendMessage()}
+            onFileUpload={handleFileUpload}
+          />
+
+          {/* Modal de Feedback Oficial USS */}
+          {feedbackData && (
+            <FeedbackModal
+              isOpen={feedbackModalOpen}
+              setIsOpen={setFeedbackModalOpen}
+              userQuestion={feedbackData.userQuestion}
+              assistantResponse={feedbackData.assistantResponse}
+              messageId={feedbackData.messageId}
+              modelName={feedbackData.modelName}
+              userId={user?.id}
+              feedbackType={feedbackData.type}
+              setFeedbackType={(t) =>
+                setFeedbackData((prev) => (prev ? { ...prev, type: t } : null))
+              }
+              initialRating={feedbackData.initialRating}
+              onRatingChange={(r) => handleRateMessage(feedbackData.messageId, r)}
+            />
+          )}
+        </div>
+
+        {/* Panel Vertical a la Derecha: Novedades & Fuentes Oficiales */}
+        <ChatSidePanel
+          posts={posts}
+          activeSources={activeSources}
+          activeTab={sidePanelTab}
+          onTabChange={setSidePanelTab}
+          isOpen={sidePanelOpen}
+          onToggleOpen={() => setSidePanelOpen(!sidePanelOpen)}
+        />
       </div>
     </>
   )

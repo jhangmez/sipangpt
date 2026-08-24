@@ -44,15 +44,18 @@ import {
   MoreHorizontal,
   Clock,
   Bot,
+  Sparkles,
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { SidebarChat } from '@/types/chat'
+import type { PostItem } from '@/types'
 import type { User } from 'next-auth'
 
 interface AppSidebarProps {
   conversations?: SidebarChat[]
   currentChatId?: string
   user?: (User & { role?: string }) | null
+  latestPost?: PostItem | null
   isLoading?: boolean
   onDeleteChat?: (chatId: string) => Promise<void>
 }
@@ -61,6 +64,7 @@ export function AppSidebar({
   conversations = [],
   currentChatId,
   user,
+  latestPost,
   isLoading = false,
   onDeleteChat,
 }: AppSidebarProps) {
@@ -248,8 +252,48 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Sección Inferior: Botón Nueva Consulta posicionado abajo */}
-        <div className='pt-2 border-t border-border/40'>
+        {/* Sección Inferior: Card de Novedades USS + Botón Nueva Consulta */}
+        <div className='pt-2 border-t border-border/40 space-y-2'>
+          {/* Card Pequeño de Novedad / Nuevo Post */}
+          {latestPost && (
+            isCollapsed ? (
+              <div className='flex justify-center'>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition cursor-pointer'>
+                        <Sparkles className='w-4 h-4' />
+                      </div>
+                    }
+                  />
+                  <TooltipContent side='right' align='center' className='font-exo max-w-xs p-3 space-y-1'>
+                    <div className='flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase'>
+                      <Sparkles className='w-3 h-3' />
+                      <span>Nuevo Post</span>
+                    </div>
+                    <p className='font-semibold text-xs text-foreground'>{latestPost.title}</p>
+                    <p className='text-[11px] text-muted-foreground line-clamp-2 leading-tight'>
+                      {latestPost.excerpt || latestPost.content}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            ) : (
+              <div className='rounded-2xl border border-primary/20 bg-primary/5 p-2.5 transition hover:bg-primary/10 select-none'>
+                <div className='flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wide'>
+                  <Sparkles className='w-3 h-3' />
+                  <span>Nuevo Post</span>
+                </div>
+                <p className='font-semibold text-xs text-foreground line-clamp-1 mt-1 leading-snug'>
+                  {latestPost.title}
+                </p>
+                <p className='text-[11px] text-muted-foreground line-clamp-1 mt-0.5 leading-tight'>
+                  {latestPost.excerpt || latestPost.content}
+                </p>
+              </div>
+            )
+          )}
+
           <SidebarMenu>
             <SidebarMenuItem>
               {isCollapsed ? (
