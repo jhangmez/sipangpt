@@ -31,6 +31,7 @@ import {
   Bot,
   Shield,
   FileText,
+  FolderTree,
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { User as AuthUser } from 'next-auth'
@@ -69,6 +70,12 @@ const ADMIN_NAV_ITEMS = [
     href: '/admin/documents',
     icon: FileText,
     description: 'Base de conocimiento RAG',
+  },
+  {
+    title: 'Temas y Categorías',
+    href: '/admin/categories',
+    icon: FolderTree,
+    description: 'Catálogo temático y analítica',
   },
 ]
 

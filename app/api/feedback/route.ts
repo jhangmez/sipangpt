@@ -37,6 +37,23 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Si el usuario calificó, su veredicto es verdad absoluta sobre el estado del mensaje
+    if (id_mensaje) {
+      const resolutionStatus =
+        rating >= 4
+          ? 'POSITIVE_FEEDBACK'
+          : rating <= 2
+          ? 'NEGATIVE_FEEDBACK'
+          : undefined
+
+      if (resolutionStatus) {
+        await prisma.message.update({
+          where: { id: id_mensaje },
+          data: { resolutionStatus },
+        }).catch((e) => console.warn('[MESSAGE_RESOLUTION_UPDATE_ERROR]', e))
+      }
+    }
+
     return NextResponse.json({ success: true, id: feedbackRecord.id })
   } catch (error: any) {
     console.error('[FEEDBACK_API_ERROR]', error)

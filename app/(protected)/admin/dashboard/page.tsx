@@ -15,6 +15,7 @@ import {
   HelpCircle,
   ShieldCheck,
   ExternalLink,
+  FolderTree,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -139,7 +140,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Accesos Rápidos Modulares */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
         <Link
           href='/admin/documents'
           className='group rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between space-y-3'
@@ -152,14 +153,37 @@ export default async function AdminDashboardPage() {
               <ArrowRight className='w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all' />
             </div>
             <h3 className='font-frances font-bold text-base text-foreground'>
-              Ingesta de Documentos
+              Ingesta RAG
             </h3>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Sube y gestiona reglamentos, cronogramas y mallas con UploadThing para RAG.
+              Sube y gestiona reglamentos y cronogramas con UploadThing.
             </p>
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
-            Acceder al módulo de ingesta →
+            Acceder a ingesta →
+          </span>
+        </Link>
+
+        <Link
+          href='/admin/categories'
+          className='group rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between space-y-3'
+        >
+          <div className='space-y-1.5'>
+            <div className='flex items-center justify-between'>
+              <div className='h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center'>
+                <FolderTree className='w-5 h-5' />
+              </div>
+              <ArrowRight className='w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all' />
+            </div>
+            <h3 className='font-frances font-bold text-base text-foreground'>
+              Temas y Categorías
+            </h3>
+            <p className='text-xs text-muted-foreground leading-relaxed'>
+              Catálogo temático de analítica institucional y subtemas USS.
+            </p>
+          </div>
+          <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
+            Gestionar categorías →
           </span>
         </Link>
 
@@ -182,7 +206,7 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
-            Gestionar preguntas frecuentes →
+            Gestionar preguntas →
           </span>
         </Link>
 
@@ -201,11 +225,11 @@ export default async function AdminDashboardPage() {
               Administradores
             </h3>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Genera invitaciones tokenizadas y gestiona el equipo de administración.
+              Genera invitaciones tokenizadas y gestiona el equipo institucional.
             </p>
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
-            Gestionar equipo institucional →
+            Gestionar administradores →
           </span>
         </Link>
       </div>

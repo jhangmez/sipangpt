@@ -65,6 +65,8 @@ enum ResolutionStatus {
   RESOLVED_GENERAL        // Éxito: Pregunta general/saludo respondido sin necesidad de RAG
   NO_CONTEXT_FOUND        // Gap: No hay documentos en la base de datos sobre esta consulta
   UNRESOLVED_BY_FALLBACK  // El modelo activó la frase de contingencia/desconocimiento
+  POSITIVE_FEEDBACK       // El usuario evaluó positivamente la respuesta (Like / 4-5 estrellas)
+  NEGATIVE_FEEDBACK       // El usuario evaluó negativamente la respuesta (Dislike / 1-2 estrellas)
   ERROR_OCCURRED          // Fallo técnico en el modelo o en la base de datos
 }
 
