@@ -341,9 +341,13 @@ export function QuestionsManager({
                         <Badge variant='outline' className='text-[9px] uppercase font-bold py-0'>
                           {categoryLabel}
                         </Badge>
-                        {subcategoryLabel && (
+                        {subcategoryLabel ? (
                           <Badge variant='outline' className='text-[9px] text-primary border-primary/30 bg-primary/5 py-0'>
                             {subcategoryLabel}
+                          </Badge>
+                        ) : (
+                          <Badge variant='outline' className='text-[9px] text-muted-foreground/70 border-border/60 py-0 font-normal'>
+                            Sin subtema en específico
                           </Badge>
                         )}
                         {!q.isActive && (
