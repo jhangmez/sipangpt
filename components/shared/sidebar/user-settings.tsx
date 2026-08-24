@@ -27,14 +27,16 @@ import {
   Smartphone,
   Copy,
   Check,
+  Moon,
+  Sun,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { SessionsManager } from '../sessions-manager'
-import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import type { User } from 'next-auth'
 
@@ -46,6 +48,7 @@ export function UserSettings({ user }: UserSettingsProps) {
   const isAdmin = user?.role === 'ADMIN'
   const { state } = useSidebar()
   const isCollapsed = state === 'collapsed'
+  const { theme, setTheme } = useTheme()
   const [copied, setCopied] = React.useState(false)
 
   const userDisplayName = user?.name || 'Estudiante USS'
@@ -63,7 +66,7 @@ export function UserSettings({ user }: UserSettingsProps) {
   const triggerContent = (
     <DropdownMenuTrigger
       className={cn(
-        'flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-muted/70 transition-colors text-left focus:outline-none cursor-pointer',
+        'flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-muted/70 transition-colors text-left focus:outline-none cursor-pointer select-none',
         'group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'
       )}
       aria-label='Configuración de usuario'
@@ -117,10 +120,9 @@ export function UserSettings({ user }: UserSettingsProps) {
         sideOffset={12}
       >
         {/* Cabecera con Avatar, Nombre y Correo clickeable para copiar */}
-        <button
-          type='button'
+        <div
           onClick={handleCopyEmail}
-          className='flex items-center gap-3 p-2 w-full rounded-xl bg-muted/40 hover:bg-muted/70 transition cursor-pointer text-left group/email mb-1.5'
+          className='flex items-center gap-3 p-2.5 w-full rounded-2xl bg-muted/40 hover:bg-muted/70 transition cursor-pointer text-left group/email mb-1.5 select-none'
           title='Haz clic para copiar el correo'
         >
           <Avatar className='h-9 w-9 rounded-xl border border-border/80 shrink-0'>
@@ -130,31 +132,27 @@ export function UserSettings({ user }: UserSettingsProps) {
             </AvatarFallback>
           </Avatar>
           <div className='flex-1 min-w-0 font-exo'>
-            <div className='flex items-center gap-1.5'>
-              <p className='truncate text-xs font-bold text-foreground'>
-                {userDisplayName}
-              </p>
-              {isAdmin && (
-                <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary shrink-0'>
-                  ADMIN
-                </span>
-              )}
-            </div>
-            <p className='truncate text-[11px] text-muted-foreground group-hover/email:text-primary transition flex items-center gap-1'>
-              <span className='truncate'>{userEmail}</span>
-              {copied ? (
-                <Check className='h-3 w-3 text-emerald-500 shrink-0' />
-              ) : (
-                <Copy className='h-3 w-3 opacity-60 group-hover/email:opacity-100 transition shrink-0' />
-              )}
+            <p className='truncate text-xs font-bold text-foreground'>
+              {userDisplayName}
+            </p>
+            <p className='truncate text-[11px] text-muted-foreground group-hover/email:text-primary transition'>
+              {userEmail}
             </p>
           </div>
-        </button>
+          <div className='ml-auto shrink-0 p-1 text-muted-foreground group-hover/email:text-primary transition'>
+            {copied ? (
+              <Check className='h-4 w-4 text-emerald-500' />
+            ) : (
+              <Copy className='h-4 w-4' />
+            )}
+          </div>
+        </div>
 
         <div className='my-1 border-t border-border/40' />
+
         {/* Diálogo de Dispositivos y Sesiones Activas */}
         <Dialog>
-          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left'>
+          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left cursor-pointer select-none'>
             <Smartphone className='w-4 h-4 text-primary' />
             Dispositivos y Sesiones
           </DialogTrigger>
@@ -168,7 +166,7 @@ export function UserSettings({ user }: UserSettingsProps) {
 
         {/* Diálogo de Modelos de IA Disponibles */}
         <Dialog>
-          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left'>
+          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left cursor-pointer select-none'>
             <Cpu className='w-4 h-4 text-primary' />
             Modelos de Inteligencia Artificial
           </DialogTrigger>
@@ -194,7 +192,7 @@ export function UserSettings({ user }: UserSettingsProps) {
 
         {/* Diálogo Sobre SipánGPT */}
         <Dialog>
-          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left'>
+          <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left cursor-pointer select-none'>
             <Info className='w-4 h-4 text-primary' />
             Sobre SipánGPT
           </DialogTrigger>
@@ -215,18 +213,31 @@ export function UserSettings({ user }: UserSettingsProps) {
           </DialogContent>
         </Dialog>
 
-        {/* Selector de Modo Noche / Modo Claro */}
-        <div className='flex items-center justify-between px-2.5 py-2 text-xs font-exo rounded-xl hover:bg-muted/60 transition'>
-          <span className='text-foreground'>Modo Noche</span>
-          <ThemeToggle />
-        </div>
+        {/* Selector de Modo Noche / Modo Claro Totalmente Clickeable */}
+        <button
+          type='button'
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className='flex items-center justify-between w-full px-2.5 py-2 text-xs font-exo rounded-xl hover:bg-muted/70 transition cursor-pointer select-none text-left'
+        >
+          <div className='flex items-center gap-2.5 text-foreground'>
+            {theme === 'dark' ? (
+              <Moon className='w-4 h-4 text-primary' />
+            ) : (
+              <Sun className='w-4 h-4 text-amber-500' />
+            )}
+            <span>Modo Noche</span>
+          </div>
+          <span className='text-[10px] font-semibold text-muted-foreground uppercase font-mono'>
+            {theme === 'dark' ? 'Activado' : 'Desactivado'}
+          </span>
+        </button>
 
-        {/* Enlace para Administradores */}
+        {/* Enlace para Administradores (Exclusivo para usuarios con rol ADMIN) */}
         {isAdmin && (
           <DropdownMenuItem className='p-0'>
             <Link
               href='/admin/dashboard'
-              className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-primary font-semibold hover:bg-primary/10 transition text-left'
+              className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-primary font-semibold hover:bg-primary/10 transition text-left cursor-pointer select-none'
             >
               <ShieldAlert className='w-4 h-4' />
               Panel de Administrador
@@ -239,7 +250,7 @@ export function UserSettings({ user }: UserSettingsProps) {
         {/* Cerrar Sesión */}
         <DropdownMenuItem
           onSelect={() => signOut({ redirectTo: '/login' })}
-          className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition text-left font-semibold'
+          className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition text-left font-semibold cursor-pointer select-none'
         >
           <LogOut className='w-4 h-4' />
           Cerrar sesión

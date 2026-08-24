@@ -1,5 +1,5 @@
 import './globals.css'
-import { Toaster } from '@/components/ui/toast'
+import { Toaster } from '@/components/ui/sonner'
 import { fontExo2, fontFraunces } from './fonts'
 import { ThemeProvider } from './providers'
 import { TooltipProvider } from '@/components/ui/tooltip'
