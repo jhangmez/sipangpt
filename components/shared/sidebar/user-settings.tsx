@@ -25,12 +25,16 @@ import {
   LogOut,
   ShieldAlert,
   Smartphone,
+  Copy,
+  Check,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { SessionsManager } from '../sessions-manager'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { useSidebar } from '@/components/ui/sidebar'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { User } from 'next-auth'
 
@@ -42,41 +46,69 @@ export function UserSettings({ user }: UserSettingsProps) {
   const isAdmin = user?.role === 'ADMIN'
   const { state } = useSidebar()
   const isCollapsed = state === 'collapsed'
+  const [copied, setCopied] = React.useState(false)
+
+  const userDisplayName = user?.name || 'Estudiante USS'
+  const userEmail = user?.email || 'estudiante@uss.edu.pe'
+  const userRoleLabel = isAdmin ? 'Administrador' : 'Estudiante USS'
+
+  const handleCopyEmail = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    await navigator.clipboard.writeText(userEmail)
+    setCopied(true)
+    toast.success('Correo copiado al portapapeles')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const triggerContent = (
+    <DropdownMenuTrigger
+      className={cn(
+        'flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-muted/70 transition-colors text-left focus:outline-none cursor-pointer',
+        'group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'
+      )}
+      aria-label='Configuración de usuario'
+    >
+      <Avatar className='h-8 w-8 rounded-xl border border-border/80 shrink-0'>
+        <AvatarImage src={user?.image || undefined} alt={userDisplayName} />
+        <AvatarFallback className='rounded-xl font-exo text-xs font-semibold bg-primary/10 text-primary'>
+          {userDisplayName.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+
+      <div className='flex-1 min-w-0 font-exo group-data-[collapsible=icon]:hidden'>
+        <p className='truncate text-xs font-bold text-foreground'>
+          {userDisplayName}
+        </p>
+        <div className='flex items-center gap-1.5 pt-0.5'>
+          {isAdmin ? (
+            <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary shrink-0'>
+              ADMIN
+            </span>
+          ) : (
+            <span className='text-[10px] text-muted-foreground truncate'>
+              {userRoleLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <ChevronUp className='w-4 h-4 text-muted-foreground shrink-0 group-data-[collapsible=icon]:hidden' />
+    </DropdownMenuTrigger>
+  )
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          'flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-muted/70 transition-colors text-left focus:outline-none cursor-pointer',
-          'group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'
-        )}
-        aria-label='Configuración de usuario'
-      >
-        <Avatar className='h-8 w-8 rounded-xl border border-border/80 shrink-0'>
-          <AvatarImage src={user?.image || undefined} alt={user?.name || 'Usuario'} />
-          <AvatarFallback className='rounded-xl font-exo text-xs font-semibold bg-primary/10 text-primary'>
-            {user?.name ? user.name.slice(0, 2).toUpperCase() : 'USS'}
-          </AvatarFallback>
-        </Avatar>
-
-        <div className='flex-1 min-w-0 font-exo group-data-[collapsible=icon]:hidden'>
-          <div className='flex items-center gap-1.5'>
-            <p className='truncate text-xs font-bold text-foreground'>
-              {user?.name || 'Estudiante USS'}
-            </p>
-            {isAdmin && (
-              <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary shrink-0'>
-                ADMIN
-              </span>
-            )}
-          </div>
-          <p className='truncate text-[11px] text-muted-foreground'>
-            {user?.email || 'estudiante@uss.edu.pe'}
-          </p>
-        </div>
-
-        <ChevronUp className='w-4 h-4 text-muted-foreground shrink-0 group-data-[collapsible=icon]:hidden' />
-      </DropdownMenuTrigger>
+      {isCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger render={triggerContent} />
+          <TooltipContent side='right' align='center' className='font-exo'>
+            <p className='font-semibold'>{userDisplayName}</p>
+            <p className='text-[10px] text-muted-foreground'>{userRoleLabel}</p>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        triggerContent
+      )}
 
       <DropdownMenuContent
         className='w-64 p-2 rounded-2xl border border-border/80 shadow-xl font-exo'
@@ -84,6 +116,42 @@ export function UserSettings({ user }: UserSettingsProps) {
         side={isCollapsed ? 'right' : 'top'}
         sideOffset={12}
       >
+        {/* Cabecera con Avatar, Nombre y Correo clickeable para copiar */}
+        <button
+          type='button'
+          onClick={handleCopyEmail}
+          className='flex items-center gap-3 p-2 w-full rounded-xl bg-muted/40 hover:bg-muted/70 transition cursor-pointer text-left group/email mb-1.5'
+          title='Haz clic para copiar el correo'
+        >
+          <Avatar className='h-9 w-9 rounded-xl border border-border/80 shrink-0'>
+            <AvatarImage src={user?.image || undefined} alt={userDisplayName} />
+            <AvatarFallback className='rounded-xl font-exo text-xs font-semibold bg-primary/10 text-primary'>
+              {userDisplayName.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className='flex-1 min-w-0 font-exo'>
+            <div className='flex items-center gap-1.5'>
+              <p className='truncate text-xs font-bold text-foreground'>
+                {userDisplayName}
+              </p>
+              {isAdmin && (
+                <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary shrink-0'>
+                  ADMIN
+                </span>
+              )}
+            </div>
+            <p className='truncate text-[11px] text-muted-foreground group-hover/email:text-primary transition flex items-center gap-1'>
+              <span className='truncate'>{userEmail}</span>
+              {copied ? (
+                <Check className='h-3 w-3 text-emerald-500 shrink-0' />
+              ) : (
+                <Copy className='h-3 w-3 opacity-60 group-hover/email:opacity-100 transition shrink-0' />
+              )}
+            </p>
+          </div>
+        </button>
+
+        <div className='my-1 border-t border-border/40' />
         {/* Diálogo de Dispositivos y Sesiones Activas */}
         <Dialog>
           <DialogTrigger className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-foreground hover:bg-muted transition text-left'>

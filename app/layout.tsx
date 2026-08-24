@@ -2,6 +2,7 @@ import './globals.css'
 import { Toaster } from '@/components/ui/toast'
 import { fontExo2, fontFraunces } from './fonts'
 import { ThemeProvider } from './providers'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export const viewport = {
   width: 'device-width',
@@ -44,8 +45,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Toaster />
-          {children}
+          <TooltipProvider>
+            <Toaster />
+            {children}
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
