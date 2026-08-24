@@ -1,0 +1,359 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  STUDENT
+  APPLICANT
+  JUROR
+  USER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DocumentStatus {
+  PROCESSING   // Subiéndose / procesando embeddings
+  INDEXED      // Activo para búsqueda en RAG
+  DEINDEXED    // Desindexado temporalmente (no se consulta en RAG)
+  ERROR        // Fallo al procesar
+}
+
+enum ModelProvider {
+  LOCAL_MAC    // Mac Mini M4 vía Cloudflare Tunnel
+  OPENAI
+  GEMINI  
+  ANTHROPIC
+}
+
+// -------------------------------------------------------------
+// AUTENTICACIÓN & USUARIOS
+// -------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  firstName     String?   @map("first_name")
+  lastName      String?   @map("last_name")
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  password      String?   // Hash bcrypt/argon2 para Credentials
+  image         String?
+  role          Role      @default(USER)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relaciones Auth
+  accounts      Account[]
+  sessions      Session[]
+  Authenticator Authenticator[]
+
+  // Relaciones del Sistema
+  posts         Post[]
+  conversations Conversation[]
+  feedbacks     Feedback[]
+  requestLogs   RequestLog[]
+  preguntas     Pregunta[]
+  uploadedDocs  Document[]     @relation("AdminUploadedDocs")
+  usage         UserUsage?
+
+  @@map("users")
+}
+
+model Account {
+  userId            String   @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String   @map("provider_account_id")
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Authenticator {
+  credentialID         String  @unique @map("credential_id")
+  userId               String  @map("user_id")
+  providerAccountId    String  @map("provider_account_id")
+  credentialPublicKey  String  @map("credential_public_key")
+  counter              Int
+  credentialDeviceType String  @map("credential_device_type")
+  credentialBackedUp   Boolean @map("credential_backed_up")
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+  @@map("authenticators")
+}
+
+// -------------------------------------------------------------
+// CHATBOT, MENSAJES Y CITAS RAG
+// -------------------------------------------------------------
+
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String    @default("Nueva Consulta")
+  userId    String?   @map("user_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String      @map("conversation_id")
+  role           MessageRole
+  content        String      @db.Text
+  
+  // Trazabilidad de IA
+  modelUsed      String?     @map("model_used")       // Ej: "gemma-4-local", "gpt-4o-mini"
+  promptTokens   Int?        @map("prompt_tokens")
+  totalTokens    Int?        @map("total_tokens")
+  latencyMs      Int?        @map("latency_ms")
+  isVoiceInput   Boolean     @default(false) @map("is_voice_input") // Marcador de transcripción STT
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  feedbacks    Feedback[]
+  citations    MessageCitation[] // Citas o fuentes utilizadas en esta respuesta
+
+  @@map("messages")
+}
+
+// Registro de citas/fuentes utilizadas para generar una respuesta
+model MessageCitation {
+  id          String   @id @default(cuid())
+  messageId   String   @map("message_id")
+  documentId  String?  @map("document_id")
+  title       String   // Nombre del documento o sección
+  sourceUrl   String?  @map("source_url")   // Enlace público al PDF / Web oficial
+  pageNumber  Int?     @map("page_number")  // Página específica citada
+  snippetText String   @map("snippet_text") @db.Text // Texto exacto recuperado
+  relevance   Float?   // Score de similitud vectorial (0.0 - 1.0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  message  Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@map("message_citations")
+}
+
+// -------------------------------------------------------------
+// BASE DE CONOCIMIENTO (DOCUMENTOS & EMBEDDINGS)
+// -------------------------------------------------------------
+
+model Document {
+  id          String         @id @default(cuid())
+  title       String
+  fileName    String         @map("file_name")
+  fileUrl     String?        @map("file_url")    // URL en storage local / S3
+  publicUrl   String?        @map("public_url")  // Enlace público oficial universitario
+  mimeType    String         @map("mime_type")
+  sizeBytes   Int            @map("size_bytes")
+  status      DocumentStatus @default(PROCESSING)
+  chunkCount  Int            @default(0) @map("chunk_count")
+  uploadedById String?       @map("uploaded_by_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  uploadedBy User?             @relation("AdminUploadedDocs", fields: [uploadedById], references: [id], onDelete: SetNull)
+  chunks     DocumentChunk[]
+  citations  MessageCitation[]
+
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id          String   @id @default(cuid())
+  documentId  String   @map("document_id")
+  chunkIndex  Int      @map("chunk_index")
+  content     String   @db.Text
+  pageNumber  Int?     @map("page_number")
+  metadata    Json?    // Metadatos adicionales (capítulo, sección, etc.)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  // Nota: La columna embedding de pgvector (vector(768/1536)) se crea mediante migración SQL en PostgreSQL
+  @@map("document_chunks")
+}
+
+// -------------------------------------------------------------
+// CONFIGURACIÓN DINÁMICA DE IA Y LÍMITES
+// -------------------------------------------------------------
+
+model AIModelConfig {
+  id           String        @id @default(cuid())
+  name         String        @unique // Ej: "Gemma 4 Fine-Tuned (Local)", "GPT-4o Mini"
+  modelCode    String        @map("model_code") // Identificador técnico: "gemma-4-local"
+  provider     ModelProvider @default(LOCAL_MAC)
+  endpointUrl  String?       @map("endpoint_url") // p. ej: "https://ai.sipangpt.com/v1"
+  apiKeyEnvVar String?       @map("api_key_env_var")
+  isActive     Boolean       @default(true) @map("is_active")
+  isDefault    Boolean       @default(false) @map("is_default")
+  maxTokens    Int           @default(2048) @map("max_tokens")
+  temperature  Float         @default(0.3)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@map("ai_model_configs")
+}
+
+model SystemSetting {
+  id                  String   @id @default("global_config")
+  maxPromptChars      Int      @default(2000) @map("max_prompt_chars") // Límite de caracteres en la entrada
+  maxDailyTokensPerUser Int    @default(50000) @map("max_daily_tokens_per_user")
+  enableVoiceInput    Boolean  @default(true) @map("enable_voice_input")
+  maintenanceMode     Boolean  @default(false) @map("maintenance_mode")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model UserUsage {
+  id            String    @id @default(cuid())
+  userId        String    @unique @map("user_id")
+  dailyTokens   Int       @default(0) @map("daily_tokens")
+  totalTokens   Int       @default(0) @map("total_tokens")
+  lastRequestAt DateTime? @map("last_request_at")
+  resetAt       DateTime  @default(now()) @map("reset_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_usages")
+}
+
+// -------------------------------------------------------------
+// NOTICIAS / BLOG / FEEDBACK / LOGS
+// -------------------------------------------------------------
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  excerpt     String?    @db.Text
+  content     String     @db.Text
+  coverImage  String?    @map("cover_image")
+  status      PostStatus @default(DRAFT)
+  authorId    String     @map("author_id")
+  categoryId  String?    @map("category_id")
+  publishedAt DateTime?  @map("published_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  author   User      @relation(fields: [authorId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("posts")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  posts       Post[]
+
+  @@map("categories")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  messageId String?  @map("message_id")
+  userId    String?  @map("user_id")
+  rating    Int?     // 1 (Like), -1 (Dislike) o 1-5 estrellas
+  comment   String?  @db.Text
+  url       String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@map("feedbacks")
+}
+
+model RequestLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  endpoint   String?
+  method     String?
+  statusCode Int      @map("status_code")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  durationMs Int?     @map("duration_ms")
+  timestamp  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("request_logs")
+}
+
+model Pregunta {
+  id          Int      @id @default(autoincrement())
+  contenido   String   @db.Text
+  creadoPorId String   @map("creado_por_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creadoPor User @relation(fields: [creadoPorId], references: [id], onDelete: Cascade)
+
+  @@map("preguntas")
+}

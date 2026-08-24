@@ -7,3 +7,77 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Protocolo y Guía de Base de Datos (Prisma 7 + PostgreSQL / Neon)
+
+## ⚠️ Regla de Oro: Prevención de Pérdida de Datos
+**NUNCA** ejecutar `npx prisma db push --force-reset` ni `npx prisma migrate reset` en bases de datos que contengan datos importantes. 
+Para mantener la integridad de la base de datos y evitar tener que borrar tablas, siempre se debe usar el flujo de **Prisma Migrate**.
+
+---
+
+## 🛠️ Flujo Estándar para Modificar la Base de Datos
+
+### Paso 1: Modificar el esquema
+Edita únicamente los modelos o campos necesarios en `prisma/schema.prisma`.
+
+### Paso 2: Crear y aplicar la migración en desarrollo
+Ejecuta en la terminal:
+```bash
+npx prisma migrate dev --name <nombre_descriptivo_del_cambio>
+```
+*Ejemplos:*
+- `npx prisma migrate dev --name add_user_role`
+- `npx prisma migrate dev --name create_conversations_table`
+
+**¿Qué hace este comando?**
+1. Compara tu esquema actual con la base de datos.
+2. Genera un archivo SQL versionado dentro de `prisma/migrations/<timestamp>_<nombre>/migration.sql`.
+3. Aplica los cambios a la base de datos de desarrollo.
+4. Si detecta que un cambio puede provocar pérdida de datos (ej. borrar una columna con datos), Prisma te advertirá **antes** de ejecutar nada.
+5. Ejecuta `npx prisma generate` automáticamente.
+
+---
+
+### Paso 3: Casos Especiales (Cambios con riesgo de datos)
+
+Si necesitas hacer cambios destructivos (renombrar una columna, cambiar un tipo incompatible) sin perder los datos existentes:
+
+1. **Crear migración sin aplicarla de inmediato:**
+   ```bash
+   npx prisma migrate dev --create-only --name <nombre_del_cambio>
+   ```
+2. **Revisar y editar el archivo SQL generado:**
+   Abre el archivo `prisma/migrations/.../migration.sql` y ajusta el SQL manualmente (por ejemplo, usando `ALTER TABLE ... RENAME COLUMN ...` en vez de `DROP COLUMN` + `ADD COLUMN`).
+3. **Aplicar la migración personalizada:**
+   ```bash
+   npx prisma migrate dev
+   ```
+
+---
+
+## 🚀 Despliegue en Producción / Staging (Vercel / CI-CD)
+
+En entornos de producción nunca se usa `migrate dev`. Se utiliza:
+```bash
+npx prisma migrate deploy
+```
+Este comando únicamente ejecuta los scripts `.sql` pendientes sin alterar la estructura existente ni hacer preguntas interactivas.
+
+---
+
+## 📋 Comandos Rápidos de Diagnóstico
+
+- **Ver estado de las migraciones:**
+  ```bash
+  npx prisma migrate status
+  ```
+- **Validar sintaxis del esquema:**
+  ```bash
+  npx prisma validate
+  ```
+- **Abrir interfaz visual de datos:**
+  ```bash
+  npx prisma studio
+  ```
+
