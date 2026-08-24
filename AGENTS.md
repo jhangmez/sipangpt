@@ -194,6 +194,7 @@ import {
 | **Field** | `components/ui/field.tsx` | Layout compuesto para etiquetas, títulos y descripciones de controles de formulario. |
 | **Hover Card** | `components/ui/hover-card.tsx` | Tarjetas flotantes activadas al pasar el cursor para previsualizaciones rápidas. |
 | **Input** | `components/ui/input.tsx` | Campo de entrada de texto estilizado y accesible. |
+| **Input Group** | `components/ui/input-group.tsx` | Contenedor compuesto para inputs y textareas con addons, botones y auto-crecimiento vertical. |
 | **Label** | `components/ui/label.tsx` | Etiquetas accesibles vinculadas a elementos de formulario. |
 | **Marker** | `components/ui/marker.tsx` | Indicador visual de estado de ejecución o eventos en la conversación. |
 | **Message** | `components/ui/message.tsx` | Layout de mensaje de chat con soporte de alineación (`start`/`end`), avatar, encabezado (`MessageHeader`) y pie (`MessageFooter`). |
