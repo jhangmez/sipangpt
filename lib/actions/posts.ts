@@ -60,6 +60,7 @@ Les damos la más cordial bienvenida al nuevo ciclo académico. A través de **S
 
 Para mayor información o consultas presenciales, acércate a la Dirección de Servicios Académicos en el Campus Universitario USS.`,
             status: 'PUBLISHED',
+            externalUrl: 'https://www.uss.edu.pe',
             authorId: firstAdmin.id,
             categoryId: generalCategory.id,
             publishedAt: new Date(),

@@ -1,30 +1,9 @@
 import crypto from 'crypto'
-
-/**
- * Valida que la contraseña cumpla con las políticas de seguridad institucional:
- * - Al menos 8 caracteres
- * - Al menos una letra mayúscula
- * - Al menos un número
- * - Al menos un carácter especial
- */
-export function validatePasswordPolicy(password: string): { isValid: boolean; message?: string } {
-  if (!password || password.length < 8) {
-    return { isValid: false, message: 'La contraseña debe tener al menos 8 caracteres.' }
-  }
-  if (!/[A-Z]/.test(password)) {
-    return { isValid: false, message: 'La contraseña debe contener al menos una letra mayúscula (A-Z).' }
-  }
-  if (!/[0-9]/.test(password)) {
-    return { isValid: false, message: 'La contraseña debe contener al menos un número (0-9).' }
-  }
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    return { isValid: false, message: 'La contraseña debe contener al menos un carácter especial (ej. !@#$%^&*).' }
-  }
-  return { isValid: true }
-}
+export { validatePasswordPolicy } from '@/lib/utils/password-policy'
 
 /**
  * Hashea una contraseña usando scrypt nativo con salt seguro.
+ * Solo debe usarse en entorno de servidor / Server Actions.
  */
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex')
@@ -34,6 +13,7 @@ export function hashPassword(password: string): string {
 
 /**
  * Verifica una contraseña contra el hash almacenado.
+ * Solo debe usarse en entorno de servidor / Server Actions.
  */
 export function verifyPassword(password: string, storedHash: string): boolean {
   try {

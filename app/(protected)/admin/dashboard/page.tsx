@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   ExternalLink,
   FolderTree,
+  Newspaper,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -236,6 +237,29 @@ export default async function AdminDashboardPage() {
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
             Gestionar administradores →
+          </span>
+        </Link>
+
+        <Link
+          href='/admin/posts'
+          className='group rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:border-primary/50 transition-all flex flex-col justify-between space-y-3'
+        >
+          <div className='space-y-1.5'>
+            <div className='flex items-center justify-between'>
+              <div className='h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center'>
+                <Newspaper className='w-5 h-5' />
+              </div>
+              <ArrowRight className='w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all' />
+            </div>
+            <h3 className='font-frances font-bold text-base text-foreground'>
+              Publicaciones y Posts
+            </h3>
+            <p className='text-xs text-muted-foreground leading-relaxed'>
+              Redacta y publica comunicados oficiales y novedades para los estudiantes.
+            </p>
+          </div>
+          <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
+            Gestionar publicaciones →
           </span>
         </Link>
       </div>

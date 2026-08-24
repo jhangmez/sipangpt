@@ -444,6 +444,7 @@ model Post {
   excerpt     String?    @db.Text
   content     String     @db.Text
   coverImage  String?    @map("cover_image")
+  externalUrl String?    @map("external_url")
   status      PostStatus @default(DRAFT)
   authorId    String     @map("author_id")
   categoryId  String?    @map("category_id")

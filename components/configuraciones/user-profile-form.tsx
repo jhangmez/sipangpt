@@ -39,7 +39,7 @@ import {
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import { getInstitutionalAffiliation } from '@/lib/utils/institutional'
-import { validatePasswordPolicy } from '@/lib/auth/password'
+import { validatePasswordPolicy } from '@/lib/utils/password-policy'
 import type { UserProfileData } from '@/types'
 
 interface UserProfileFormProps {

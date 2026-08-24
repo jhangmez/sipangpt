@@ -1,4 +1,4 @@
-import type { PostStatus } from '@/lib/prisma'
+export type PostStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 
 export interface PostItem {
   id: string
@@ -7,6 +7,7 @@ export interface PostItem {
   excerpt: string | null
   content: string
   coverImage: string | null
+  externalUrl: string | null
   status: PostStatus
   publishedAt: Date | null
   createdAt: Date
