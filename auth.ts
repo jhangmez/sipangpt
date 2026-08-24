@@ -1,8 +1,7 @@
 ﻿import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
-import { prisma } from '@/lib/prisma'
-import { Role } from '@prisma/client'
+import { prisma, Role } from '@/lib/prisma'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -34,7 +33,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.firstName = user.firstName ?? null
         token.lastName = user.lastName ?? null
       } else if (token.email && !token.role) {
-        // En caso de que el token aún no tenga el rol sincronizado
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
           select: { id: true, role: true, firstName: true, lastName: true },

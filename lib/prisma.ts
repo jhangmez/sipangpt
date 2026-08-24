@@ -2,6 +2,27 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
 
+// Re-exportar tipos y enums desde un único punto para evitar bundles duplicados
+export { Role, ModelProvider, MessageRole, PostStatus, DocumentStatus } from '@prisma/client'
+export type {
+  User,
+  Account,
+  Session,
+  Conversation,
+  Message,
+  MessageCitation,
+  Document,
+  DocumentChunk,
+  AIModelConfig,
+  SystemSetting,
+  UserUsage,
+  Post,
+  Category,
+  Feedback,
+  RequestLog,
+  Pregunta,
+} from '@prisma/client'
+
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 const connectionString = process.env.DATABASE_URL || ''

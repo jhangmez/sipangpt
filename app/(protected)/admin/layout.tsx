@@ -1,7 +1,7 @@
 ﻿import { requireRole } from '@/lib/session'
-import { Role } from '@prisma/client'
+import { Role } from '@/lib/prisma'
 import Link from 'next/link'
-import { LayoutDashboard, FileText, Settings, Users, Bot } from 'lucide-react'
+import { LayoutDashboard } from 'lucide-react'
 
 export default async function AdminLayout({
   children,

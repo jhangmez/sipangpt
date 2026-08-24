@@ -122,4 +122,43 @@ El proyecto utiliza dos fuentes locales variables configuradas en `app/fonts.ts`
    }
    ```
 
+---
 
+# ⚡ Optimización de Imports de Prisma y Gestión de Tipos
+
+Para evitar sobrecargar el bundle con el runtime de `@prisma/client` y mantener una única fuente de verdad:
+
+### 📌 Reglas de Importación:
+1. **NUNCA** importar `@prisma/client` directamente en archivos de rutas, componentes o módulos de la aplicación.
+2. Todo acceso a la base de datos y a los tipos/enums de Prisma debe realizarse a través de `@/lib/prisma`:
+   ```typescript
+   // Para operaciones de base de datos
+   import { prisma } from '@/lib/prisma'
+
+   // Para tipos y enums (SIEMPRE usar 'import type' cuando no se requiera el valor en runtime)
+   import type { Role, ModelProvider, User, Conversation, Message } from '@/lib/prisma'
+   ```
+3. El archivo `lib/prisma.ts` es el único encargado de instanciar el cliente `PrismaClient` con el adapter correspondiente (`@prisma/adapter-pg`) y de re-exportar los tipos necesarios.
+
+---
+
+# 📦 Gestión y Centralización de Constantes (`constants/`)
+
+Cualquier valor constante, configuración estática o texto institucional **NUNCA** debe estar hardcodeado dentro de páginas, componentes o API routes. Debe residir obligatoriamente en la carpeta `constants/`.
+
+### 📌 Estructura y Módulos de Constantes:
+- **`constants/prompts.ts`**: Prompts de sistema (`SIPANGPT_SYSTEM_PROMPT`), instrucciones institucionales de la USS y constructores de contexto RAG (`buildSystemPromptWithSources`).
+- **`constants/models.ts`**: Lista de modelos disponibles (`SYSTEM_MODELS`), modelo por defecto (`DEFAULT_MODEL_CODE`), proveedor por defecto (`DEFAULT_PROVIDER`).
+- **`constants/questions.ts`**: Preguntas sugeridas para estudiantes y usuarios (`INITIAL_QUESTIONS`).
+- **`constants/routes.ts`**: Rutas canónicas del sistema (`ROUTES.PUBLIC`, `ROUTES.PROTECTED`, `ROUTES.ADMIN`).
+- **`constants/index.ts`**: Archivo barril que re-exporta todas las constantes para importarlas directamente desde `@/constants`:
+
+```typescript
+import { 
+  buildSystemPromptWithSources, 
+  DEFAULT_MODEL_CODE, 
+  DEFAULT_PROVIDER,
+  INITIAL_QUESTIONS,
+  ROUTES 
+} from '@/constants'
+```

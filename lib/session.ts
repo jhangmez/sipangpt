@@ -1,7 +1,7 @@
 ﻿import { cache } from 'react'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { Role } from '@prisma/client'
+import type { Role } from '@/lib/prisma'
 
 /**
  * Obtiene el usuario autenticado actual desde la sesión.
