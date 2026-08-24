@@ -44,7 +44,7 @@ import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import type { User as AuthUser } from 'next-auth'
-import { logoutAction } from '@/lib/actions/auth'
+import { performSafeLogout } from '@/lib/auth/multi-tab-sync'
 
 interface UserSettingsProps {
   user?: (AuthUser & { role?: string }) | null
@@ -74,12 +74,8 @@ export function UserSettings({ user }: UserSettingsProps) {
     }
   }
 
-  const handleSignOut = async () => {
-    try {
-      await logoutAction()
-    } catch {
-      await signOut({ callbackUrl: '/login', redirect: true })
-    }
+  const handleSignOut = () => {
+    performSafeLogout('/login')
   }
 
   const triggerContent = (
@@ -280,6 +276,7 @@ export function UserSettings({ user }: UserSettingsProps) {
 
         {/* Cerrar Sesión */}
         <DropdownMenuItem
+          onClick={handleSignOut}
           onSelect={handleSignOut}
           className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition text-left font-semibold cursor-pointer select-none'
         >

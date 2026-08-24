@@ -1,10 +1,11 @@
-﻿'use client'
+'use client'
 
-import { signIn, signOut } from 'next-auth/react'
+import { signIn } from 'next-auth/react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { LogIn, LogOut, Shield } from 'lucide-react'
 import Link from 'next/link'
+import { performSafeLogout } from '@/lib/auth/multi-tab-sync'
 
 interface UserButtonProps {
   user?: {
@@ -27,6 +28,10 @@ export function UserButton({ user }: UserButtonProps) {
         Iniciar Sesión
       </Button>
     )
+  }
+
+  const handleSignOut = () => {
+    performSafeLogout('/')
   }
 
   return (
@@ -64,9 +69,9 @@ export function UserButton({ user }: UserButtonProps) {
       <Button
         variant='ghost'
         size='icon'
-        onClick={() => signOut({ callbackUrl: '/' })}
+        onClick={handleSignOut}
         title='Cerrar Sesión'
-        className='rounded-full text-muted-foreground hover:text-destructive'
+        className='rounded-full text-muted-foreground hover:text-destructive cursor-pointer'
       >
         <LogOut className='w-4 h-4' />
       </Button>
