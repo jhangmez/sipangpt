@@ -1,4 +1,4 @@
-﻿import type { ModelProvider, ModelStatus } from '@/lib/prisma'
+import type { ModelProvider, ModelStatus } from '@/lib/prisma'
 
 export interface SidebarChat {
   id: string
@@ -23,4 +23,49 @@ export interface ModelInformation {
   status: ModelStatus
   latencyMs?: number
   isDefault: boolean
+}
+
+export interface MessageAttachment {
+  id: string
+  name: string
+  size: string
+  type: string
+  url?: string
+}
+
+export interface MessageSource {
+  title: string
+  url?: string
+  snippet?: string
+}
+
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: string
+  modelName?: string
+  modelProvider?: string
+  reasoning?: string
+  attachments?: MessageAttachment[]
+  rating?: number
+  latencyMs?: number
+  sources?: MessageSource[]
+}
+
+export interface AttachedFile {
+  id: string
+  name: string
+  size: string
+  type: string
+  file: File
+}
+
+export interface FeedbackState {
+  messageId: string
+  userQuestion: string
+  assistantResponse: string
+  modelName: string
+  type: 'Adecuada' | 'Inadecuada' | null
+  initialRating?: number
 }

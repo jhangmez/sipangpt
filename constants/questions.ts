@@ -1,9 +1,11 @@
-﻿export interface SuggestedQuestion {
+export interface SuggestedQuestion {
   id: string
   icon: string
   text: string
-  category: 'admision' | 'matricula' | 'tramites' | 'carreras'
+  category: string
 }
+
+export type SuggestedQuestionDefinition = SuggestedQuestion
 
 export const INITIAL_QUESTIONS: SuggestedQuestion[] = [
   {
