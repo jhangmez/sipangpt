@@ -36,6 +36,7 @@ import { SYSTEM_MODELS } from '@/constants/models'
 import { SessionsManager } from '../sessions-manager'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Separator } from '@/components/ui/separator'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import type { User } from 'next-auth'
@@ -148,7 +149,7 @@ export function UserSettings({ user }: UserSettingsProps) {
           </div>
         </div>
 
-        <div className='my-1 border-t border-border/40' />
+        <Separator className='my-1 bg-border/40' />
 
         {/* Enlace a Configuraciones */}
         <DropdownMenuItem className='p-0'>
@@ -231,18 +232,21 @@ export function UserSettings({ user }: UserSettingsProps) {
 
         {/* Enlace para Administradores (Exclusivo para usuarios con rol ADMIN) */}
         {isAdmin && (
-          <DropdownMenuItem className='p-0'>
-            <Link
-              href='/admin/dashboard'
-              className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-primary font-semibold hover:bg-primary/10 transition text-left cursor-pointer select-none'
-            >
-              <ShieldAlert className='w-4 h-4' />
-              Panel de Administrador
-            </Link>
-          </DropdownMenuItem>
+          <>
+            <Separator className='my-1 bg-border/40' />
+            <DropdownMenuItem className='p-0'>
+              <Link
+                href='/admin/dashboard'
+                className='flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-exo text-primary font-semibold hover:bg-primary/10 transition text-left cursor-pointer select-none'
+              >
+                <ShieldAlert className='w-4 h-4' />
+                Panel de Administrador
+              </Link>
+            </DropdownMenuItem>
+          </>
         )}
 
-        <div className='my-1 border-t border-border/40' />
+        <Separator className='my-1 bg-border/40' />
 
         {/* Cerrar Sesión */}
         <DropdownMenuItem
