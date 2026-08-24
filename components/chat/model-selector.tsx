@@ -1,7 +1,28 @@
 ﻿'use client'
 
 import * as React from 'react'
-import { Check, ChevronDown, Cpu, Sparkles, AlertCircle, Zap, ShieldCheck } from 'lucide-react'
+import { Sparkles, Check, ChevronDown, Cpu, Activity } from 'lucide-react'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldTitle,
+} from '@/components/ui/field'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { SYSTEM_MODELS, type ModelDefinition } from '@/constants/models'
 import type { ModelStatus } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
@@ -17,135 +38,150 @@ export function ModelSelector({
   onSelectModel,
   models = SYSTEM_MODELS,
 }: ModelSelectorProps) {
-  const [isOpen, setIsOpen] = React.useState(false)
-  const menuRef = React.useRef<HTMLDivElement>(null)
-
-  // Cerrar el menú si se hace click afuera
-  React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const [open, setOpen] = React.useState(false)
+  const isMobile = useIsMobile()
 
   const getStatusBadge = (status: ModelStatus, latencyMs?: number) => {
     switch (status) {
       case 'ONLINE':
         return (
-          <span className='inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400'>
+          <Badge variant='outline' className='gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium'>
             <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse' />
             Estable {latencyMs ? `(${latencyMs}ms)` : ''}
-          </span>
+          </Badge>
         )
       case 'DEGRADED':
         return (
-          <span className='inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400'>
+          <Badge variant='outline' className='gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-medium'>
             <span className='h-1.5 w-1.5 rounded-full bg-amber-500' />
             Ping alto {latencyMs ? `(${latencyMs}ms)` : ''}
-          </span>
+          </Badge>
         )
       case 'OFFLINE':
         return (
-          <span className='inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400'>
+          <Badge variant='outline' className='gap-1.5 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-medium'>
             <span className='h-1.5 w-1.5 rounded-full bg-rose-500' />
             Sin respuesta
-          </span>
+          </Badge>
         )
       case 'DISABLED':
       default:
         return (
-          <span className='inline-flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground'>
+          <Badge variant='outline' className='gap-1.5 border-border bg-muted text-muted-foreground text-[10px] font-medium'>
             <span className='h-1.5 w-1.5 rounded-full bg-muted-foreground' />
             Desactivado
-          </span>
+          </Badge>
         )
     }
   }
 
   return (
-    <div className='relative inline-block text-left' ref={menuRef}>
-      {/* Botón Disparador del Selector */}
-      <button
-        type='button'
-        onClick={() => setIsOpen((prev) => !prev)}
-        className='inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-background/90 px-3.5 py-1.5 text-xs font-medium text-foreground shadow-sm hover:border-primary/50 hover:bg-accent/40 focus:outline-none transition-all'
-      >
-        <Sparkles className='h-3.5 w-3.5 text-primary' />
-        <span className='font-semibold'>{selectedModel.name}</span>
-        {selectedModel.isDefault && (
-          <span className='rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary'>
-            Default
-          </span>
-        )}
-        {getStatusBadge(selectedModel.status, selectedModel.latencyMs)}
-        <ChevronDown
-          className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform duration-200', {
-            'rotate-180': isOpen,
-          })}
-        />
-      </button>
+    <Drawer open={open} onOpenChange={setOpen} showSwipeHandle={isMobile} swipeDirection='down'>
+      {/* Botón Disparador del Selector con Drawer de Shadcn */}
+      <DrawerTrigger
+        render={
+          <button
+            type='button'
+            className='inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-background/90 px-3.5 py-1.5 text-xs font-medium text-foreground shadow-xs hover:border-primary/50 hover:bg-accent/40 focus:outline-none transition-all'
+          >
+            <Sparkles className='h-3.5 w-3.5 text-primary' />
+            <span className='font-semibold'>{selectedModel.name}</span>
+            {selectedModel.isDefault && (
+              <span className='rounded-md bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary'>
+                Default
+              </span>
+            )}
+            {getStatusBadge(selectedModel.status, selectedModel.latencyMs)}
+            <ChevronDown className='h-3.5 w-3.5 text-muted-foreground transition-transform' />
+          </button>
+        }
+      />
 
-      {/* Menú Desplegable con Estados de Modelos */}
-      {isOpen && (
-        <div className='absolute left-0 mt-2 w-80 sm:w-96 rounded-2xl border border-border/80 bg-card/95 backdrop-blur-md p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150'>
-          <div className='px-3 py-2 border-b border-border/40'>
-            <p className='text-xs font-semibold text-foreground font-frances'>
-              Seleccionar Modelo de Inteligencia Artificial
-            </p>
-            <p className='text-[11px] text-muted-foreground font-exo'>
-              Elige el motor de procesamiento para tus consultas universitarias.
-            </p>
-          </div>
+      <DrawerContent className='max-h-[85vh]'>
+        <DrawerHeader className='text-left font-exo'>
+          <DrawerTitle className='font-frances text-xl'>
+            Seleccionar Modelo de Inteligencia Artificial
+          </DrawerTitle>
+          <DrawerDescription className='text-xs text-muted-foreground'>
+            Elige el motor de procesamiento para tus consultas universitarias oficiales en SipánGPT.
+          </DrawerDescription>
+        </DrawerHeader>
 
-          <div className='py-1 space-y-1 max-h-72 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto px-4 py-2 font-exo'>
+          <RadioGroup
+            value={selectedModel.id}
+            onValueChange={(val) => {
+              const found = models.find((m) => m.id === val)
+              if (found && found.status !== 'OFFLINE' && found.status !== 'DISABLED') {
+                onSelectModel(found)
+                setOpen(false)
+              }
+            }}
+            className='gap-3'
+          >
             {models.map((model) => {
               const isSelected = selectedModel.id === model.id
               const isOffline = model.status === 'OFFLINE' || model.status === 'DISABLED'
 
               return (
-                <button
+                <FieldLabel
                   key={model.id}
-                  type='button'
-                  disabled={isOffline}
-                  onClick={() => {
-                    onSelectModel(model)
-                    setIsOpen(false)
-                  }}
+                  htmlFor={`model-${model.id}`}
                   className={cn(
-                    'w-full text-left rounded-xl p-2.5 transition-colors flex items-start justify-between gap-3',
-                    isSelected ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted/60',
-                    isOffline && 'opacity-50 cursor-not-allowed'
+                    'block cursor-pointer rounded-2xl border p-4 transition-all',
+                    isSelected
+                      ? 'border-primary/50 bg-primary/5 shadow-xs ring-1 ring-primary/20'
+                      : 'border-border/70 hover:bg-muted/40',
+                    isOffline && 'opacity-40 cursor-not-allowed'
                   )}
                 >
-                  <div className='space-y-1 flex-1'>
-                    <div className='flex items-center gap-2 flex-wrap'>
-                      <span className='text-xs font-semibold text-foreground'>
-                        {model.name}
-                      </span>
-                      {model.isDefault && (
-                        <span className='rounded-md bg-primary/15 px-1.5 py-0.2 text-[9px] font-bold text-primary'>
-                          Por Defecto
-                        </span>
-                      )}
-                      {getStatusBadge(model.status, model.latencyMs)}
-                    </div>
-                    <p className='text-[11px] text-muted-foreground font-exo line-clamp-2'>
-                      {model.description}
-                    </p>
-                  </div>
+                  <Field orientation='horizontal' className='flex items-start justify-between gap-3'>
+                    <FieldContent className='space-y-1.5 flex-1'>
+                      <div className='flex items-center gap-2 flex-wrap'>
+                        <FieldTitle className='text-sm font-bold text-foreground'>
+                          {model.name}
+                        </FieldTitle>
+                        <Badge variant='secondary' className='text-[10px] font-mono'>
+                          {model.provider}
+                        </Badge>
+                        {model.isDefault && (
+                          <Badge className='text-[10px] bg-primary/20 text-primary hover:bg-primary/20'>
+                            ★ Por Defecto
+                          </Badge>
+                        )}
+                        {getStatusBadge(model.status, model.latencyMs)}
+                      </div>
+                      <FieldDescription className='text-xs text-muted-foreground leading-relaxed'>
+                        {model.description}
+                      </FieldDescription>
+                    </FieldContent>
 
-                  {isSelected && (
-                    <Check className='h-4 w-4 text-primary shrink-0 mt-0.5' />
-                  )}
-                </button>
+                    <RadioGroupItem
+                      value={model.id}
+                      id={`model-${model.id}`}
+                      disabled={isOffline}
+                      className='mt-1'
+                    />
+                  </Field>
+                </FieldLabel>
               )
             })}
-          </div>
+          </RadioGroup>
         </div>
-      )}
-    </div>
+
+        <DrawerFooter className='pt-2'>
+          <DrawerClose
+            render={
+              <button
+                type='button'
+                className='w-full rounded-xl border border-border bg-background py-2 text-xs font-semibold hover:bg-muted transition font-exo'
+              >
+                Cerrar
+              </button>
+            }
+          />
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }
