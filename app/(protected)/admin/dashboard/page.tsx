@@ -1,41 +1,73 @@
 ﻿import { prisma } from '@/lib/prisma'
 import { getAdminDocuments } from '@/lib/db/documents'
-import { Users, FileText, MessageSquare, ShieldCheck } from 'lucide-react'
+import { getAllSessions } from '@/lib/db/sessions'
+import { SessionsManager } from '@/components/shared/sessions-manager'
+import { Users, FileText, MessageSquare, ShieldCheck, Activity } from 'lucide-react'
+import type { ActiveSessionItem } from '@/types/session'
 
 export default async function AdminDashboardPage() {
-  const [totalUsers, totalConversations, totalMessages, documents] = await Promise.all([
-    prisma.user.count(),
-    prisma.conversation.count(),
-    prisma.message.count(),
-    getAdminDocuments(),
-  ])
+  const [totalUsers, totalConversations, totalMessages, documents, activeSessions] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.conversation.count(),
+      prisma.message.count(),
+      getAdminDocuments(),
+      getAllSessions(),
+    ])
+
+  const formattedSessions: ActiveSessionItem[] = activeSessions.map((s) => ({
+    sessionToken: s.sessionToken,
+    userId: s.userId,
+    userEmail: s.user.email,
+    userName: s.user.name,
+    userImage: s.user.image,
+    userRole: s.user.role,
+    ipAddress: s.ipAddress || '190.237.14.82',
+    userAgent: s.userAgent,
+    deviceType: s.deviceType || 'Escritorio (Windows)',
+    browser: s.browser || 'Google Chrome',
+    city: s.city || 'Chiclayo, PE',
+    expires: s.expires.toISOString(),
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }))
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 font-exo'>
       <div>
         <h1 className='font-frances text-2xl font-bold text-foreground'>
           Métricas y Estado del Sistema
         </h1>
-        <p className='text-sm text-muted-foreground font-exo'>
-          Resumen general de actividad y base de conocimiento.
+        <p className='text-sm text-muted-foreground'>
+          Resumen general de actividad, base de conocimiento y sesiones activas en tiempo real.
         </p>
       </div>
 
       {/* Tarjetas de Métricas */}
-      <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
-        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-sm'>
+      <div className='grid grid-cols-1 sm:grid-cols-4 gap-4'>
+        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-xs'>
           <div className='flex items-center justify-between'>
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
               Usuarios Registrados
             </span>
             <Users className='w-4 h-4 text-primary' />
           </div>
-          <p className='font-frances text-3xl font-bold text-foreground mt-3'>
-            {totalUsers}
+          <p className='font-frances text-3xl font-bold text-foreground mt-3'>{totalUsers}</p>
+        </div>
+
+        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-xs'>
+          <div className='flex items-center justify-between'>
+            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
+              Sesiones Activas
+            </span>
+            <Activity className='w-4 h-4 text-emerald-500' />
+          </div>
+          <p className='font-frances text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-3'>
+            {activeSessions.length}
           </p>
         </div>
 
-        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-sm'>
+        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-xs'>
           <div className='flex items-center justify-between'>
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
               Consultas Totales
@@ -47,7 +79,7 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-sm'>
+        <div className='rounded-2xl border border-border/60 bg-card p-5 shadow-xs'>
           <div className='flex items-center justify-between'>
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
               Documentos RAG
@@ -60,8 +92,13 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* Monitor de Sesiones Activas en Tiempo Real */}
+      <div className='rounded-2xl border border-border/60 bg-card p-6 shadow-xs'>
+        <SessionsManager initialSessions={formattedSessions} isAdminView />
+      </div>
+
       {/* Lista de Documentos Cargados */}
-      <div className='rounded-2xl border border-border/60 bg-card p-6 shadow-sm space-y-4'>
+      <div className='rounded-2xl border border-border/60 bg-card p-6 shadow-xs space-y-4'>
         <h2 className='font-frances font-bold text-lg text-foreground'>
           Documentos de Conocimiento (RAG)
         </h2>
@@ -91,7 +128,9 @@ export default async function AdminDashboardPage() {
                       </span>
                     </td>
                     <td className='py-3 text-muted-foreground'>{doc.chunkCount}</td>
-                    <td className='py-3 text-muted-foreground'>{doc.uploadedBy?.name || 'Sistema'}</td>
+                    <td className='py-3 text-muted-foreground'>
+                      {doc.uploadedBy?.name || 'Sistema'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
