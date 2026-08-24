@@ -1,4 +1,4 @@
-﻿<!-- BEGIN:nextjs-agent-rules -->
+<!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
 
@@ -180,6 +180,7 @@ import {
 
 | Componente | Archivo | Propósito y Uso |
 | :--- | :--- | :--- |
+| **Accordion** | `components/ui/accordion.tsx` | Contenedores colapsables apilados para visualizar preguntas y respuestas en modales de feedback. |
 | **Attachment** | `components/ui/attachment.tsx` | Muestra archivos adjuntos (PDFs, imágenes, etc.) con vista previa, tamaño, estados de subida (idle, uploading, done) y botón de eliminación. |
 | **Avatar** | `components/ui/avatar.tsx` | Foto o iniciales del usuario y del bot con soporte accesible para fallbacks. |
 | **Badge** | `components/ui/badge.tsx` | Insignias de estado (ONLINE, DEGRADED, OFFLINE), roles y categorías. |
@@ -204,5 +205,7 @@ import {
 | **Sheet** | `components/ui/sheet.tsx` | Panel lateral superpuesto para navegación o detalles auxiliares. |
 | **Sidebar** | `components/ui/sidebar.tsx` | Sidebar oficial de navegación colapsable responsive con atajos de teclado. |
 | **Skeleton** | `components/ui/skeleton.tsx` | Placeholders animados para estados de carga de listas y contenido. |
+| **Switch** | `components/ui/switch.tsx` | Interruptor toggle accesible para consentimientos y preferencias. |
+| **Textarea** | `components/ui/textarea.tsx` | Área de texto multilínea para comentarios de feedback y notas. |
 | **Toast** | `components/ui/toast.tsx` | Sistema de notificaciones toast (integrado con `sonner`). |
 | **Tooltip** | `components/ui/tooltip.tsx` | Ayudas visuales al pasar el cursor o hacer focus. |

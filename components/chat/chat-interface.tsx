@@ -22,7 +22,11 @@ import {
   Clock,
   ExternalLink,
   Check,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react'
+import { formatTimeAgo } from '@/lib/timeago'
+import { FeedbackModal } from './feedback-modal'
 import { ModelSelector } from './model-selector'
 import {
   ContextMenu,
@@ -146,7 +150,39 @@ export function ChatInterface({
   const [attachedFiles, setAttachedFiles] = React.useState<{ id: string; name: string; size: string; type: string }[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false)
+  const [feedbackData, setFeedbackData] = React.useState<{
+    messageId: string
+    modelName: string
+    userQuestion: string
+    assistantResponse: string
+    type: 'Adecuada' | 'Inadecuada' | null
+    initialRating: number
+  } | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleOpenFeedback = (
+    message: ChatMessage,
+    type: 'Adecuada' | 'Inadecuada' | null = null,
+    initialRating = 0
+  ) => {
+    const messageIndex = messages.findIndex((m) => m.id === message.id)
+    const userQuestion =
+      messages
+        .slice(0, messageIndex >= 0 ? messageIndex : messages.length)
+        .reverse()
+        .find((m) => m.role === 'user')?.content || 'Consulta general USS'
+
+    setFeedbackData({
+      messageId: message.id,
+      modelName: message.modelName || selectedModel.name,
+      userQuestion,
+      assistantResponse: message.content,
+      type,
+      initialRating: initialRating || (type === 'Adecuada' ? 5 : type === 'Inadecuada' ? 1 : 0),
+    })
+    setFeedbackModalOpen(true)
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -415,7 +451,7 @@ export function ChatInterface({
                         'space-y-2 max-w-[88%] sm:max-w-2xl',
                         !isUser && 'bg-assistant-bg border border-assistant-border rounded-3xl p-4 sm:p-5 shadow-xs'
                       )}>
-                        {/* Header del Mensaje: Nombre del Modelo de IA */}
+                        {/* Header del Mensaje: Nombre del Modelo de IA y Tiempo Relativo */}
                         {!isUser && (
                           <MessageHeader className='flex items-center justify-between pb-1 border-b border-border/30'>
                             <div className='flex items-center gap-2'>
@@ -426,8 +462,11 @@ export function ChatInterface({
                                 {message.modelProvider || selectedModel.provider}
                               </Badge>
                             </div>
-                            <span className='text-[10px] text-muted-foreground font-mono'>
-                              {formattedTime}
+                            <span
+                              className='text-[10px] text-muted-foreground font-mono cursor-default'
+                              title={`${formattedDate} - ${formattedTime}`}
+                            >
+                              {formatTimeAgo(message.createdAt)}
                             </span>
                           </MessageHeader>
                         )}
@@ -479,17 +518,45 @@ export function ChatInterface({
                               aria-label={`Calificación: ${message.rating} de 5 estrellas`}
                               className='pt-2'
                             >
-                              <Badge variant='outline' className='border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1 text-[10px] font-bold'>
+                              <Badge
+                                variant='outline'
+                                onClick={() => handleOpenFeedback(message, null, message.rating)}
+                                className='border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1 text-[10px] font-bold cursor-pointer hover:bg-amber-500/20 transition'
+                              >
                                 {'⭐'.repeat(message.rating)} ({message.rating}/5)
                               </Badge>
                             </BubbleReactions>
                           )}
                         </Bubble>
 
-                        {/* Footer del Mensaje del Asistente: Acciones, Rating y Diálogo de Información */}
+                        {/* Footer del Mensaje del Asistente: Feedback, Acciones, Rating y Diálogo de Información */}
                         {!isUser && message.content && (
                           <MessageFooter className='flex items-center justify-between gap-1 pt-2 border-t border-border/30 flex-wrap'>
                             <div className='flex items-center gap-1'>
+                              {/* Botón Respuesta Adecuada (ThumbsUp) */}
+                              <Button
+                                variant='ghost'
+                                size='icon-xs'
+                                onClick={() => handleOpenFeedback(message, 'Adecuada', 5)}
+                                aria-label='Respuesta adecuada'
+                                className='h-7 w-7 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                                title='Respuesta adecuada'
+                              >
+                                <ThumbsUp className='h-3.5 w-3.5' />
+                              </Button>
+
+                              {/* Botón Respuesta Inadecuada (ThumbsDown) */}
+                              <Button
+                                variant='ghost'
+                                size='icon-xs'
+                                onClick={() => handleOpenFeedback(message, 'Inadecuada', 1)}
+                                aria-label='Respuesta inadecuada'
+                                className='h-7 w-7 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400'
+                                title='Respuesta inadecuada'
+                              >
+                                <ThumbsDown className='h-3.5 w-3.5' />
+                              </Button>
+
                               {/* Botón Copiar */}
                               <Button
                                 variant='ghost'
@@ -497,6 +564,7 @@ export function ChatInterface({
                                 onClick={() => copyToClipboard(message.content)}
                                 aria-label='Copiar mensaje'
                                 className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                                title='Copiar texto'
                               >
                                 <Copy className='h-3.5 w-3.5' />
                               </Button>
@@ -507,12 +575,13 @@ export function ChatInterface({
                                   <button
                                     key={star}
                                     type='button'
-                                    onClick={() => handleRateMessage(message.id, star)}
+                                    onClick={() => handleOpenFeedback(message, null, star)}
                                     className={cn(
                                       'p-1 text-muted-foreground/50 hover:text-amber-500 transition-colors',
                                       message.rating && star <= message.rating ? 'text-amber-500' : ''
                                     )}
                                     aria-label={`Puntuar con ${star} estrellas`}
+                                    title={`Calificar con ${star} estrellas`}
                                   >
                                     <Star className='h-3.5 w-3.5 fill-current' />
                                   </button>
@@ -526,6 +595,7 @@ export function ChatInterface({
                                 onClick={() => handleSendMessage()}
                                 aria-label='Regenerar respuesta'
                                 className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                                title='Regenerar respuesta'
                               >
                                 <RefreshCw className='h-3.5 w-3.5' />
                               </Button>
@@ -540,6 +610,7 @@ export function ChatInterface({
                                     size='icon-xs'
                                     aria-label='Ver información del mensaje'
                                     className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                                    title='Metadatos e información'
                                   >
                                     <Info className='h-3.5 w-3.5' />
                                   </Button>
@@ -570,8 +641,8 @@ export function ChatInterface({
                                       <span className='font-mono font-medium'>{message.latencyMs ? `${message.latencyMs} ms` : '180 ms'}</span>
                                     </div>
                                     <div className='flex justify-between items-center'>
-                                      <span className='text-muted-foreground'>Fecha y Hora exacta:</span>
-                                      <span className='font-mono font-medium'>{formattedDate} - {formattedTime}</span>
+                                      <span className='text-muted-foreground'>Emitido:</span>
+                                      <span className='font-mono font-medium'>{formatTimeAgo(message.createdAt)} ({formattedDate} {formattedTime})</span>
                                     </div>
                                   </div>
 
@@ -634,19 +705,25 @@ export function ChatInterface({
                               <span>Copiar respuesta</span>
                             </ContextMenuItem>
 
+                            <ContextMenuItem
+                              onSelect={() => handleOpenFeedback(message, 'Adecuada', 5)}
+                              className='gap-2 text-emerald-600 dark:text-emerald-400'
+                            >
+                              <ThumbsUp className='w-4 h-4' />
+                              <span>Respuesta adecuada (👍)</span>
+                            </ContextMenuItem>
+
+                            <ContextMenuItem
+                              onSelect={() => handleOpenFeedback(message, 'Inadecuada', 1)}
+                              className='gap-2 text-rose-600 dark:text-rose-400'
+                            >
+                              <ThumbsDown className='w-4 h-4' />
+                              <span>Respuesta inadecuada (👎)</span>
+                            </ContextMenuItem>
+
                             <ContextMenuItem onSelect={() => handleSendMessage()} className='gap-2'>
                               <RefreshCw className='w-4 h-4 text-primary' />
                               <span>Regenerar respuesta</span>
-                            </ContextMenuItem>
-
-                            <ContextMenuSeparator />
-
-                            <ContextMenuItem
-                              onSelect={() => handleRateMessage(message.id, 5)}
-                              className='gap-2'
-                            >
-                              <Star className='w-4 h-4 text-amber-500 fill-amber-500' />
-                              <span>Calificar excelente (5★)</span>
                             </ContextMenuItem>
 
                             <ContextMenuSeparator />
@@ -782,6 +859,25 @@ export function ChatInterface({
           SipánGPT puede cometer errores. Verifica información importante con los reglamentos institucionales oficiales.
         </p>
       </form>
+
+      {/* Modal de Feedback USS */}
+      {feedbackData && (
+        <FeedbackModal
+          isOpen={feedbackModalOpen}
+          setIsOpen={setFeedbackModalOpen}
+          userQuestion={feedbackData.userQuestion}
+          assistantResponse={feedbackData.assistantResponse}
+          messageId={feedbackData.messageId}
+          modelName={feedbackData.modelName}
+          userId={user?.id}
+          feedbackType={feedbackData.type}
+          setFeedbackType={(t) =>
+            setFeedbackData((prev) => (prev ? { ...prev, type: t } : null))
+          }
+          initialRating={feedbackData.initialRating}
+          onRatingChange={(r) => handleRateMessage(feedbackData.messageId, r)}
+        />
+      )}
     </div>
   )
 }
