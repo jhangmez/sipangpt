@@ -30,6 +30,7 @@ import {
   ArrowLeft,
   Bot,
   Shield,
+  FileText,
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { User as AuthUser } from 'next-auth'
@@ -62,6 +63,12 @@ const ADMIN_NAV_ITEMS = [
     href: '/admin/administradores',
     icon: ShieldCheck,
     description: 'Asignaciones e invitaciones',
+  },
+  {
+    title: 'Ingesta de Documentos',
+    href: '/admin/documents',
+    icon: FileText,
+    description: 'Base de conocimiento RAG',
   },
 ]
 
