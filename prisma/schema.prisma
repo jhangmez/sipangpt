@@ -45,6 +45,13 @@ enum ModelProvider {
   ANTHROPIC
 }
 
+enum ModelStatus {
+  ONLINE      // Activo y respondiendo con baja latencia
+  DEGRADED    // Problemas de ping / latencia alta
+  OFFLINE     // Sin respuesta / no responde
+  DISABLED    // Desactivado manualmente por el administrador
+}
+
 // -------------------------------------------------------------
 // AUTENTICACIÓN & USUARIOS
 // -------------------------------------------------------------
@@ -69,6 +76,7 @@ model User {
   Authenticator Authenticator[]
 
   // Relaciones del Sistema
+  memories      UserMemory[]
   posts         Post[]
   conversations Conversation[]
   feedbacks     Feedback[]
@@ -247,6 +255,8 @@ model AIModelConfig {
   provider     ModelProvider @default(LOCAL_MAC)
   endpointUrl  String?       @map("endpoint_url") // p. ej: "https://ai.sipangpt.com/v1"
   apiKeyEnvVar String?       @map("api_key_env_var")
+  status       ModelStatus   @default(ONLINE) // ONLINE, DEGRADED, OFFLINE, DISABLED
+  latencyMs    Int?          @map("latency_ms") // Último ping / latencia medida en ms
   isActive     Boolean       @default(true) @map("is_active")
   isDefault    Boolean       @default(false) @map("is_default")
   maxTokens    Int           @default(2048) @map("max_tokens")
@@ -255,6 +265,22 @@ model AIModelConfig {
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
   @@map("ai_model_configs")
+}
+
+model UserMemory {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  fact       String   @db.Text // Ej: "Estudiante de Ingeniería de Sistemas, 6to ciclo"
+  category   String?  // Ej: "academico", "preferencia", "tramite"
+  isActive   Boolean  @default(true) @map("is_active") // Permite al usuario desactivar un recuerdo
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Nota: La columna embedding de pgvector (vector(768)) se puede crear en migración SQL
+  @@index([userId])
+  @@map("user_memories")
 }
 
 model SystemSetting {

@@ -1,13 +1,21 @@
-﻿import { Pool } from 'pg'
+import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
 
 // Re-exportar tipos y enums desde un único punto para evitar bundles duplicados
-export { Role, ModelProvider, MessageRole, PostStatus, DocumentStatus } from '@prisma/client'
+export {
+  Role,
+  ModelProvider,
+  ModelStatus,
+  MessageRole,
+  PostStatus,
+  DocumentStatus,
+} from '@prisma/client'
 export type {
   User,
   Account,
   Session,
+  UserMemory,
   Conversation,
   Message,
   MessageCitation,
