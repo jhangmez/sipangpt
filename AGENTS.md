@@ -196,6 +196,7 @@ import {
 | **Input** | `components/ui/input.tsx` | Campo de entrada de texto estilizado y accesible. |
 | **Input Group** | `components/ui/input-group.tsx` | Contenedor compuesto para inputs y textareas con addons, botones y auto-crecimiento vertical. |
 | **Label** | `components/ui/label.tsx` | Etiquetas accesibles vinculadas a elementos de formulario. |
+| **Markdown** | `components/ui/markdown.tsx` | Renderizador Markdown con soporte de sintaxis resaltada, fórmulas KaTeX, diagramas Mermaid, tablas y copia de bloques. |
 | **Marker** | `components/ui/marker.tsx` | Indicador visual de estado de ejecución o eventos en la conversación. |
 | **Message** | `components/ui/message.tsx` | Layout de mensaje de chat con soporte de alineación (`start`/`end`), avatar, encabezado (`MessageHeader`) y pie (`MessageFooter`). |
 | **Message Scroller**| `components/ui/message-scroller.tsx`| Scroll container especializado para chat de IA con streaming, anclaje de turnos (`scrollAnchor`) y seguimiento suave. |
@@ -206,7 +207,8 @@ import {
 | **Sheet** | `components/ui/sheet.tsx` | Panel lateral superpuesto para navegación o detalles auxiliares. |
 | **Sidebar** | `components/ui/sidebar.tsx` | Sidebar oficial de navegación colapsable responsive con atajos de teclado. |
 | **Skeleton** | `components/ui/skeleton.tsx` | Placeholders animados para estados de carga de listas y contenido. |
-| **Switch** | `components/ui/switch.tsx` | Interruptor toggle accesible para consentimientos y preferencias. |
+| **Slider** | `components/ui/slider.tsx` | Control deslizante de rango accesible (usado para ajustar el umbral de similitud coseno RAG). |
+| **Switch** | `components/ui/switch.tsx` | Interruptor toggle accesible para consentimientos, políticas de búsqueda y preferencias. |
 | **Textarea** | `components/ui/textarea.tsx` | Área de texto multilínea para comentarios de feedback y notas. |
 | **Toast** | `components/ui/toast.tsx` | Sistema de notificaciones toast (integrado con `sonner`). |
 | **Tooltip** | `components/ui/tooltip.tsx` | Ayudas visuales al pasar el cursor o hacer focus. |

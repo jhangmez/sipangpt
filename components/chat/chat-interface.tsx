@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   MessageScroller,
@@ -106,6 +107,8 @@ export function ChatInterface({
       }
     }
   }, [mappedModels, selectedModel.id])
+  const router = useRouter()
+  const [currentConversationId, setCurrentConversationId] = React.useState<string | undefined>(conversationId)
 
   // Estados del chat
   const [messages, setMessages] = React.useState<ChatMessage[]>(initialMessages)
@@ -114,22 +117,57 @@ export function ChatInterface({
   const [error, setError] = React.useState<string | null>(null)
   const [attachedFiles, setAttachedFiles] = React.useState<AttachedFile[]>([])
 
+  // Sincronizar mensajes e ID si cambian las props iniciales
+  React.useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages)
+    }
+  }, [initialMessages])
+
+  React.useEffect(() => {
+    if (conversationId) {
+      setCurrentConversationId(conversationId)
+    }
+  }, [conversationId])
+
   // Estados del modal de feedback
   const [feedbackModalOpen, setFeedbackModalOpen] = React.useState(false)
   const [feedbackData, setFeedbackData] = React.useState<FeedbackState | null>(
     null
   )
 
+  // Obtener fuentes iniciales si existen mensajes previos
+  const initialSources = React.useMemo(() => {
+    const lastAssistant = [...initialMessages]
+      .reverse()
+      .find((m) => m.role === 'assistant' && m.sources && m.sources.length > 0)
+    return lastAssistant?.sources || []
+  }, [initialMessages])
+
   // Estados del panel lateral derecho reutilizable (Novedades USS & Fuentes RAG)
-  const [sidePanelOpen, setSidePanelOpen] = React.useState(true)
-  const [sidePanelTab, setSidePanelTab] = React.useState<'posts' | 'sources'>('posts')
-  const [activeSources, setActiveSources] = React.useState<MessageSource[]>([])
+  // Se oculta si ya existen mensajes o no hay posts disponibles
+  const [sidePanelOpen, setSidePanelOpen] = React.useState<boolean>(() => {
+    if (initialMessages.length > 0) {
+      return initialSources.length > 0
+    }
+    return posts.length > 0
+  })
+  const [sidePanelTab, setSidePanelTab] = React.useState<'posts' | 'sources'>(() => {
+    if (initialMessages.length > 0 && initialSources.length > 0) {
+      return 'sources'
+    }
+    return 'posts'
+  })
+  const [activeSources, setActiveSources] = React.useState<MessageSource[]>(initialSources)
 
   // Sincronizar fuentes si el último mensaje del asistente las contiene
   React.useEffect(() => {
     const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && m.sources && m.sources.length > 0)
-    if (lastAssistant?.sources) {
-      setActiveSources(lastAssistant.sources)
+    if (lastAssistant?.sources && lastAssistant.sources.length > 0) {
+      setActiveSources((prev) => {
+        if (prev.length === lastAssistant.sources?.length) return prev
+        return lastAssistant.sources!
+      })
     }
   }, [messages])
 
@@ -139,19 +177,16 @@ export function ChatInterface({
     type: 'Adecuada' | 'Inadecuada' | null,
     rating?: number
   ) => {
-    const messageIndex = messages.findIndex((m) => m.id === message.id)
-    const userQuestion =
-      messageIndex > 0 && messages[messageIndex - 1].role === 'user'
-        ? messages[messageIndex - 1].content
-        : 'Consulta sobre trámites y normativas de la USS'
-
     setFeedbackData({
       messageId: message.id,
-      userQuestion,
+      userQuestion:
+        [...messages]
+          .reverse()
+          .find((m) => m.role === 'user')?.content || 'Consulta',
       assistantResponse: message.content,
       modelName: message.modelName || selectedModel.name,
-      type: type || (rating && rating >= 4 ? 'Adecuada' : 'Inadecuada'),
-      initialRating: rating || (type === 'Adecuada' ? 5 : 1)
+      type,
+      initialRating: rating,
     })
     setFeedbackModalOpen(true)
   }
@@ -163,13 +198,13 @@ export function ChatInterface({
     )
   }
 
-  // Copiar mensaje al portapapeles con toast
-  const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text)
-    toast.success('Mensaje copiado!')
+  // Copiar al portapapeles
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Texto copiado al portapapeles')
   }
 
-  // Manejo de carga de archivos adjuntos
+  // Manejo de archivos adjuntos
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
@@ -179,9 +214,8 @@ export function ChatInterface({
       name: file.name,
       size: `${(file.size / 1024).toFixed(1)} KB`,
       type: file.type || 'documento',
-      file
+      file,
     }))
-
     setAttachedFiles((prev) => [...prev, ...newFiles])
     toast.success(`${newFiles.length} archivo(s) adjuntado(s)`)
   }
@@ -190,20 +224,39 @@ export function ChatInterface({
     setAttachedFiles((prev) => prev.filter((f) => f.id !== id))
   }
 
-  // Envío e inferencia de consulta
-  const handleSendMessage = async (customText?: string) => {
-    const textToSend = customText || input
-    if ((!textToSend.trim() && attachedFiles.length === 0) || isLoading) return
+  // Helper para leer archivo en base64
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = reader.result as string
+        const base64 = result.includes(',') ? result.split(',')[1] : result
+        resolve(base64)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Envío e inferencia de consulta con streaming en tiempo real
+  const handleSendMessage = async (textOverride?: string) => {
+    const textToSend = (textOverride !== undefined ? textOverride : input).trim()
+    if (!textToSend && attachedFiles.length === 0) return
+
+    // Al realizar una pregunta, ocultar la sección de publicaciones/posts si está activa
+    if (sidePanelTab === 'posts') {
+      setSidePanelOpen(false)
+    }
 
     setError(null)
     const userMessageId = crypto.randomUUID()
     const nowIso = new Date().toISOString()
 
-    const attachmentsForMessage = attachedFiles.map((att) => ({
+    const attachmentsForUi = attachedFiles.map((att) => ({
       id: att.id,
       name: att.name,
       size: att.size,
-      type: att.type
+      type: att.type,
     }))
 
     const newUserMessage: ChatMessage = {
@@ -212,56 +265,233 @@ export function ChatInterface({
       content: textToSend,
       createdAt: nowIso,
       attachments:
-        attachmentsForMessage.length > 0 ? attachmentsForMessage : undefined
+        attachmentsForUi.length > 0 ? attachmentsForUi : undefined,
     }
 
+    const currentAttachments = [...attachedFiles]
     setMessages((prev) => [...prev, newUserMessage])
     setInput('')
     setAttachedFiles([])
     setIsLoading(true)
 
     try {
+      // Preparar payload de archivos con contenido en base64
+      const attachmentsPayload = await Promise.all(
+        currentAttachments.map(async (att) => {
+          let base64Data: string | undefined = undefined
+          try {
+            base64Data = await readFileAsBase64(att.file)
+          } catch {
+            // Continuar sin base64 si no es legible
+          }
+          return {
+            id: att.id,
+            name: att.name,
+            size: att.size,
+            type: att.type,
+            data: base64Data,
+          }
+        })
+      )
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: textToSend,
-          conversationId,
+          conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
           provider: selectedModel.provider,
-          attachments: attachmentsForMessage
-        })
+          attachments: attachmentsPayload,
+        }),
       })
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}))
-        throw new Error(errData?.error || 'Error al conectar con el asistente')
+        throw new Error(
+          errData?.error || 'Error al conectar con el asistente de IA'
+        )
       }
 
-      const data = await response.json()
-
-      const assistantMessage: ChatMessage = {
-        id: data.id || crypto.randomUUID(),
-        role: 'assistant',
-        content: data.response || data.content,
-        createdAt: data.createdAt || new Date().toISOString(),
-        modelName: selectedModel.name,
-        modelProvider: selectedModel.provider,
-        reasoning: data.reasoning,
-        latencyMs: data.latencyMs || selectedModel.latencyMs || 180,
-        sources: data.sources
+      // Sincronizar nuevo ID de conversación desde los encabezados de respuesta
+      const headerConvId = response.headers.get('x-conversation-id')
+      if (headerConvId && headerConvId !== currentConversationId) {
+        setCurrentConversationId(headerConvId)
+        if (typeof window !== 'undefined' && !window.location.pathname.includes(headerConvId)) {
+          window.history.replaceState(null, '', `/chat/${headerConvId}`)
+        }
       }
 
-      if (data.sources && data.sources.length > 0) {
-        setActiveSources(data.sources)
-        setSidePanelTab('sources')
-        setSidePanelOpen(true)
+      // Procesar flujo de respuesta en tiempo real (SSE)
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('No se pudo inicializar el flujo de datos del modelo.')
       }
 
-      setMessages((prev) => [...prev, assistantMessage])
+      let assistantAdded = false
+      const assistantTempId = crypto.randomUUID()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let accumulatedText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        let currentEvent = ''
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+
+          if (trimmed.startsWith('event: ')) {
+            currentEvent = trimmed.slice(7).trim()
+            continue
+          }
+
+          if (trimmed.startsWith('data: ') || trimmed.startsWith('data:')) {
+            const dataStr = trimmed.replace(/^data:\s*/, '')
+            if (dataStr === '[DONE]') continue
+
+            try {
+              const packet = JSON.parse(dataStr)
+
+              // 1. Manejo de paquete 'start' o metadatos iniciales
+              if (packet.type === 'start' && packet.messageMetadata) {
+                const meta = packet.messageMetadata
+                if (meta.conversationId && meta.conversationId !== currentConversationId) {
+                  setCurrentConversationId(meta.conversationId)
+                  if (typeof window !== 'undefined' && !window.location.pathname.includes(meta.conversationId)) {
+                    window.history.replaceState(null, '', `/chat/${meta.conversationId}`)
+                  }
+                }
+                if (meta.sources && meta.sources.length > 0) {
+                  setActiveSources(meta.sources)
+                  setSidePanelTab('sources')
+                  setSidePanelOpen(true)
+                }
+              }
+
+              // 2. Manejo de chunks de texto (soporta 'delta' de AI SDK 7.x, 'textDelta' y 'text')
+              const textDelta =
+                packet.delta !== undefined
+                  ? packet.delta
+                  : packet.textDelta !== undefined
+                  ? packet.textDelta
+                  : packet.text !== undefined
+                  ? packet.text
+                  : currentEvent === 'delta'
+                  ? packet.text
+                  : null
+
+              if (textDelta) {
+                accumulatedText += textDelta
+                if (!assistantAdded) {
+                  assistantAdded = true
+                  const newAssistantMsg: ChatMessage = {
+                    id: assistantTempId,
+                    role: 'assistant',
+                    content: accumulatedText,
+                    createdAt: new Date().toISOString(),
+                    modelName: selectedModel.name,
+                    modelProvider: selectedModel.provider,
+                    latencyMs: selectedModel.latencyMs || 140,
+                  }
+                  setMessages((prev) => [...prev, newAssistantMsg])
+                } else {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantTempId
+                        ? { ...msg, content: accumulatedText }
+                        : msg
+                    )
+                  )
+                }
+              }
+
+              // 3. Manejo de razonamiento CoT en streaming
+              if (packet.type === 'reasoning-delta') {
+                const rDelta = packet.delta ?? packet.textDelta
+                if (rDelta) {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantTempId
+                        ? { ...msg, reasoning: (msg.reasoning || '') + rDelta }
+                        : msg
+                    )
+                  )
+                }
+              }
+
+              // 4. Manejo de fuentes y metadatos complementarios
+              if (packet.type === 'source' && packet.source) {
+                setActiveSources((prev) => [...prev, packet.source])
+                setSidePanelTab('sources')
+                setSidePanelOpen(true)
+              }
+
+              if (currentEvent === 'meta' || packet.type === 'metadata') {
+                const metaSources = packet.sources || packet.messageMetadata?.sources
+                if (metaSources && metaSources.length > 0) {
+                  setActiveSources(metaSources)
+                  setSidePanelTab('sources')
+                  setSidePanelOpen(true)
+                }
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantTempId
+                      ? {
+                          ...msg,
+                          id: packet.id || msg.id,
+                          sources: metaSources || msg.sources,
+                          latencyMs: packet.latencyMs || msg.latencyMs,
+                          retrievalLatencyMs: packet.retrievalLatencyMs || msg.retrievalLatencyMs,
+                          generationLatencyMs: packet.generationLatencyMs || msg.generationLatencyMs,
+                          embeddingModel: packet.embeddingModel || msg.embeddingModel || 'gemini-embedding-2',
+                          modelName: packet.modelName || selectedModel.name,
+                        }
+                      : msg
+                  )
+                )
+              }
+
+              if (packet.type === 'finish' && packet.messageMetadata?.conversationId) {
+                const finishConvId = packet.messageMetadata.conversationId
+                if (finishConvId !== currentConversationId) {
+                  setCurrentConversationId(finishConvId)
+                  if (typeof window !== 'undefined' && !window.location.pathname.includes(finishConvId)) {
+                    window.history.replaceState(null, '', `/chat/${finishConvId}`)
+                  }
+                }
+              }
+
+              if (packet.type === 'error' || currentEvent === 'error') {
+                throw new Error(
+                  packet.error || 'Error reportado por el modelo de IA.'
+                )
+              }
+            } catch (parseErr: any) {
+              if (trimmed.includes('"error"')) {
+                throw parseErr
+              }
+            }
+          }
+        }
+      }
+
+      // Actualizar datos del servidor para que el historial en el sidebar muestre la nueva conversación
+      router.refresh()
     } catch (err: unknown) {
       console.error('[CHAT_ERROR]', err)
-      setError(getErrorMessage(err) || 'Ocurrió un error al procesar tu consulta.')
+      const rawErrMsg = getErrorMessage(err)
+      const friendlyMsg =
+        rawErrMsg?.includes('API key')
+          ? rawErrMsg
+          : 'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
+      setError(friendlyMsg)
     } finally {
       setIsLoading(false)
     }
@@ -303,12 +533,19 @@ export function ChatInterface({
                         onCopy={copyToClipboard}
                         onRegenerate={() => handleSendMessage()}
                         onOpenFeedback={handleOpenFeedback}
+                        onShowSources={(srcs) => {
+                          setActiveSources(srcs)
+                          setSidePanelTab('sources')
+                          setSidePanelOpen(true)
+                        }}
                       />
                     ))
                   )}
 
-                  {/* Indicador de Carga */}
-                  {isLoading && <ChatLoadingItem />}
+                  {/* Indicador de Carga mientras se espera la primera respuesta */}
+                  {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                    <ChatLoadingItem />
+                  )}
 
                   {/* Alerta de Error */}
                   {error && (

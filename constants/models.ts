@@ -11,28 +11,29 @@ export interface ModelDefinition {
   isDefault: boolean
 }
 
-export const DEFAULT_MODEL_CODE = 'gemini-2.5-flash'
+export const DEFAULT_MODEL_CODE = 'gemini-3.1-flash-lite'
 export const DEFAULT_PROVIDER: ModelProvider = 'GEMINI'
 
 export const SYSTEM_MODELS: ModelDefinition[] = [
   {
-    id: 'gemini-flash',
-    name: 'Gemini 2.5 Flash',
-    modelCode: 'gemini-2.5-flash',
+    id: 'gemini-flash-lite',
+    name: 'Gemini 3.1 Flash-Lite',
+    modelCode: 'gemini-3.1-flash-lite',
     provider: 'GEMINI',
-    description: 'Modelo oficial de alta velocidad y multimodal.',
+    description:
+      'Nuestro modelo más rentable, optimizado para tareas de agentes de gran volumen, traducción y respuestas rápidas.',
     status: 'ONLINE',
-    latencyMs: 180,
+    latencyMs: 140,
     isDefault: true,
   },
   {
-    id: 'gemini-pro',
-    name: 'Gemini 2.5 Pro',
-    modelCode: 'gemini-2.5-pro',
+    id: 'gemini-flash',
+    name: 'Gemini 3.6 Flash',
+    modelCode: 'gemini-3.6-flash',
     provider: 'GEMINI',
-    description: 'Razonamiento complejo para normativas y tesis.',
+    description: 'Modelo oficial de alta velocidad y multimodal.',
     status: 'ONLINE',
-    latencyMs: 450,
+    latencyMs: 210,
     isDefault: false,
   },
   {

@@ -34,9 +34,13 @@ export interface MessageAttachment {
 }
 
 export interface MessageSource {
+  chunkId?: string | null
+  documentId?: string | null
   title: string
   url?: string
   snippet?: string
+  relevance?: number
+  embeddingModel?: string
 }
 
 export interface ChatMessage {
@@ -46,10 +50,13 @@ export interface ChatMessage {
   createdAt: string
   modelName?: string
   modelProvider?: string
+  embeddingModel?: string
   reasoning?: string
   attachments?: MessageAttachment[]
   rating?: number
   latencyMs?: number
+  retrievalLatencyMs?: number
+  generationLatencyMs?: number
   sources?: MessageSource[]
 }
 

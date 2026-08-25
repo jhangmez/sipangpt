@@ -1,4 +1,4 @@
-﻿import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createOllama } from 'ollama-ai-provider-v2'
 import type { LanguageModel } from 'ai'
@@ -37,7 +37,7 @@ export function getLanguageModel(
     }
 
     case ModelProvider.GEMINI: {
-      return google(modelCode || 'gemini-2.5-flash')
+      return google(modelCode || DEFAULT_MODEL_CODE)
     }
 
     case ModelProvider.OPENAI: {
@@ -46,13 +46,13 @@ export function getLanguageModel(
 
     default: {
       if (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY) {
-        return google('gemini-2.5-flash')
+        return google(modelCode || DEFAULT_MODEL_CODE)
       }
       if (process.env.OPENAI_API_KEY) {
-        return openai('gpt-4o-mini')
+        return openai(modelCode || 'gpt-4o-mini')
       }
       const ollama = getOllamaProvider(endpointUrl)
-      return ollama('llama3.2:latest')
+      return ollama(modelCode || 'llama3.2:latest')
     }
   }
 }

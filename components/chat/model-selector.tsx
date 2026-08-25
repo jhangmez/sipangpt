@@ -45,31 +45,44 @@ export function ModelSelector({
     switch (status) {
       case 'ONLINE':
         return (
-          <Badge variant='outline' className='gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium'>
-            <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse' />
-            Estable {latencyMs ? `(${latencyMs}ms)` : ''}
+          <Badge
+            variant='outline'
+            className='gap-1 sm:gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium py-0 px-1.5 sm:px-2 shrink-0'
+          >
+            <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0' />
+            <span className='hidden sm:inline'>Estable</span>
+            <span className='hidden lg:inline'>{latencyMs ? ` (${latencyMs}ms)` : ''}</span>
           </Badge>
         )
       case 'DEGRADED':
         return (
-          <Badge variant='outline' className='gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-medium'>
-            <span className='h-1.5 w-1.5 rounded-full bg-amber-500' />
-            Ping alto {latencyMs ? `(${latencyMs}ms)` : ''}
+          <Badge
+            variant='outline'
+            className='gap-1 sm:gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-medium py-0 px-1.5 sm:px-2 shrink-0'
+          >
+            <span className='h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0' />
+            <span className='hidden sm:inline'>Ping alto</span>
           </Badge>
         )
       case 'OFFLINE':
         return (
-          <Badge variant='outline' className='gap-1.5 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-medium'>
-            <span className='h-1.5 w-1.5 rounded-full bg-rose-500' />
-            Sin respuesta
+          <Badge
+            variant='outline'
+            className='gap-1 sm:gap-1.5 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-medium py-0 px-1.5 sm:px-2 shrink-0'
+          >
+            <span className='h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0' />
+            <span className='hidden sm:inline'>Sin respuesta</span>
           </Badge>
         )
       case 'DISABLED':
       default:
         return (
-          <Badge variant='outline' className='gap-1.5 border-border bg-muted text-muted-foreground text-[10px] font-medium'>
-            <span className='h-1.5 w-1.5 rounded-full bg-muted-foreground' />
-            Desactivado
+          <Badge
+            variant='outline'
+            className='gap-1 sm:gap-1.5 border-border bg-muted text-muted-foreground text-[10px] font-medium py-0 px-1.5 sm:px-2 shrink-0'
+          >
+            <span className='h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0' />
+            <span className='hidden sm:inline'>Desactivado</span>
           </Badge>
         )
     }
@@ -84,17 +97,19 @@ export function ModelSelector({
         render={
           <button
             type='button'
-            className='inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-background/90 px-3.5 py-1.5 text-xs font-medium text-foreground shadow-xs hover:border-primary/50 hover:bg-accent/40 focus:outline-none transition-all'
+            className='inline-flex items-center gap-1.5 sm:gap-2 rounded-2xl border border-border/80 bg-background/90 px-2 sm:px-3.5 py-1 sm:py-1.5 text-xs font-medium text-foreground shadow-xs hover:border-primary/50 hover:bg-accent/40 focus:outline-none transition-all max-w-full min-w-0'
           >
-            <Sparkles className='h-3.5 w-3.5 text-primary' />
-            <span className='font-semibold'>{selectedModel.name}</span>
+            <Sparkles className='h-3.5 w-3.5 text-primary shrink-0' />
+            <span className='font-semibold truncate max-w-[100px] min-[400px]:max-w-[145px] sm:max-w-[185px] md:max-w-[220px] lg:max-w-none text-left'>
+              {selectedModel.name}
+            </span>
             {selectedModel.isDefault && (
-              <span className='rounded-md bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary'>
+              <span className='rounded-md bg-primary/10 px-1.5 py-0.2 text-[9px] sm:text-[10px] font-semibold text-primary hidden md:inline-block shrink-0'>
                 Default
               </span>
             )}
             {getStatusBadge(selectedModel.status, selectedModel.latencyMs)}
-            <ChevronDown className='h-3.5 w-3.5 text-muted-foreground transition-transform' />
+            <ChevronDown className='h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform' />
           </button>
         }
       />

@@ -255,11 +255,14 @@ model Message {
   resolutionStatus ResolutionStatus @default(RESOLVED_WITH_SOURCES) @map("resolution_status")
 
   // Trazabilidad Técnica & Métricas
-  modelUsed      String?          @map("model_used")
-  promptTokens   Int?             @map("prompt_tokens")
-  totalTokens    Int?             @map("total_tokens")
-  latencyMs      Int?             @map("latency_ms")
-  isVoiceInput   Boolean          @default(false) @map("is_voice_input")
+  modelUsed           String?          @map("model_used")
+  embeddingModel      String?          @default("gemini-embedding-2") @map("embedding_model")
+  promptTokens        Int?             @map("prompt_tokens")
+  totalTokens         Int?             @map("total_tokens")
+  latencyMs           Int?             @map("latency_ms")
+  retrievalLatencyMs  Int?             @map("retrieval_latency_ms")
+  generationLatencyMs Int?             @map("generation_latency_ms")
+  isVoiceInput        Boolean          @default(false) @map("is_voice_input")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -273,18 +276,21 @@ model Message {
 }
 
 model MessageCitation {
-  id          String   @id @default(cuid())
-  messageId   String   @map("message_id")
-  documentId  String?  @map("document_id")
-  title       String   // Nombre del reglamento/documento citado
-  sourceUrl   String?  @map("source_url")   // URL pública al PDF institucional
-  pageNumber  Int?     @map("page_number")  // Número de página (permite enlace url#page=X)
-  snippetText String   @map("snippet_text") @db.Text // Fragmento exacto recuperado
-  relevance   Float?   // Score de similitud (0.0 - 1.0)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String   @id @default(cuid())
+  messageId      String   @map("message_id")
+  documentId     String?  @map("document_id")
+  chunkId        String?  @map("chunk_id")
+  title          String   // Nombre del reglamento/documento citado
+  sourceUrl      String?  @map("source_url")   // URL pública al PDF institucional
+  pageNumber     Int?     @map("page_number")  // Número de página (permite enlace url#page=X)
+  snippetText    String   @map("snippet_text") @db.Text // Fragmento exacto recuperado
+  relevance      Float?   // Score de similitud (0.0 - 1.0)
+  embeddingModel String?  @default("gemini-embedding-2") @map("embedding_model")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  message  Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  message  Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  document Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  chunk    DocumentChunk? @relation(fields: [chunkId], references: [id], onDelete: SetNull)
 
   @@map("message_citations")
 }
@@ -326,7 +332,8 @@ model DocumentChunk {
   metadata    Json?    // Metadatos (título del capítulo, sección)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document  Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  citations MessageCitation[]
 
   @@map("document_chunks")
 }
@@ -380,6 +387,11 @@ model SystemSetting {
   maxPromptChars        Int      @default(2000) @map("max_prompt_chars")
   maxDailyTokensPerUser Int      @default(50000) @map("max_daily_tokens_per_user")
   enableVoiceInput      Boolean  @default(true) @map("enable_voice_input")
+  enableRAG             Boolean  @default(true) @map("enable_rag")
+  enableWebSearch       Boolean  @default(false) @map("enable_web_search")
+  enableMapsSearch      Boolean  @default(false) @map("enable_maps_search")
+  enableImageAnalysis   Boolean  @default(true) @map("enable_image_analysis")
+  minSimilarityScore    Float    @default(0.50) @map("min_similarity_score")
   maintenanceMode       Boolean  @default(false) @map("maintenance_mode")
   updatedAt             DateTime @updatedAt @map("updated_at")
 

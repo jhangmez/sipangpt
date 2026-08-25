@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import Link from 'next/link'
 import {
   Newspaper,
   BookOpen,
@@ -12,11 +11,11 @@ import {
   Calendar,
   PanelRightClose,
   PanelRightOpen,
-  ArrowLeft
+  ArrowLeft,
+  Search,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import type { PostItem } from '@/types'
 import type { MessageSource } from '@/types/chat'
 
@@ -35,7 +34,7 @@ export function ChatSidePanel({
   activeTab = 'posts',
   onTabChange,
   isOpen = true,
-  onToggleOpen
+  onToggleOpen,
 }: ChatSidePanelProps) {
   const isShowingSources = activeTab === 'sources' && activeSources.length > 0
 
@@ -113,7 +112,7 @@ export function ChatSidePanel({
       {/* Contenido Desplazable del Panel */}
       <div className='flex-1 overflow-y-auto p-3.5 space-y-3'>
         {isShowingSources ? (
-          /* MODO FUENTES OFICIALES CITADAS */
+          /* MODO FUENTES OFICIALES CITADAS (RAG) */
           <div className='space-y-3'>
             <div className='p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1'>
               <p className='font-bold text-primary flex items-center gap-1.5 text-[11px]'>
@@ -125,34 +124,65 @@ export function ChatSidePanel({
               </p>
             </div>
 
-            {activeSources.map((source, sIdx) => (
-              <div
-                key={sIdx}
-                className='rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs space-y-2 text-xs'
-              >
-                <div className='flex items-center justify-between gap-2'>
-                  <span className='font-semibold text-foreground line-clamp-1 text-[11px]'>
-                    {source.title}
-                  </span>
-                  {source.url && (
+            {activeSources.map((source, sIdx) => {
+              const relevancePercent =
+                source.relevance !== undefined
+                  ? Math.round(source.relevance * 100)
+                  : null
+
+              const targetDocUrl = source.url || '#'
+
+              return (
+                <div
+                  key={sIdx}
+                  className='rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs space-y-2.5 text-xs hover:border-primary/40 transition-colors'
+                >
+                  {/* Encabezado de la Fuente */}
+                  <div className='space-y-1'>
+                    <div className='flex items-center justify-between gap-2'>
+                      <span className='font-bold text-foreground text-xs line-clamp-2 leading-snug'>
+                        {source.title}
+                      </span>
+                      {relevancePercent !== null && (
+                        <Badge
+                          variant='secondary'
+                          className='text-[9px] py-0 px-1.5 font-mono shrink-0 bg-primary/15 text-primary border-primary/20'
+                        >
+                          {relevancePercent}% relevancia
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Texto Recuperado del Fragmento */}
+                  {source.snippet && (
+                    <div className='rounded-xl bg-muted/40 p-2.5 border border-border/50 text-[11px] text-muted-foreground font-mono leading-relaxed space-y-1'>
+                      <div className='flex items-center gap-1 text-[10px] text-primary/80 font-sans font-semibold'>
+                        <Sparkles className='w-3 h-3' /> Fragmento recuperado:
+                      </div>
+                      <p className='italic'>«{source.snippet}»</p>
+                    </div>
+                  )}
+
+                  {/* Botón de enlace para ver el documento en otra ventana */}
+                  {source.url ? (
                     <a
-                      href={source.url}
+                      href={targetDocUrl}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='text-primary hover:underline flex items-center gap-1 text-[10px] shrink-0 font-medium'
+                      className='flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-semibold transition-all border border-primary/25 cursor-pointer shadow-xs'
                     >
-                      Ver PDF <ExternalLink className='w-3 h-3' />
+                      <ExternalLink className='w-3.5 h-3.5' />
+                      Ver Documento Oficial (PDF / Portal)
                     </a>
+                  ) : (
+                    <div className='text-[10px] text-muted-foreground text-center py-1 bg-muted/20 rounded-lg'>
+                      Documento interno USS
+                    </div>
                   )}
                 </div>
-
-                {source.snippet && (
-                  <p className='text-[11px] text-muted-foreground font-mono bg-muted/40 p-2 rounded-xl leading-relaxed border border-border/40'>
-                    «{source.snippet}»
-                  </p>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : /* MODO LISTA DE PUBLICACIONES / POSTS CON REDIRECCIÓN */
         posts.length === 0 ? (
@@ -197,7 +227,7 @@ export function ChatSidePanel({
                         post.publishedAt || post.createdAt
                       ).toLocaleDateString('es-PE', {
                         day: '2-digit',
-                        month: 'short'
+                        month: 'short',
                       })}
                     </span>
                   </div>

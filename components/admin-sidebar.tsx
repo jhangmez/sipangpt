@@ -33,6 +33,7 @@ import {
   FileText,
   FolderTree,
   Newspaper,
+  Sliders,
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { User as AuthUser } from 'next-auth'
@@ -77,6 +78,12 @@ const ADMIN_NAV_ITEMS = [
     href: '/admin/documents',
     icon: FileText,
     description: 'Base de conocimiento RAG',
+  },
+  {
+    title: 'Políticas y Búsqueda IA',
+    href: '/admin/settings',
+    icon: Sliders,
+    description: 'Control de RAG, Web y Maps',
   },
   {
     title: 'Temas y Categorías',

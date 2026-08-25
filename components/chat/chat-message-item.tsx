@@ -57,7 +57,8 @@ import {
 } from '@/components/ui/dialog'
 import { formatTimeAgo } from '@/lib/timeago'
 import { cn } from '@/lib/utils'
-import type { ChatMessage } from '@/types/chat'
+import { MarkdownRenderer } from '@/components/ui/markdown'
+import type { ChatMessage, MessageSource } from '@/types/chat'
 import type { ModelDefinition } from '@/constants/models'
 
 interface ChatMessageItemProps {
@@ -72,6 +73,7 @@ interface ChatMessageItemProps {
     type: 'Adecuada' | 'Inadecuada' | null,
     rating?: number
   ) => void
+  onShowSources?: (sources: MessageSource[]) => void
 }
 
 export function ChatMessageItem({
@@ -82,6 +84,7 @@ export function ChatMessageItem({
   onCopy,
   onRegenerate,
   onOpenFeedback,
+  onShowSources,
 }: ChatMessageItemProps) {
   const isUser = message.role === 'user'
   const dateObj = new Date(message.createdAt)
@@ -176,10 +179,10 @@ export function ChatMessageItem({
                   </AttachmentGroup>
                 )}
 
-                {/* Superficie del Mensaje usando Bubble de Shadcn */}
+                {/* Superficie del Mensaje usando Bubble de Shadcn y MarkdownRenderer */}
                 <Bubble variant='ghost' className='rounded-2xl'>
-                  <BubbleContent className='text-sm leading-relaxed whitespace-pre-wrap p-0 font-normal'>
-                    {message.content}
+                  <BubbleContent className='text-sm leading-relaxed p-0 font-normal select-text'>
+                    <MarkdownRenderer content={message.content} />
                   </BubbleContent>
 
                   {/* Reacciones de Burbuja con Calificación de Estrellas */}
@@ -251,6 +254,20 @@ export function ChatMessageItem({
                       >
                         <RefreshCw className='h-3.5 w-3.5' />
                       </Button>
+
+                      {/* Botón Abrir Citas RAG en Panel Lateral */}
+                      {message.sources && message.sources.length > 0 && onShowSources && (
+                        <Button
+                          variant='outline'
+                          size='xs'
+                          onClick={() => onShowSources(message.sources!)}
+                          className='gap-1 text-[10px] font-semibold rounded-xl text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 h-7'
+                          title='Ver fragmentos y reglamentos en el panel lateral derecho'
+                        >
+                          <BookOpen className='w-3 h-3' />
+                          Ver {message.sources.length} Cita(s) RAG
+                        </Button>
+                      )}
                     </div>
 
                     {/* Diálogo Modal de Información del Mensaje */}
@@ -281,17 +298,27 @@ export function ChatMessageItem({
                         <div className='space-y-3 pt-3 text-xs'>
                           <div className='rounded-2xl border border-border/70 p-3.5 space-y-2 bg-card/60'>
                             <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>Modelo de IA:</span>
+                              <span className='text-muted-foreground'>Modelo de Generación:</span>
                               <span className='font-bold text-foreground'>{message.modelName || selectedModel.name}</span>
+                            </div>
+                            <div className='flex justify-between items-center'>
+                              <span className='text-muted-foreground'>Modelo de Embeddings:</span>
+                              <span className='font-mono font-medium text-foreground'>{message.embeddingModel || 'gemini-embedding-2'}</span>
                             </div>
                             <div className='flex justify-between items-center'>
                               <span className='text-muted-foreground'>Proveedor:</span>
                               <Badge variant='outline'>{message.modelProvider || selectedModel.provider}</Badge>
                             </div>
                             <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>Tiempo de respuesta:</span>
+                              <span className='text-muted-foreground'>Tiempo total de respuesta:</span>
                               <span className='font-mono font-medium'>{message.latencyMs ? `${message.latencyMs} ms` : '180 ms'}</span>
                             </div>
+                            {(message.retrievalLatencyMs !== undefined || message.generationLatencyMs !== undefined) && (
+                              <div className='flex justify-between items-center text-[11px] text-muted-foreground border-t border-border/40 pt-1.5'>
+                                <span>Búsqueda Vectorial: <strong className='text-foreground'>{message.retrievalLatencyMs ?? 0} ms</strong></span>
+                                <span>Generación LLM: <strong className='text-foreground'>{message.generationLatencyMs ?? 0} ms</strong></span>
+                              </div>
+                            )}
                             <div className='flex justify-between items-center'>
                               <span className='text-muted-foreground'>Emitido:</span>
                               <span className='font-mono font-medium'>{formatTimeAgo(message.createdAt)} ({formattedDate} {formattedTime})</span>
@@ -305,9 +332,16 @@ export function ChatMessageItem({
                                 Fuentes y Normativas Consultadas:
                               </span>
                               {message.sources.map((src, i) => (
-                                <div key={i} className='rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-1'>
+                                <div key={i} className='rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-1.5'>
                                   <div className='flex items-center justify-between'>
-                                    <span className='font-semibold text-primary'>{src.title}</span>
+                                    <div className='flex items-center gap-1.5'>
+                                      <span className='font-semibold text-primary'>{src.title}</span>
+                                      {src.relevance !== undefined && (
+                                        <Badge variant='secondary' className='text-[10px] py-0 px-1 font-mono'>
+                                          Similitud: {Math.round(src.relevance * 100)}%
+                                        </Badge>
+                                      )}
+                                    </div>
                                     {src.url && (
                                       <a
                                         href={src.url}
@@ -320,7 +354,12 @@ export function ChatMessageItem({
                                     )}
                                   </div>
                                   {src.snippet && (
-                                    <p className='text-[11px] text-muted-foreground'>{src.snippet}</p>
+                                    <p className='text-[11px] text-muted-foreground leading-relaxed'>{src.snippet}</p>
+                                  )}
+                                  {src.chunkId && (
+                                    <span className='text-[9px] text-muted-foreground font-mono block'>
+                                      ID Fragmento: {src.chunkId}
+                                    </span>
                                   )}
                                 </div>
                               ))}
