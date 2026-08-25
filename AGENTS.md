@@ -181,6 +181,7 @@ import {
 | Componente | Archivo | Propósito y Uso |
 | :--- | :--- | :--- |
 | **Accordion** | `components/ui/accordion.tsx` | Contenedores colapsables apilados para visualizar preguntas y respuestas en modales de feedback. |
+| **Alert Dialog** | `components/ui/alert-dialog.tsx` | Modal de confirmación para acciones destructivas e irreversibles (eliminar documentos, chunks o desindexar). |
 | **Attachment** | `components/ui/attachment.tsx` | Muestra archivos adjuntos (PDFs, imágenes, etc.) con vista previa, tamaño, estados de subida (idle, uploading, done) y botón de eliminación. |
 | **Avatar** | `components/ui/avatar.tsx` | Foto o iniciales del usuario y del bot con soporte accesible para fallbacks. |
 | **Badge** | `components/ui/badge.tsx` | Insignias de estado (ONLINE, DEGRADED, OFFLINE), roles y categorías. |
@@ -191,6 +192,7 @@ import {
 | **Dialog** | `components/ui/dialog.tsx` | Ventanas modales para confirmaciones, inspección profunda de mensajes e información institucional. |
 | **Drawer** | `components/ui/drawer.tsx` | Panel deslizable desde la parte inferior/lateral para selección de modelos en móvil y desktop. |
 | **Dropdown Menu** | `components/ui/dropdown-menu.tsx` | Menús desplegables para opciones de usuario, acciones rápidas y ajustes. |
+| **Empty** | `components/ui/empty.tsx` | Visualización compuesta de estados vacíos (sin datos, sin fragmentos o sin resultados). |
 | **Field** | `components/ui/field.tsx` | Layout compuesto para etiquetas, títulos y descripciones de controles de formulario. |
 | **Hover Card** | `components/ui/hover-card.tsx` | Tarjetas flotantes activadas al pasar el cursor para previsualizaciones rápidas. |
 | **Input** | `components/ui/input.tsx` | Campo de entrada de texto estilizado y accesible. |
@@ -200,9 +202,11 @@ import {
 | **Marker** | `components/ui/marker.tsx` | Indicador visual de estado de ejecución o eventos en la conversación. |
 | **Message** | `components/ui/message.tsx` | Layout de mensaje de chat con soporte de alineación (`start`/`end`), avatar, encabezado (`MessageHeader`) y pie (`MessageFooter`). |
 | **Message Scroller**| `components/ui/message-scroller.tsx`| Scroll container especializado para chat de IA con streaming, anclaje de turnos (`scrollAnchor`) y seguimiento suave. |
+| **Native Select** | `components/ui/native-select.tsx` | Selector select nativo estilizado y accesible con chevron integrado. |
 | **Popover** | `components/ui/popover.tsx` | Paneles flotantes para mostrar detalles bajo demanda. |
 | **Questionnaire**| `components/ui/questionnaire.tsx`| Módulo de preguntas y respuestas guiadas con opciones, categorías y progreso. |
 | **Radio Group** | `components/ui/radio-group.tsx` | Selector de opciones excluyentes (usado en el selector de modelos). |
+| **Select** | `components/ui/select.tsx` | Componente de selección flotante estilizado con grupos, items y scroll. |
 | **Separator** | `components/ui/separator.tsx` | Línea divisoria horizontal o vertical entre secciones. |
 | **Sheet** | `components/ui/sheet.tsx` | Panel lateral superpuesto para navegación o detalles auxiliares. |
 | **Sidebar** | `components/ui/sidebar.tsx` | Sidebar oficial de navegación colapsable responsive con atajos de teclado. |

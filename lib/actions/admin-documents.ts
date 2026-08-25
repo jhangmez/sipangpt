@@ -212,6 +212,37 @@ export async function reindexDocumentAction(documentId: string, content: string)
   return result
 }
 
+export async function updateDocumentDetailsAction(
+  documentId: string,
+  data: {
+    title: string
+    publicUrl?: string | null
+    categoryId?: string | null
+  }
+) {
+  await requireRole(Role.ADMIN)
+
+  if (!data.title.trim()) {
+    throw new Error('El título del documento es requerido.')
+  }
+
+  const updated = await prisma.document.update({
+    where: { id: documentId },
+    data: {
+      title: data.title.trim(),
+      publicUrl: data.publicUrl?.trim() || null,
+      fileUrl: data.publicUrl?.trim() || null,
+      categoryId: data.categoryId || null,
+    },
+    include: {
+      category: true,
+    },
+  })
+
+  revalidatePath('/admin/documents')
+  return { success: true, document: updated }
+}
+
 export async function toggleDocumentStatus(documentId: string, status: DocumentStatus) {
   await requireRole(Role.ADMIN)
 
@@ -258,3 +289,4 @@ export async function markDocumentAsIndexed(documentId: string) {
   revalidatePath('/admin/documents')
   return { success: true, document: updated }
 }
+
