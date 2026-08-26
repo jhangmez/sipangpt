@@ -1,16 +1,17 @@
 import type { Metadata } from 'next'
-import * as React from 'react'
+
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/session'
 import { AcceptInvitationCard } from '@/components/admin/accept-invitation-card'
 
 export const metadata: Metadata = {
   title: 'Aceptar Invitación de Administrador',
-  description: 'Acepta la invitación institucional para incorporarte al equipo de administración de SipánGPT.',
+  description:
+    'Acepta la invitación institucional para incorporarte al equipo de administración de SipánGPT.'
 }
 
 export default async function InvitacionPage({
-  params,
+  params
 }: {
   params: Promise<{ token: string }>
 }) {
@@ -18,7 +19,7 @@ export default async function InvitacionPage({
   const currentUser = await getCurrentUser()
 
   const invitation = await prisma.adminInvitation.findUnique({
-    where: { token },
+    where: { token }
   })
 
   let isValid = true
@@ -44,7 +45,9 @@ export default async function InvitacionPage({
         token={token}
         invitationEmail={invitation?.email || ''}
         currentUserEmail={currentUser?.email}
-        expiresAt={invitation?.expiresAt ? invitation.expiresAt.toISOString() : ''}
+        expiresAt={
+          invitation?.expiresAt ? invitation.expiresAt.toISOString() : ''
+        }
         isValid={isValid}
         errorMessage={errorMessage}
       />

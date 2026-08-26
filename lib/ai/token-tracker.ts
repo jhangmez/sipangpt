@@ -57,7 +57,7 @@ export interface RecordTokenUsageParams {
   promptTokens?: number
   completionTokens?: number
   latencyMs?: number
-  metadata?: any
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -93,7 +93,7 @@ export async function recordTokenUsageLog({
         totalTokens,
         estimatedCostUsd,
         latencyMs: latencyMs ?? null,
-        metadata: metadata ? (metadata as any) : undefined,
+        metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
       },
     })
 

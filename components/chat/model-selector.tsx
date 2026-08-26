@@ -10,14 +10,14 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
+  DrawerTrigger
 } from '@/components/ui/drawer'
 import {
   Field,
   FieldContent,
   FieldDescription,
   FieldLabel,
-  FieldTitle,
+  FieldTitle
 } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,7 @@ interface ModelSelectorProps {
 export function ModelSelector({
   selectedModel,
   onSelectModel,
-  models = SYSTEM_MODELS,
+  models = SYSTEM_MODELS
 }: ModelSelectorProps) {
   const [open, setOpen] = React.useState(false)
   const isMobile = useIsMobile()
@@ -51,7 +51,9 @@ export function ModelSelector({
           >
             <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0' />
             <span className='hidden sm:inline'>Estable</span>
-            <span className='hidden lg:inline'>{latencyMs ? ` (${latencyMs}ms)` : ''}</span>
+            <span className='hidden lg:inline'>
+              {latencyMs ? ` (${latencyMs}ms)` : ''}
+            </span>
           </Badge>
         )
       case 'DEGRADED':
@@ -91,7 +93,12 @@ export function ModelSelector({
   const swipeDirection = isMobile ? 'down' : 'right'
 
   return (
-    <Drawer open={open} onOpenChange={setOpen} showSwipeHandle={isMobile} swipeDirection={swipeDirection}>
+    <Drawer
+      open={open}
+      onOpenChange={setOpen}
+      showSwipeHandle={isMobile}
+      swipeDirection={swipeDirection}
+    >
       {/* Botón Disparador del Selector con Drawer de Shadcn */}
       <DrawerTrigger
         render={
@@ -120,7 +127,8 @@ export function ModelSelector({
             Seleccionar Modelo de Inteligencia Artificial
           </DrawerTitle>
           <DrawerDescription className='text-xs text-muted-foreground'>
-            Elige el motor de procesamiento para tus consultas universitarias oficiales en SipánGPT.
+            Elige el motor de procesamiento para tus consultas universitarias
+            oficiales en SipánGPT.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -129,7 +137,11 @@ export function ModelSelector({
             value={selectedModel.id}
             onValueChange={(val) => {
               const found = models.find((m) => m.id === val)
-              if (found && found.status !== 'OFFLINE' && found.status !== 'DISABLED') {
+              if (
+                found &&
+                found.status !== 'OFFLINE' &&
+                found.status !== 'DISABLED'
+              ) {
                 onSelectModel(found)
                 setOpen(false)
               }
@@ -138,7 +150,8 @@ export function ModelSelector({
           >
             {models.map((model) => {
               const isSelected = selectedModel.id === model.id
-              const isOffline = model.status === 'OFFLINE' || model.status === 'DISABLED'
+              const isOffline =
+                model.status === 'OFFLINE' || model.status === 'DISABLED'
 
               return (
                 <FieldLabel
@@ -152,13 +165,19 @@ export function ModelSelector({
                     isOffline && 'opacity-40 cursor-not-allowed'
                   )}
                 >
-                  <Field orientation='horizontal' className='flex items-start justify-between gap-3'>
+                  <Field
+                    orientation='horizontal'
+                    className='flex items-start justify-between gap-3'
+                  >
                     <FieldContent className='space-y-1.5 flex-1'>
                       <div className='flex items-center gap-2 flex-wrap'>
                         <FieldTitle className='text-sm font-bold text-foreground'>
                           {model.name}
                         </FieldTitle>
-                        <Badge variant='secondary' className='text-[10px] font-mono'>
+                        <Badge
+                          variant='secondary'
+                          className='text-[10px] font-mono'
+                        >
                           {model.provider}
                         </Badge>
                         {model.isDefault && (

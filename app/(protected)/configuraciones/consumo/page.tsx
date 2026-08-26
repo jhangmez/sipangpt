@@ -1,26 +1,38 @@
 import type { Metadata } from 'next'
-import * as React from 'react'
+
 import { getAuthenticatedUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { getUserSettingsData } from '@/lib/actions/user-settings'
 import { SYSTEM_MODELS } from '@/constants/models'
 import { Badge } from '@/components/ui/badge'
-import { Cpu, Zap, MessageSquare, Flame, Sparkles, BarChart3 } from 'lucide-react'
+import {
+  Cpu,
+  Zap,
+  MessageSquare,
+  Flame,
+  Sparkles,
+  BarChart3
+} from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Consumo y Tokens • Configuraciones',
-  description: 'Monitorea tu uso de tokens, límites diarios y actividad en los modelos de IA de SipánGPT.',
+  description:
+    'Monitorea tu uso de tokens, límites diarios y actividad en los modelos de IA de SipánGPT.'
 }
 
 export default async function ConsumoSettingsPage() {
   const authUser = await getAuthenticatedUser()
   if (!authUser) redirect('/login')
 
-  const { usage, messageCount, totalConversations } = await getUserSettingsData()
+  const { usage, messageCount, totalConversations } =
+    await getUserSettingsData()
   const dailyLimit = 50000
   const dailyTokens = usage.dailyTokens || 0
   const totalTokens = usage.totalTokens || 0
-  const usagePercentage = Math.min(100, Math.round((dailyTokens / dailyLimit) * 100))
+  const usagePercentage = Math.min(
+    100,
+    Math.round((dailyTokens / dailyLimit) * 100)
+  )
 
   return (
     <div className='space-y-6 font-exo'>
@@ -29,7 +41,8 @@ export default async function ConsumoSettingsPage() {
           Uso de Modelos y Tokens
         </h1>
         <p className='text-xs text-muted-foreground'>
-          Estadísticas de consumo de inferencia y límites de cuota asignados a tu cuenta.
+          Estadísticas de consumo de inferencia y límites de cuota asignados a
+          tu cuenta.
         </p>
       </div>
 
@@ -69,9 +82,7 @@ export default async function ConsumoSettingsPage() {
           <p className='text-2xl font-bold font-mono text-foreground'>
             {messageCount}
           </p>
-          <p className='text-[10px] text-muted-foreground'>
-            Consultas a la IA
-          </p>
+          <p className='text-[10px] text-muted-foreground'>Consultas a la IA</p>
         </div>
 
         <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-2'>
@@ -128,7 +139,8 @@ export default async function ConsumoSettingsPage() {
             Modelos de IA Disponibles para tu Cuenta
           </h3>
           <p className='text-xs text-muted-foreground'>
-            Modelos institucionales optimizados para responder normativas y reglamentos de la USS.
+            Modelos institucionales optimizados para responder normativas y
+            reglamentos de la USS.
           </p>
         </div>
 

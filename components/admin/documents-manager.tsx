@@ -12,7 +12,7 @@ import {
   updateDocumentChunkAction,
   deleteDocumentChunkAction,
   addDocumentChunkAction,
-  processAndIndexDocumentAction,
+  processAndIndexDocumentAction
 } from '@/lib/actions/admin-documents'
 import { UploadDropzone } from '@/lib/uploadthing'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +22,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 import {
   Empty,
@@ -30,12 +30,9 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
-  EmptyTitle,
+  EmptyTitle
 } from '@/components/ui/empty'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '@/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { ConfirmAlertDialog } from '@/components/admin/confirm-alert-dialog'
 import {
   FileText,
@@ -58,7 +55,7 @@ import {
   Power,
   Link as LinkIcon,
   FileCode,
-  Eye,
+  Eye
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { DocumentStatus } from '@/lib/prisma'
@@ -85,11 +82,14 @@ interface ChunkItem {
 export function DocumentsManager({
   initialDocuments,
   topicCategories,
-  stats: initialStats,
+  stats: initialStats
 }: DocumentsManagerProps) {
-  const [documents, setDocuments] = React.useState<DocumentItem[]>(initialDocuments)
+  const [documents, setDocuments] =
+    React.useState<DocumentItem[]>(initialDocuments)
   const [stats, setStats] = React.useState(initialStats)
-  const [activeTab, setActiveTab] = React.useState<'documents' | 'chunks'>('documents')
+  const [activeTab, setActiveTab] = React.useState<'documents' | 'chunks'>(
+    'documents'
+  )
 
   // Estado para Modal de Crear Documento Directo
   const [isCreateOpen, setIsCreateOpen] = React.useState(false)
@@ -110,13 +110,16 @@ export function DocumentsManager({
   const [previewDoc, setPreviewDoc] = React.useState<DocumentItem | null>(null)
 
   // Estado para Gestión de Fragmentos (Chunks)
-  const [selectedDocForChunks, setSelectedDocForChunks] = React.useState<DocumentItem | null>(
-    documents.length > 0 ? documents[0] : null
-  )
+  const [selectedDocForChunks, setSelectedDocForChunks] =
+    React.useState<DocumentItem | null>(
+      documents.length > 0 ? documents[0] : null
+    )
   const [chunks, setChunks] = React.useState<ChunkItem[]>([])
   const [isLoadingChunks, setIsLoadingChunks] = React.useState(false)
   const [chunkSearchQuery, setChunkSearchQuery] = React.useState('')
-  const [editingChunkId, setEditingChunkId] = React.useState<string | null>(null)
+  const [editingChunkId, setEditingChunkId] = React.useState<string | null>(
+    null
+  )
   const [editChunkContent, setEditChunkContent] = React.useState('')
   const [editChunkPage, setEditChunkPage] = React.useState<number | ''>('')
   const [isSavingChunk, setIsSavingChunk] = React.useState(false)
@@ -137,10 +140,12 @@ export function DocumentsManager({
     isOpen: false,
     type: 'document',
     id: '',
-    title: '',
+    title: ''
   })
   const [isAlertLoading, setIsAlertLoading] = React.useState(false)
-  const [processingDocId, setProcessingDocId] = React.useState<string | null>(null)
+  const [processingDocId, setProcessingDocId] = React.useState<string | null>(
+    null
+  )
   const [showPipelineInfo, setShowPipelineInfo] = React.useState(false)
 
   const formatFileSize = (bytes: number) => {
@@ -162,7 +167,7 @@ export function DocumentsManager({
     setIsAddingChunk(false)
     try {
       const res = await getDocumentChunksAction(docId)
-      setChunks(res.chunks as any)
+      setChunks(res.chunks as ChunkItem[])
     } catch (err) {
       toast.error('Error al cargar los fragmentos del documento.')
     } finally {
@@ -198,14 +203,18 @@ export function DocumentsManager({
       const res = await updateDocumentDetailsAction(editingDoc.id, {
         title: editDocTitle.trim(),
         publicUrl: editDocPublicUrl.trim() || null,
-        categoryId: editDocCategoryId === 'none' ? null : editDocCategoryId,
+        categoryId: editDocCategoryId === 'none' ? null : editDocCategoryId
       })
 
       setDocuments((prev) =>
-        prev.map((d) => (d.id === editingDoc.id ? { ...d, ...res.document } : d))
+        prev.map((d) =>
+          d.id === editingDoc.id ? { ...d, ...res.document } : d
+        )
       )
       if (selectedDocForChunks?.id === editingDoc.id) {
-        setSelectedDocForChunks((prev) => (prev ? { ...prev, ...res.document } : null))
+        setSelectedDocForChunks((prev) =>
+          prev ? { ...prev, ...res.document } : null
+        )
       }
 
       toast.success('Documento y enlace público actualizados.')
@@ -232,7 +241,7 @@ export function DocumentsManager({
               removedDoc.status === 'INDEXED'
                 ? Math.max(0, prev.indexed - 1)
                 : prev.indexed,
-            totalBytes: Math.max(0, prev.totalBytes - removedDoc.sizeBytes),
+            totalBytes: Math.max(0, prev.totalBytes - removedDoc.sizeBytes)
           }))
         }
         if (selectedDocForChunks?.id === deleteConfirm.id) {
@@ -257,7 +266,9 @@ export function DocumentsManager({
         await toggleDocumentStatus(deleteConfirm.id, 'DEINDEXED')
         setDocuments((prev) =>
           prev.map((doc) =>
-            doc.id === deleteConfirm.id ? { ...doc, status: 'DEINDEXED' as DocumentStatus } : doc
+            doc.id === deleteConfirm.id
+              ? { ...doc, status: 'DEINDEXED' as DocumentStatus }
+              : doc
           )
         )
         if (selectedDocForChunks?.id === deleteConfirm.id) {
@@ -265,7 +276,10 @@ export function DocumentsManager({
             prev ? { ...prev, status: 'DEINDEXED' as DocumentStatus } : null
           )
         }
-        setStats((prev) => ({ ...prev, indexed: Math.max(0, prev.indexed - 1) }))
+        setStats((prev) => ({
+          ...prev,
+          indexed: Math.max(0, prev.indexed - 1)
+        }))
         toast.success('Documento desindexado. No será consultado por SipánGPT.')
       }
       setDeleteConfirm((prev) => ({ ...prev, isOpen: false }))
@@ -283,7 +297,7 @@ export function DocumentsManager({
         isOpen: true,
         type: 'deindex',
         id: doc.id,
-        title: doc.title || doc.fileName,
+        title: doc.title || doc.fileName
       })
     } else {
       // Re-indexar directamente
@@ -291,7 +305,9 @@ export function DocumentsManager({
         .then(() => {
           setDocuments((prev) =>
             prev.map((d) =>
-              d.id === doc.id ? { ...d, status: 'INDEXED' as DocumentStatus } : d
+              d.id === doc.id
+                ? { ...d, status: 'INDEXED' as DocumentStatus }
+                : d
             )
           )
           if (selectedDocForChunks?.id === doc.id) {
@@ -302,33 +318,53 @@ export function DocumentsManager({
           setStats((prev) => ({ ...prev, indexed: prev.indexed + 1 }))
           toast.success('Documento indexado para respuestas RAG.')
         })
-        .catch((err) => toast.error(getErrorMessage(err) || 'Error al indexar.'))
+        .catch((err) =>
+          toast.error(getErrorMessage(err) || 'Error al indexar.')
+        )
     }
   }
 
   // Procesar y Transcribir a Markdown con Gemini OCR
   const handleProcessAndIndex = async (doc: DocumentItem) => {
     setProcessingDocId(doc.id)
-    const toastId = toast.loading(`Extrayendo texto y transcribiendo "${doc.title || doc.fileName}" a Markdown con Gemini...`)
+    const toastId = toast.loading(
+      `Extrayendo texto y transcribiendo "${doc.title || doc.fileName}" a Markdown con Gemini...`
+    )
     try {
       const res = await processAndIndexDocumentAction(doc.id)
       setDocuments((prev) =>
         prev.map((d) =>
           d.id === doc.id
-            ? { ...d, status: 'INDEXED' as DocumentStatus, chunkCount: res.chunkCount }
+            ? {
+                ...d,
+                status: 'INDEXED' as DocumentStatus,
+                chunkCount: res.chunkCount
+              }
             : d
         )
       )
       if (selectedDocForChunks?.id === doc.id) {
         setSelectedDocForChunks((prev) =>
-          prev ? { ...prev, status: 'INDEXED' as DocumentStatus, chunkCount: res.chunkCount } : null
+          prev
+            ? {
+                ...prev,
+                status: 'INDEXED' as DocumentStatus,
+                chunkCount: res.chunkCount
+              }
+            : null
         )
         loadChunks(doc.id)
       }
       setStats((prev) => ({ ...prev, indexed: prev.indexed + 1 }))
-      toast.success(`¡Documento transcrito e indexado en ${res.chunkCount} fragmentos RAG!`, { id: toastId })
+      toast.success(
+        `¡Documento transcrito e indexado en ${res.chunkCount} fragmentos RAG!`,
+        { id: toastId }
+      )
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err) || 'Error al procesar el documento con IA.', { id: toastId })
+      toast.error(
+        getErrorMessage(err) || 'Error al procesar el documento con IA.',
+        { id: toastId }
+      )
     } finally {
       setProcessingDocId(null)
     }
@@ -348,10 +384,12 @@ export function DocumentsManager({
         title: newTitle.trim(),
         publicUrl: newPublicUrl.trim() || undefined,
         categoryId: newCategoryId === 'none' ? null : newCategoryId,
-        content: newContent.trim(),
+        content: newContent.trim()
       })
 
-      toast.success(`¡Documento creado e indexado con ${res.chunkCount} fragmentos RAG!`)
+      toast.success(
+        `¡Documento creado e indexado con ${res.chunkCount} fragmentos RAG!`
+      )
       setIsCreateOpen(false)
       setNewTitle('')
       setNewPublicUrl('')
@@ -385,7 +423,7 @@ export function DocumentsManager({
             ? {
                 ...c,
                 content: editChunkContent.trim(),
-                pageNumber: editChunkPage === '' ? null : Number(editChunkPage),
+                pageNumber: editChunkPage === '' ? null : Number(editChunkPage)
               }
             : c
         )
@@ -413,14 +451,18 @@ export function DocumentsManager({
         newChunkContent.trim(),
         newChunkPage === '' ? null : Number(newChunkPage)
       )
-      setChunks((prev) => [...prev, res.chunk as any])
+      setChunks((prev) => [...prev, res.chunk as ChunkItem])
       setIsAddingChunk(false)
       setNewChunkContent('')
       setNewChunkPage('')
       setDocuments((prev) =>
         prev.map((d) =>
           d.id === selectedDocForChunks.id
-            ? { ...d, chunkCount: (d.chunkCount || 0) + 1, status: 'INDEXED' as DocumentStatus }
+            ? {
+                ...d,
+                chunkCount: (d.chunkCount || 0) + 1,
+                status: 'INDEXED' as DocumentStatus
+              }
             : d
         )
       )
@@ -449,7 +491,9 @@ export function DocumentsManager({
             Base de Conocimiento y Fragmentos RAG
           </h1>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            Sube reglamentos de matrícula, normativas de grados, cronogramas y directivas de la USS. Administra y edita los fragmentos semánticos (chunks) indexados para búsquedas vectoriales con Gemini.
+            Sube reglamentos de matrícula, normativas de grados, cronogramas y
+            directivas de la USS. Administra y edita los fragmentos semánticos
+            (chunks) indexados para búsquedas vectoriales con Gemini.
           </p>
         </div>
 
@@ -498,7 +542,10 @@ export function DocumentsManager({
           <Layers className='w-4 h-4' />
           <span>Gestión de Fragmentos RAG (Chunks)</span>
           {selectedDocForChunks && (
-            <Badge variant='outline' className={`text-[10px] ml-1 py-0 ${activeTab === 'chunks' ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30' : ''}`}>
+            <Badge
+              variant='outline'
+              className={`text-[10px] ml-1 py-0 ${activeTab === 'chunks' ? 'bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30' : ''}`}
+            >
               {selectedDocForChunks.title?.substring(0, 18) || 'Doc'}...
             </Badge>
           )}
@@ -517,8 +564,12 @@ export function DocumentsManager({
                 <span className='text-xs font-semibold'>Total Documentos</span>
                 <FileText className='w-4 h-4 text-primary' />
               </div>
-              <p className='text-2xl font-bold font-mono text-foreground'>{stats.total}</p>
-              <p className='text-[10px] text-muted-foreground'>Archivos institucionales registrados</p>
+              <p className='text-2xl font-bold font-mono text-foreground'>
+                {stats.total}
+              </p>
+              <p className='text-[10px] text-muted-foreground'>
+                Archivos institucionales registrados
+              </p>
             </div>
 
             <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-1.5'>
@@ -526,19 +577,27 @@ export function DocumentsManager({
                 <span className='text-xs font-semibold'>Indexados en RAG</span>
                 <CheckCircle2 className='w-4 h-4 text-emerald-500' />
               </div>
-              <p className='text-2xl font-bold font-mono text-foreground'>{stats.indexed}</p>
-              <p className='text-[10px] text-muted-foreground'>Activos para respuestas inteligentes</p>
+              <p className='text-2xl font-bold font-mono text-foreground'>
+                {stats.indexed}
+              </p>
+              <p className='text-[10px] text-muted-foreground'>
+                Activos para respuestas inteligentes
+              </p>
             </div>
 
             <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-1.5'>
               <div className='flex items-center justify-between text-muted-foreground'>
-                <span className='text-xs font-semibold'>Almacenamiento Total</span>
+                <span className='text-xs font-semibold'>
+                  Almacenamiento Total
+                </span>
                 <HardDrive className='w-4 h-4 text-sky-500' />
               </div>
               <p className='text-2xl font-bold font-mono text-foreground'>
                 {formatFileSize(stats.totalBytes)}
               </p>
-              <p className='text-[10px] text-muted-foreground'>Espacio en servidor UploadThing</p>
+              <p className='text-[10px] text-muted-foreground'>
+                Espacio en servidor UploadThing
+              </p>
             </div>
           </div>
 
@@ -551,7 +610,8 @@ export function DocumentsManager({
                   Subir Archivos PDF / TXT
                 </h2>
                 <p className='text-xs text-muted-foreground'>
-                  Arrastra o selecciona reglamentos oficiales universitarios (hasta 16 MB).
+                  Arrastra o selecciona reglamentos oficiales universitarios
+                  (hasta 16 MB).
                 </p>
               </div>
             </div>
@@ -560,7 +620,9 @@ export function DocumentsManager({
               <UploadDropzone
                 endpoint='documentUploader'
                 onClientUploadComplete={(res) => {
-                  toast.success(`¡${res?.length || 1} archivo(s) subido(s) con éxito!`)
+                  toast.success(
+                    `¡${res?.length || 1} archivo(s) subido(s) con éxito!`
+                  )
                   window.location.reload()
                 }}
                 onUploadError={(error: Error) => {
@@ -586,9 +648,12 @@ export function DocumentsManager({
                   <EmptyMedia variant='icon'>
                     <FileText className='w-5 h-5 text-primary' />
                   </EmptyMedia>
-                  <EmptyTitle className='font-frances'>No hay documentos registrados</EmptyTitle>
+                  <EmptyTitle className='font-frances'>
+                    No hay documentos registrados
+                  </EmptyTitle>
                   <EmptyDescription>
-                    Sube tu primer reglamento institucional o regístralo manualmente para indexarlo en RAG.
+                    Sube tu primer reglamento institucional o regístralo
+                    manualmente para indexarlo en RAG.
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
@@ -606,11 +671,14 @@ export function DocumentsManager({
                   const isIndexed = doc.status === 'INDEXED'
                   const isProcessing = doc.status === 'PROCESSING'
                   const isDeindexed = doc.status === 'DEINDEXED'
-                  const dateStr = new Date(doc.createdAt).toLocaleDateString('es-PE', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })
+                  const dateStr = new Date(doc.createdAt).toLocaleDateString(
+                    'es-PE',
+                    {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    }
+                  )
 
                   return (
                     <div
@@ -629,19 +697,28 @@ export function DocumentsManager({
 
                             {/* Badge de Estado */}
                             {isIndexed && (
-                              <Badge variant='outline' className='border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[9px] font-bold py-0 gap-1'>
+                              <Badge
+                                variant='outline'
+                                className='border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[9px] font-bold py-0 gap-1'
+                              >
                                 <span className='size-1.5 rounded-full bg-emerald-500 animate-pulse' />
                                 Indexado RAG ({doc.chunkCount || 0} chunks)
                               </Badge>
                             )}
                             {isDeindexed && (
-                              <Badge variant='outline' className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[9px] font-bold py-0 gap-1'>
+                              <Badge
+                                variant='outline'
+                                className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[9px] font-bold py-0 gap-1'
+                              >
                                 <PowerOff className='size-2.5' />
                                 Desindexado (Pausado)
                               </Badge>
                             )}
                             {isProcessing && (
-                              <Badge variant='outline' className='border-sky-500/40 text-sky-600 dark:text-sky-400 bg-sky-500/10 text-[9px] py-0'>
+                              <Badge
+                                variant='outline'
+                                className='border-sky-500/40 text-sky-600 dark:text-sky-400 bg-sky-500/10 text-[9px] py-0'
+                              >
                                 En Proceso
                               </Badge>
                             )}
@@ -650,11 +727,15 @@ export function DocumentsManager({
                           <div className='flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap'>
                             <span>{formatFileSize(doc.sizeBytes)}</span>
                             <span>•</span>
-                            <span suppressHydrationWarning>Subido el {dateStr}</span>
+                            <span suppressHydrationWarning>
+                              Subido el {dateStr}
+                            </span>
                             {doc.category && (
                               <>
                                 <span>•</span>
-                                <span className='text-primary font-medium'>{doc.category.name}</span>
+                                <span className='text-primary font-medium'>
+                                  {doc.category.name}
+                                </span>
                               </>
                             )}
                             {doc.publicUrl && (
@@ -667,7 +748,9 @@ export function DocumentsManager({
                                   className='text-sky-600 hover:underline flex items-center gap-0.5 truncate max-w-xs'
                                 >
                                   <LinkIcon className='size-2.5 shrink-0' />
-                                  <span className='truncate'>{doc.publicUrl}</span>
+                                  <span className='truncate'>
+                                    {doc.publicUrl}
+                                  </span>
                                 </a>
                               </>
                             )}
@@ -730,7 +813,9 @@ export function DocumentsManager({
                         )}
 
                         {/* 5. Botón Transcribir e Indexar a Markdown con Gemini (si no tiene chunks o está en proceso) */}
-                        {((doc.chunkCount || 0) === 0 || doc.status === 'PROCESSING' || doc.status === 'ERROR') && (
+                        {((doc.chunkCount || 0) === 0 ||
+                          doc.status === 'PROCESSING' ||
+                          doc.status === 'ERROR') && (
                           <Button
                             size='xs'
                             onClick={() => handleProcessAndIndex(doc)}
@@ -738,8 +823,12 @@ export function DocumentsManager({
                             className='gap-1 text-[11px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-xs cursor-pointer'
                             title='Transcribir PDF a Markdown con Gemini OCR y generar fragmentos RAG'
                           >
-                            <Sparkles className={`w-3.5 h-3.5 ${processingDocId === doc.id ? 'animate-spin' : ''}`} />
-                            {processingDocId === doc.id ? 'Transcribiendo...' : 'Procesar con IA a Markdown'}
+                            <Sparkles
+                              className={`w-3.5 h-3.5 ${processingDocId === doc.id ? 'animate-spin' : ''}`}
+                            />
+                            {processingDocId === doc.id
+                              ? 'Transcribiendo...'
+                              : 'Procesar con IA a Markdown'}
                           </Button>
                         )}
 
@@ -753,7 +842,11 @@ export function DocumentsManager({
                               ? 'border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700'
                               : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                           }`}
-                          title={isIndexed ? 'Pausar/Desindexar de búsquedas RAG' : 'Activar indexación para RAG'}
+                          title={
+                            isIndexed
+                              ? 'Pausar/Desindexar de búsquedas RAG'
+                              : 'Activar indexación para RAG'
+                          }
                         >
                           {isIndexed ? (
                             <>
@@ -776,7 +869,7 @@ export function DocumentsManager({
                               type: 'document',
                               id: doc.id,
                               title: doc.title || doc.fileName,
-                              chunkCount: doc.chunkCount || 0,
+                              chunkCount: doc.chunkCount || 0
                             })
                           }
                           className='text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 text-[11px] rounded-xl cursor-pointer'
@@ -808,7 +901,8 @@ export function DocumentsManager({
                   Editor de Fragmentos Semánticos (Chunks)
                 </h2>
                 <p className='text-xs text-muted-foreground mt-0.5'>
-                  Modifica los textos normativos, números de página y directivas exactas recuperadas por SipánGPT.
+                  Modifica los textos normativos, números de página y directivas
+                  exactas recuperadas por SipánGPT.
                 </p>
               </div>
 
@@ -818,7 +912,8 @@ export function DocumentsManager({
                 onClick={() => setIsAddingChunk(!isAddingChunk)}
                 className='gap-1.5 text-xs rounded-xl font-semibold cursor-pointer'
               >
-                <Plus className='w-3.5 h-3.5' /> {isAddingChunk ? 'Cancelar' : 'Añadir Fragmento'}
+                <Plus className='w-3.5 h-3.5' />{' '}
+                {isAddingChunk ? 'Cancelar' : 'Añadir Fragmento'}
               </Button>
             </div>
 
@@ -838,7 +933,8 @@ export function DocumentsManager({
                 >
                   {documents.map((d) => (
                     <NativeSelectOption key={d.id} value={d.id}>
-                      {d.title || d.fileName} ({d.status === 'INDEXED' ? 'Indexado' : 'Desindexado'})
+                      {d.title || d.fileName} (
+                      {d.status === 'INDEXED' ? 'Indexado' : 'Desindexado'})
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
@@ -879,16 +975,21 @@ export function DocumentsManager({
             <div className='rounded-3xl border border-primary/30 bg-primary/5 p-5 space-y-3 shadow-xs'>
               <div className='flex items-center justify-between border-b border-primary/20 pb-2'>
                 <h3 className='font-frances font-bold text-sm text-primary flex items-center gap-1.5'>
-                  <Plus className='size-4' /> Nuevo Fragmento para &quot;{selectedDocForChunks?.title}&quot;
+                  <Plus className='size-4' /> Nuevo Fragmento para &quot;
+                  {selectedDocForChunks?.title}&quot;
                 </h3>
                 <div className='flex items-center gap-2'>
-                  <span className='text-xs text-muted-foreground'>Página del documento:</span>
+                  <span className='text-xs text-muted-foreground'>
+                    Página del documento:
+                  </span>
                   <input
                     type='number'
                     placeholder='Ej: 14'
                     value={newChunkPage}
                     onChange={(e) =>
-                      setNewChunkPage(e.target.value === '' ? '' : Number(e.target.value))
+                      setNewChunkPage(
+                        e.target.value === '' ? '' : Number(e.target.value)
+                      )
                     }
                     className='w-20 rounded-lg border border-border bg-background px-2 py-1 text-xs'
                   />
@@ -937,7 +1038,9 @@ export function DocumentsManager({
                   <EmptyMedia variant='icon'>
                     <FileCode className='w-5 h-5 text-primary' />
                   </EmptyMedia>
-                  <EmptyTitle className='font-frances'>No se encontraron fragmentos</EmptyTitle>
+                  <EmptyTitle className='font-frances'>
+                    No se encontraron fragmentos
+                  </EmptyTitle>
                   <EmptyDescription>
                     {chunkSearchQuery
                       ? 'No hay fragmentos que coincidan con la búsqueda de texto.'
@@ -967,16 +1070,25 @@ export function DocumentsManager({
                   >
                     <div className='flex items-center justify-between border-b border-border/40 pb-2.5'>
                       <div className='flex items-center gap-2 flex-wrap'>
-                        <Badge variant='secondary' className='text-[10px] font-mono py-0.5 font-bold'>
+                        <Badge
+                          variant='secondary'
+                          className='text-[10px] font-mono py-0.5 font-bold'
+                        >
                           Fragmento #{chunk.chunkIndex + 1}
                         </Badge>
                         {chunk.pageNumber && (
-                          <Badge variant='outline' className='text-[10px] text-muted-foreground py-0.5'>
+                          <Badge
+                            variant='outline'
+                            className='text-[10px] text-muted-foreground py-0.5'
+                          >
                             Pág. {chunk.pageNumber}
                           </Badge>
                         )}
                         {chunk._count?.citations ? (
-                          <Badge variant='outline' className='text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/30 py-0.5'>
+                          <Badge
+                            variant='outline'
+                            className='text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/30 py-0.5'
+                          >
                             {chunk._count.citations} citas realizadas
                           </Badge>
                         ) : null}
@@ -1009,7 +1121,7 @@ export function DocumentsManager({
                                   isOpen: true,
                                   type: 'chunk',
                                   id: chunk.id,
-                                  title: `Fragmento #${chunk.chunkIndex + 1}`,
+                                  title: `Fragmento #${chunk.chunkIndex + 1}`
                                 })
                               }
                               className='text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 text-[11px] rounded-xl cursor-pointer'
@@ -1042,7 +1154,11 @@ export function DocumentsManager({
                             type='number'
                             value={editChunkPage}
                             onChange={(e) =>
-                              setEditChunkPage(e.target.value === '' ? '' : Number(e.target.value))
+                              setEditChunkPage(
+                                e.target.value === ''
+                                  ? ''
+                                  : Number(e.target.value)
+                              )
                             }
                             className='w-20 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-mono'
                           />
@@ -1090,14 +1206,19 @@ export function DocumentsManager({
       {/* ========================================================================= */}
       {/* MODAL: EDITAR ENLACE Y METADATOS DEL DOCUMENTO */}
       {/* ========================================================================= */}
-      <Dialog open={Boolean(editingDoc)} onOpenChange={(open) => !open && setEditingDoc(null)}>
+      <Dialog
+        open={Boolean(editingDoc)}
+        onOpenChange={(open) => !open && setEditingDoc(null)}
+      >
         <DialogContent className='max-w-xl font-exo rounded-3xl p-6'>
           <DialogHeader>
             <DialogTitle className='font-frances text-lg font-bold flex items-center gap-2'>
-              <LinkIcon className='w-5 h-5 text-primary' /> Editar Enlace y Datos del Documento
+              <LinkIcon className='w-5 h-5 text-primary' /> Editar Enlace y
+              Datos del Documento
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Actualiza la URL pública del PDF institucional, título y categoría para que los estudiantes puedan consultar la fuente oficial.
+              Actualiza la URL pública del PDF institucional, título y categoría
+              para que los estudiantes puedan consultar la fuente oficial.
             </DialogDescription>
           </DialogHeader>
 
@@ -1138,7 +1259,8 @@ export function DocumentsManager({
                 className='w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
               />
               <p className='text-[10px] text-muted-foreground'>
-                Este es el enlace que se abrirá cuando los estudiantes hagan clic en el botón de citas o fuente oficial.
+                Este es el enlace que se abrirá cuando los estudiantes hagan
+                clic en el botón de citas o fuente oficial.
               </p>
             </div>
 
@@ -1151,7 +1273,9 @@ export function DocumentsManager({
                 onChange={(e) => setEditDocCategoryId(e.target.value)}
                 className='w-full'
               >
-                <NativeSelectOption value='none'>Sin categoría temática</NativeSelectOption>
+                <NativeSelectOption value='none'>
+                  Sin categoría temática
+                </NativeSelectOption>
                 {topicCategories.map((c) => (
                   <NativeSelectOption key={c.id} value={c.id}>
                     {c.name} ({c.code})
@@ -1189,10 +1313,12 @@ export function DocumentsManager({
         <DialogContent className='max-w-2xl font-exo rounded-3xl p-6'>
           <DialogHeader>
             <DialogTitle className='font-frances text-lg font-bold flex items-center gap-2'>
-              <BookOpen className='w-5 h-5 text-primary' /> Registrar Documento o Reglamento RAG
+              <BookOpen className='w-5 h-5 text-primary' /> Registrar Documento
+              o Reglamento RAG
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Ingresa el contenido oficial del reglamento para que SipánGPT lo divida en fragmentos semánticos y lo indexe automáticamente.
+              Ingresa el contenido oficial del reglamento para que SipánGPT lo
+              divida en fragmentos semánticos y lo indexe automáticamente.
             </DialogDescription>
           </DialogHeader>
 
@@ -1234,7 +1360,9 @@ export function DocumentsManager({
                   onChange={(e) => setNewCategoryId(e.target.value)}
                   className='w-full'
                 >
-                  <NativeSelectOption value='none'>Sin categoría temática</NativeSelectOption>
+                  <NativeSelectOption value='none'>
+                    Sin categoría temática
+                  </NativeSelectOption>
                   {topicCategories.map((c) => (
                     <NativeSelectOption key={c.id} value={c.id}>
                       {c.name} ({c.code})
@@ -1257,7 +1385,8 @@ export function DocumentsManager({
                 className='w-full rounded-2xl border border-border bg-background p-3 text-xs text-foreground font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary'
               />
               <p className='text-[10px] text-muted-foreground'>
-                El sistema fragmentará automáticamente el texto en bloques semánticos y los preparará para búsquedas vectoriales.
+                El sistema fragmentará automáticamente el texto en bloques
+                semánticos y los preparará para búsquedas vectoriales.
               </p>
             </div>
 
@@ -1276,7 +1405,9 @@ export function DocumentsManager({
                 className='gap-2 rounded-xl text-xs font-semibold cursor-pointer'
               >
                 <Sparkles className='w-4 h-4' />
-                {isCreating ? 'Indexando en RAG...' : 'Guardar e Indexar Documento'}
+                {isCreating
+                  ? 'Indexando en RAG...'
+                  : 'Guardar e Indexar Documento'}
               </Button>
             </div>
           </form>
@@ -1288,13 +1419,15 @@ export function DocumentsManager({
       {/* ========================================================================= */}
       <ConfirmAlertDialog
         open={deleteConfirm.isOpen}
-        onOpenChange={(open) => setDeleteConfirm((prev) => ({ ...prev, isOpen: open }))}
+        onOpenChange={(open) =>
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: open }))
+        }
         title={
           deleteConfirm.type === 'document'
             ? `¿Eliminar "${deleteConfirm.title}"?`
             : deleteConfirm.type === 'chunk'
-            ? `¿Eliminar ${deleteConfirm.title}?`
-            : `¿Desindexar "${deleteConfirm.title}"?`
+              ? `¿Eliminar ${deleteConfirm.title}?`
+              : `¿Desindexar "${deleteConfirm.title}"?`
         }
         description={
           deleteConfirm.type === 'document'
@@ -1302,15 +1435,15 @@ export function DocumentsManager({
                 deleteConfirm.chunkCount ?? 0
               } fragmentos semánticos indexados de la base de conocimiento.`
             : deleteConfirm.type === 'chunk'
-            ? 'Esta acción eliminará permanentemente este fragmento normativo. SipánGPT ya no podrá utilizar este texto en sus respuestas.'
-            : 'El documento permanecerá en el sistema, pero sus fragmentos se pausarán temporalmente y SipánGPT no los utilizará para responder a las preguntas de los estudiantes.'
+              ? 'Esta acción eliminará permanentemente este fragmento normativo. SipánGPT ya no podrá utilizar este texto en sus respuestas.'
+              : 'El documento permanecerá en el sistema, pero sus fragmentos se pausarán temporalmente y SipánGPT no los utilizará para responder a las preguntas de los estudiantes.'
         }
         confirmText={
           deleteConfirm.type === 'document'
             ? 'Eliminar Documento'
             : deleteConfirm.type === 'chunk'
-            ? 'Eliminar Fragmento'
-            : 'Desindexar Documento'
+              ? 'Eliminar Fragmento'
+              : 'Desindexar Documento'
         }
         variant={deleteConfirm.type === 'deindex' ? 'default' : 'destructive'}
         isLoading={isAlertLoading}
@@ -1320,13 +1453,18 @@ export function DocumentsManager({
       {/* ========================================================================= */}
       {/* MODAL: VISUALIZADOR DE DOCUMENTO Y PDF INTEGRADO */}
       {/* ========================================================================= */}
-      <Dialog open={Boolean(previewDoc)} onOpenChange={(open) => !open && setPreviewDoc(null)}>
+      <Dialog
+        open={Boolean(previewDoc)}
+        onOpenChange={(open) => !open && setPreviewDoc(null)}
+      >
         <DialogContent className='max-w-4xl max-h-[90vh] flex flex-col font-exo rounded-3xl p-6'>
           <DialogHeader className='shrink-0'>
             <DialogTitle className='font-frances text-lg font-bold flex items-center justify-between'>
               <div className='flex items-center gap-2'>
                 <Eye className='w-5 h-5 text-primary' />
-                <span className='truncate max-w-lg'>{previewDoc?.title || previewDoc?.fileName}</span>
+                <span className='truncate max-w-lg'>
+                  {previewDoc?.title || previewDoc?.fileName}
+                </span>
               </div>
               {previewDoc?.publicUrl && (
                 <a
@@ -1340,7 +1478,8 @@ export function DocumentsManager({
               )}
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Visualización previa del documento institucional oficial y sus metadatos de indexación RAG.
+              Visualización previa del documento institucional oficial y sus
+              metadatos de indexación RAG.
             </DialogDescription>
           </DialogHeader>
 
@@ -1354,8 +1493,13 @@ export function DocumentsManager({
             ) : (
               <div className='flex flex-col items-center justify-center h-full p-8 text-center text-xs text-muted-foreground space-y-2'>
                 <FileText className='size-8 text-muted-foreground/60' />
-                <p className='font-semibold text-foreground'>Sin archivo PDF cargado</p>
-                <p>Este documento fue registrado mediante inserción directa de texto en la base RAG.</p>
+                <p className='font-semibold text-foreground'>
+                  Sin archivo PDF cargado
+                </p>
+                <p>
+                  Este documento fue registrado mediante inserción directa de
+                  texto en la base RAG.
+                </p>
               </div>
             )}
           </div>
@@ -1369,10 +1513,13 @@ export function DocumentsManager({
         <DialogContent className='max-w-2xl font-exo rounded-3xl p-6'>
           <DialogHeader>
             <DialogTitle className='font-frances text-lg font-bold flex items-center gap-2'>
-              <Sparkles className='w-5 h-5 text-primary' /> Arquitectura e Indexación RAG: ¿Qué ocurre por detrás?
+              <Sparkles className='w-5 h-5 text-primary' /> Arquitectura e
+              Indexación RAG: ¿Qué ocurre por detrás?
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Conoce el flujo paso a paso que transforma reglamentos y normativas de la USS en respuestas oficiales con citas verificables.
+              Conoce el flujo paso a paso que transforma reglamentos y
+              normativas de la USS en respuestas oficiales con citas
+              verificables.
             </DialogDescription>
           </DialogHeader>
 
@@ -1383,9 +1530,13 @@ export function DocumentsManager({
                 1
               </div>
               <div className='space-y-0.5'>
-                <p className='font-bold text-foreground'>Ingesta y Almacenamiento en CDN (UploadThing)</p>
+                <p className='font-bold text-foreground'>
+                  Ingesta y Almacenamiento en CDN (UploadThing)
+                </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  El archivo PDF institucional se carga de forma segura a los servidores CDN y se registra en la base de datos con estado <strong>PROCESSING</strong>.
+                  El archivo PDF institucional se carga de forma segura a los
+                  servidores CDN y se registra en la base de datos con estado{' '}
+                  <strong>PROCESSING</strong>.
                 </p>
               </div>
             </div>
@@ -1396,9 +1547,15 @@ export function DocumentsManager({
                 2
               </div>
               <div className='space-y-0.5'>
-                <p className='font-bold text-foreground'>Transcripción y Estructuración a Markdown (Gemini Multimodal OCR)</p>
+                <p className='font-bold text-foreground'>
+                  Transcripción y Estructuración a Markdown (Gemini Multimodal
+                  OCR)
+                </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  Gemini 2.5 Flash lee el documento binario página por página y lo convierte a formato Markdown estructurado con títulos (#), viñetas, tablas y delimitadores (<code className='font-mono'>--- Página X ---</code>).
+                  Gemini 2.5 Flash lee el documento binario página por página y
+                  lo convierte a formato Markdown estructurado con títulos (#),
+                  viñetas, tablas y delimitadores (
+                  <code className='font-mono'>--- Página X ---</code>).
                 </p>
               </div>
             </div>
@@ -1409,9 +1566,13 @@ export function DocumentsManager({
                 3
               </div>
               <div className='space-y-0.5'>
-                <p className='font-bold text-foreground'>Fragmentación Semántica con Solapamiento (Chunking & Overlap)</p>
+                <p className='font-bold text-foreground'>
+                  Fragmentación Semántica con Solapamiento (Chunking & Overlap)
+                </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  El texto se segmenta en bloques de ~650 caracteres con 90 caracteres de solapamiento (overlap) para garantizar que las frases no se corten abruptamente.
+                  El texto se segmenta en bloques de ~650 caracteres con 90
+                  caracteres de solapamiento (overlap) para garantizar que las
+                  frases no se corten abruptamente.
                 </p>
               </div>
             </div>
@@ -1422,9 +1583,13 @@ export function DocumentsManager({
                 4
               </div>
               <div className='space-y-0.5'>
-                <p className='font-bold text-foreground'>Generación de Embeddings Vectoriales (gemini-embedding-2)</p>
+                <p className='font-bold text-foreground'>
+                  Generación de Embeddings Vectoriales (gemini-embedding-2)
+                </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  Cada fragmento se convierte en un vector denso multidimensional que captura el significado semántico profundo de la normativa.
+                  Cada fragmento se convierte en un vector denso
+                  multidimensional que captura el significado semántico profundo
+                  de la normativa.
                 </p>
               </div>
             </div>
@@ -1435,9 +1600,14 @@ export function DocumentsManager({
                 5
               </div>
               <div className='space-y-0.5'>
-                <p className='font-bold text-foreground'>Indexación Activa en PostgreSQL Neon & Citación en Chat</p>
+                <p className='font-bold text-foreground'>
+                  Indexación Activa en PostgreSQL Neon & Citación en Chat
+                </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  El documento pasa a estado <strong>INDEXED</strong>. Cuando un estudiante pregunta algo, SipánGPT compara el coseno de similitud, inyecta los mejores fragmentos en el prompt y genera citas oficiales con enlace al PDF.
+                  El documento pasa a estado <strong>INDEXED</strong>. Cuando un
+                  estudiante pregunta algo, SipánGPT compara el coseno de
+                  similitud, inyecta los mejores fragmentos en el prompt y
+                  genera citas oficiales con enlace al PDF.
                 </p>
               </div>
             </div>

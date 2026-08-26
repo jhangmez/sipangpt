@@ -1,12 +1,14 @@
 'use client'
 
-import * as React from 'react'
 import { Bot } from 'lucide-react'
 import { MessageScrollerItem } from '@/components/ui/message-scroller'
 
 export function ChatLoadingItem() {
   return (
-    <MessageScrollerItem messageId='streaming-indicator' className='py-2 font-exo'>
+    <MessageScrollerItem
+      messageId='streaming-indicator'
+      className='py-2 font-exo'
+    >
       <div className='flex items-center gap-2.5 max-w-[90%] sm:max-w-xl'>
         {/* Avatar del Asistente centrado verticalmente a la izquierda */}
         <div className='h-8 w-8 rounded-xl bg-muted border border-border/80 flex items-center justify-center shrink-0 shadow-xs'>

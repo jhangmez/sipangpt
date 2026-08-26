@@ -11,13 +11,32 @@ import { auth } from '@/auth'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { searchKnowledgeBase } from '@/lib/ai/rag'
 import { detectResolutionStatus } from '@/lib/ai/resolution-detector'
-import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept } from '@/lib/prisma'
+import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept, type Message } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import {
   buildSystemPromptWithSources,
   DEFAULT_MODEL_CODE,
   DEFAULT_PROVIDER,
 } from '@/constants'
+
+export interface ChatAttachment {
+  name?: string
+  type?: string
+  data?: string
+  base64?: string
+  mediaType?: string
+  filename?: string
+}
+
+export interface ChatRequestBody {
+  conversationId?: string
+  modelCode?: string
+  provider?: ModelProvider
+  isVoiceInput?: boolean
+  messages?: UIMessage[]
+  message?: string
+  attachments?: ChatAttachment[]
+}
 
 export const maxDuration = 45
 
@@ -38,9 +57,9 @@ export async function POST(req: Request) {
     })
   }
 
-  let body: any
+  let body: ChatRequestBody
   try {
-    body = await req.json()
+    body = (await req.json()) as ChatRequestBody
   } catch {
     return new Response(JSON.stringify({ error: 'Cuerpo de solicitud inválido.' }), {
       status: 400,
@@ -76,7 +95,7 @@ export async function POST(req: Request) {
       .join(' ')
       .trim() || ''
 
-  const attachments: any[] = body.attachments || []
+  const attachments: ChatAttachment[] = body.attachments || []
 
   if (!userText && attachments.length === 0) {
     return new Response(
@@ -144,7 +163,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
     if (attachments.length > 0 && modelMessages.length > 0) {
       const lastModelMsg = modelMessages[modelMessages.length - 1]
       if (lastModelMsg.role === 'user') {
-        const fileParts: any[] = []
+        const fileParts: Array<{ type: 'file'; data: Buffer; mediaType: string; filename?: string }> = []
         for (const att of attachments) {
           if (att.data) {
             try {
@@ -244,7 +263,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
           }
 
           // Persistir mensaje del asistente con métricas de tokens y desglose de latencia
-          let assistantMsg: any
+          let assistantMsg: Message | null = null
           try {
             assistantMsg = await prisma.message.create({
               data: {
@@ -404,7 +423,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
         'x-conversation-id': activeConvId,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     const durationMs = Date.now() - startTime
     console.error('[CHAT_API_ERROR]', error)
 
@@ -422,10 +441,10 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
       })
       .catch(() => {})
 
-    const userFriendlyMessage =
-      error?.message?.includes('API key')
-        ? 'Clave de API de Gemini no válida o expirada. Por favor verifica la configuración.'
-        : 'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
+    const isApiKeyError = error instanceof Error && error.message.includes('API key')
+    const userFriendlyMessage = isApiKeyError
+      ? 'Clave de API de Gemini no válida o expirada. Por favor verifica la configuración.'
+      : 'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
 
     return new Response(JSON.stringify({ error: userFriendlyMessage }), {
       status: 500,

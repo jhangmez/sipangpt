@@ -1,4 +1,4 @@
-import * as React from 'react'
+import type * as React from 'react'
 import { requireRole } from '@/lib/session'
 import { Role } from '@/lib/prisma'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
@@ -6,7 +6,7 @@ import { AdminSidebar } from '@/components/admin-sidebar'
 import { AdminHeader } from '@/components/admin/admin-header'
 
 export default async function AdminLayout({
-  children,
+  children
 }: {
   children: React.ReactNode
 }) {
@@ -27,9 +27,7 @@ export default async function AdminLayout({
 
             {/* Vista activa con scroll independiente */}
             <main className='flex-1 overflow-y-auto pt-4 px-2 sm:px-6 pb-12 font-exo'>
-              <div className='max-w-5xl mx-auto space-y-6'>
-                {children}
-              </div>
+              <div className='max-w-5xl mx-auto space-y-6'>{children}</div>
             </main>
           </div>
         </SidebarInset>

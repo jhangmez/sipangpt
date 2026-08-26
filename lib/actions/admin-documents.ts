@@ -337,14 +337,15 @@ export async function processAndIndexDocumentAction(documentId: string) {
       chunkCount: result.chunkCount,
       markdownPreview: markdownContent.substring(0, 500),
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[PROCESS_AND_INDEX_ACTION_ERROR]', err)
     // Marcar como ERROR si falla
     await prisma.document.update({
       where: { id: documentId },
       data: { status: 'ERROR' },
     })
-    throw new Error(err?.message || 'Error durante el procesamiento e indexación del documento.')
+    const msg = err instanceof Error ? err.message : 'Error durante el procesamiento e indexación del documento.'
+    throw new Error(msg)
   }
 }
 

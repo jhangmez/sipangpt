@@ -15,7 +15,7 @@ import {
   X,
   RefreshCw,
   CheckCircle2,
-  ShieldCheck,
+  ShieldCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -65,8 +65,8 @@ export function ActiveSessionsManager() {
       const response = await fetch('/api/account/sessions/terminate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionToken }),
-      });
+        body: JSON.stringify({ sessionToken })
+      })
       if (response.ok) {
         toast.success('Sesión cerrada correctamente')
         setSessions((prev) =>
@@ -88,7 +88,7 @@ export function ActiveSessionsManager() {
   const terminateAllOtherSessions = async () => {
     try {
       const response = await fetch('/api/account/sessions/terminate-others', {
-        method: 'POST',
+        method: 'POST'
       })
       if (response.ok) {
         toast.success('Todas las otras sesiones han sido cerradas')
@@ -113,13 +113,23 @@ export function ActiveSessionsManager() {
     const dt = (deviceType || '').toLowerCase()
     const ua = (userAgent || '').toLowerCase()
 
-    if (dt === 'mobile' || ua.includes('mobile') || ua.includes('iphone') || ua.includes('android')) {
+    if (
+      dt === 'mobile' ||
+      ua.includes('mobile') ||
+      ua.includes('iphone') ||
+      ua.includes('android')
+    ) {
       return <Smartphone className='h-4 w-4 text-primary' />
     }
     if (dt === 'tablet' || ua.includes('tablet') || ua.includes('ipad')) {
       return <Tablet className='h-4 w-4 text-primary' />
     }
-    if (dt === 'desktop' || ua.includes('windows') || ua.includes('macintosh') || ua.includes('linux')) {
+    if (
+      dt === 'desktop' ||
+      ua.includes('windows') ||
+      ua.includes('macintosh') ||
+      ua.includes('linux')
+    ) {
       return <Laptop className='h-4 w-4 text-primary' />
     }
     return <Monitor className='h-4 w-4 text-primary' />
@@ -142,7 +152,7 @@ export function ActiveSessionsManager() {
       return date.toLocaleDateString('es-PE', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric',
+        year: 'numeric'
       })
     } catch {
       return dateString
@@ -163,7 +173,10 @@ export function ActiveSessionsManager() {
             Dispositivos y Sesiones Activas
           </h2>
           <p className='text-xs text-muted-foreground'>
-            {sessions.length} {sessions.length === 1 ? 'dispositivo conectado' : 'dispositivos conectados'}
+            {sessions.length}{' '}
+            {sessions.length === 1
+              ? 'dispositivo conectado'
+              : 'dispositivos conectados'}
           </p>
         </div>
 
@@ -215,8 +228,12 @@ export function ActiveSessionsManager() {
       ) : sessions.length === 0 ? (
         <div className='text-center py-10 text-muted-foreground space-y-2'>
           <Monitor className='h-10 w-10 mx-auto text-muted-foreground/40' />
-          <p className='text-sm font-semibold text-foreground'>No se encontraron sesiones activas</p>
-          <p className='text-xs'>Al iniciar sesión en un nuevo dispositivo aparecerá reflejado aquí.</p>
+          <p className='text-sm font-semibold text-foreground'>
+            No se encontraron sesiones activas
+          </p>
+          <p className='text-xs'>
+            Al iniciar sesión en un nuevo dispositivo aparecerá reflejado aquí.
+          </p>
         </div>
       ) : (
         <div className='space-y-3'>
@@ -231,10 +248,7 @@ export function ActiveSessionsManager() {
             >
               <div className='flex items-start gap-3.5'>
                 <div className='rounded-xl bg-primary/10 p-2.5 shrink-0 mt-0.5'>
-                  {getDeviceIcon(
-                    sessionData.deviceType,
-                    sessionData.userAgent
-                  )}
+                  {getDeviceIcon(sessionData.deviceType, sessionData.userAgent)}
                 </div>
 
                 <div className='flex-1 min-w-0 space-y-1.5'>
@@ -246,7 +260,8 @@ export function ActiveSessionsManager() {
 
                     {sessionData.isCurrent && (
                       <Badge className='text-[10px] py-0 bg-emerald-600 hover:bg-emerald-600 text-white gap-1'>
-                        <CheckCircle2 className='w-3 h-3' /> Este Dispositivo (Actual)
+                        <CheckCircle2 className='w-3 h-3' /> Este Dispositivo
+                        (Actual)
                       </Badge>
                     )}
                   </div>

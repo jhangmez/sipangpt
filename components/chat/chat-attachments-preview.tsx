@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { FileText, X } from 'lucide-react'
 import {
   Attachment,
@@ -10,7 +9,7 @@ import {
   AttachmentDescription,
   AttachmentGroup,
   AttachmentMedia,
-  AttachmentTitle,
+  AttachmentTitle
 } from '@/components/ui/attachment'
 import type { AttachedFile } from '@/types/chat'
 
@@ -21,7 +20,7 @@ interface ChatAttachmentsPreviewProps {
 
 export function ChatAttachmentsPreview({
   files,
-  onRemove,
+  onRemove
 }: ChatAttachmentsPreviewProps) {
   if (files.length === 0) return null
 

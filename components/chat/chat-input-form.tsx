@@ -6,7 +6,7 @@ import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
-  InputGroupTextarea,
+  InputGroupTextarea
 } from '@/components/ui/input-group'
 
 interface ChatInputFormProps {
@@ -24,7 +24,7 @@ export function ChatInputForm({
   isLoading,
   hasAttachments,
   onSubmit,
-  onFileUpload,
+  onFileUpload
 }: ChatInputFormProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -100,7 +100,8 @@ export function ChatInputForm({
       </InputGroup>
 
       <p className='text-[11px] text-muted-foreground text-center font-exo pt-2'>
-        SipánGPT puede cometer errores. Verifica información importante con los reglamentos institucionales oficiales.
+        SipánGPT puede cometer errores. Verifica información importante con los
+        reglamentos institucionales oficiales.
       </p>
     </form>
   )

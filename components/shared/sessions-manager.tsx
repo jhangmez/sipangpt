@@ -4,8 +4,21 @@ import * as React from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { toast } from 'sonner'
-import { Laptop, Smartphone, Globe, Shield, LogOut, RefreshCw, Clock, MapPin, CheckCircle2 } from 'lucide-react'
-import { closeSessionAction, closeOtherSessionsAction } from '@/lib/actions/sessions'
+import {
+  Laptop,
+  Smartphone,
+  Globe,
+  Shield,
+  LogOut,
+  RefreshCw,
+  Clock,
+  MapPin,
+  CheckCircle2
+} from 'lucide-react'
+import {
+  closeSessionAction,
+  closeOtherSessionsAction
+} from '@/lib/actions/sessions'
 import { performSafeLogout } from '@/lib/auth/multi-tab-sync'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,8 +30,12 @@ interface SessionsManagerProps {
   isAdminView?: boolean
 }
 
-export function SessionsManager({ initialSessions = [], isAdminView = false }: SessionsManagerProps) {
-  const [sessions, setSessions] = React.useState<ActiveSessionItem[]>(initialSessions)
+export function SessionsManager({
+  initialSessions = [],
+  isAdminView = false
+}: SessionsManagerProps) {
+  const [sessions, setSessions] =
+    React.useState<ActiveSessionItem[]>(initialSessions)
   const [isLoading, setIsLoading] = React.useState(false)
 
   const fetchSessions = async () => {
@@ -46,9 +63,16 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
     return () => clearInterval(interval)
   }, [initialSessions])
 
-  const handleCloseSession = async (sessionToken: string, isCurrent: boolean) => {
+  const handleCloseSession = async (
+    sessionToken: string,
+    isCurrent: boolean
+  ) => {
     if (isCurrent) {
-      if (confirm('¿Deseas cerrar la sesión en este dispositivo? Serás redirigido al inicio de sesión.')) {
+      if (
+        confirm(
+          '¿Deseas cerrar la sesión en este dispositivo? Serás redirigido al inicio de sesión.'
+        )
+      ) {
         await performSafeLogout('/login')
       }
       return
@@ -58,7 +82,9 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
       const res = await closeSessionAction(sessionToken)
       if (res.success) {
         toast.success(res.message)
-        setSessions((prev) => prev.filter((s) => s.sessionToken !== sessionToken))
+        setSessions((prev) =>
+          prev.filter((s) => s.sessionToken !== sessionToken)
+        )
       }
     } catch (err: unknown) {
       toast.error(getErrorMessage(err) || 'Error al cerrar la sesión.')
@@ -87,7 +113,11 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
 
   const getDeviceIcon = (deviceType?: string | null) => {
     const lower = (deviceType || '').toLowerCase()
-    if (lower.includes('móvil') || lower.includes('android') || lower.includes('iphone')) {
+    if (
+      lower.includes('móvil') ||
+      lower.includes('android') ||
+      lower.includes('iphone')
+    ) {
       return <Smartphone className='w-5 h-5 text-primary' />
     }
     return <Laptop className='w-5 h-5 text-primary' />
@@ -98,10 +128,15 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
       <div className='flex items-center justify-between gap-4 flex-wrap'>
         <div>
           <h3 className='font-frances font-bold text-lg text-foreground'>
-            {isAdminView ? 'Sesiones Activas en el Sistema' : 'Dispositivos y Sesiones Conectadas'}
+            {isAdminView
+              ? 'Sesiones Activas en el Sistema'
+              : 'Dispositivos y Sesiones Conectadas'}
           </h3>
           <p className='text-xs text-muted-foreground'>
-            {sessions.length} {sessions.length === 1 ? 'dispositivo conectado' : 'dispositivos conectados'}
+            {sessions.length}{' '}
+            {sessions.length === 1
+              ? 'dispositivo conectado'
+              : 'dispositivos conectados'}
           </p>
         </div>
 
@@ -114,7 +149,9 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
             className='rounded-xl cursor-pointer'
             title='Actualizar lista'
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`}
+            />
           </Button>
 
           {!isAdminView && sessions.length > 1 && (
@@ -155,16 +192,23 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
                     <span className='font-semibold text-foreground text-sm'>
                       {s.deviceType || 'Dispositivo'}
                     </span>
-                    <Badge variant='outline' className='text-[10px] py-0 font-normal'>
+                    <Badge
+                      variant='outline'
+                      className='text-[10px] py-0 font-normal'
+                    >
                       {s.browser || 'Navegador Web'}
                     </Badge>
                     {s.isCurrent && (
                       <Badge className='text-[10px] py-0 bg-emerald-600 hover:bg-emerald-600 text-white gap-1'>
-                        <CheckCircle2 className='w-3 h-3' /> Este Dispositivo (Actual)
+                        <CheckCircle2 className='w-3 h-3' /> Este Dispositivo
+                        (Actual)
                       </Badge>
                     )}
                     {isAdminView && s.userEmail && (
-                      <Badge variant='secondary' className='text-[10px] py-0 font-mono'>
+                      <Badge
+                        variant='secondary'
+                        className='text-[10px] py-0 font-mono'
+                      >
                         {s.userEmail}
                       </Badge>
                     )}
@@ -173,7 +217,9 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
                   <div className='flex items-center gap-3 text-muted-foreground flex-wrap text-[11px]'>
                     <span className='flex items-center gap-1'>
                       <MapPin className='w-3 h-3 text-muted-foreground' />
-                      {s.city ? `${s.city} • IP: ${s.ipAddress}` : `IP: ${s.ipAddress}`}
+                      {s.city
+                        ? `${s.city} • IP: ${s.ipAddress}`
+                        : `IP: ${s.ipAddress}`}
                     </span>
                     <span className='flex items-center gap-1'>
                       <Clock className='w-3 h-3 text-muted-foreground' />
@@ -187,7 +233,9 @@ export function SessionsManager({ initialSessions = [], isAdminView = false }: S
                 <Button
                   variant='outline'
                   size='sm'
-                  onClick={() => handleCloseSession(s.sessionToken, !!s.isCurrent)}
+                  onClick={() =>
+                    handleCloseSession(s.sessionToken, !!s.isCurrent)
+                  }
                   className='rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/10 cursor-pointer'
                 >
                   <LogOut className='w-3.5 h-3.5 mr-1.5' />

@@ -1,18 +1,19 @@
 import type { Metadata } from 'next'
-import * as React from 'react'
+
 import { getAllQuestionsWithTopics } from '@/lib/actions/admin-questions'
 import { getTopicCategoriesData } from '@/lib/actions/admin-topics'
 import { QuestionsManager } from '@/components/admin/questions-manager'
 
 export const metadata: Metadata = {
   title: 'Preguntas Frecuentes • Panel Administrador',
-  description: 'Configuración de preguntas sugeridas para estudiantes, ordenamiento e iconos en SipánGPT.',
+  description:
+    'Configuración de preguntas sugeridas para estudiantes, ordenamiento e iconos en SipánGPT.'
 }
 
 export default async function AdminQuestionsPage() {
   const [questions, categories] = await Promise.all([
     getAllQuestionsWithTopics(),
-    getTopicCategoriesData(),
+    getTopicCategoriesData()
   ])
 
   return (

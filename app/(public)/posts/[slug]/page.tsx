@@ -1,4 +1,3 @@
-import * as React from 'react'
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
@@ -10,7 +9,7 @@ import {
   Share2,
   Sparkles,
   Building,
-  Clock,
+  Clock
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,12 +19,12 @@ interface PostSlugPageProps {
 }
 
 export async function generateMetadata({
-  params,
+  params
 }: PostSlugPageProps): Promise<Metadata> {
   const { slug } = await params
   const post = await prisma.post.findUnique({
     where: { slug },
-    select: { title: true, excerpt: true },
+    select: { title: true, excerpt: true }
   })
 
   if (!post) {
@@ -36,7 +35,7 @@ export async function generateMetadata({
     title: `${post.title} • Novedades USS`,
     description:
       post.excerpt ||
-      'Comunicado y noticia oficial de la Universidad Señor de Sipán en SipánGPT.',
+      'Comunicado y noticia oficial de la Universidad Señor de Sipán en SipánGPT.'
   }
 }
 
@@ -47,12 +46,12 @@ export default async function PostSlugPage({ params }: PostSlugPageProps) {
     where: { slug },
     include: {
       author: {
-        select: { name: true, email: true, image: true },
+        select: { name: true, email: true, image: true }
       },
       category: {
-        select: { id: true, name: true, slug: true },
-      },
-    },
+        select: { id: true, name: true, slug: true }
+      }
+    }
   })
 
   if (!post || post.status !== 'PUBLISHED') {
@@ -65,7 +64,7 @@ export default async function PostSlugPage({ params }: PostSlugPageProps) {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric',
+    year: 'numeric'
   })
 
   // Estimación de tiempo de lectura (aprox 200 palabras por minuto)
@@ -159,7 +158,8 @@ export default async function PostSlugPage({ params }: PostSlugPageProps) {
               ¿Tienes dudas sobre este comunicado?
             </h3>
             <p className='text-xs text-muted-foreground'>
-              Consulta directamente con SipánGPT para resolver inquietudes académicas basadas en reglamentos oficiales.
+              Consulta directamente con SipánGPT para resolver inquietudes
+              académicas basadas en reglamentos oficiales.
             </p>
           </div>
 

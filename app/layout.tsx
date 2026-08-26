@@ -1,4 +1,5 @@
 import './globals.css'
+import type * as React from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { fontExo2, fontFraunces } from './fonts'
 import { ThemeProvider } from './providers'

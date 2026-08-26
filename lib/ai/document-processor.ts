@@ -75,9 +75,10 @@ Reglas de Estructuración:
     })
 
     return result.text.trim()
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[PDF_GEMINI_OCR_ERROR]', err)
-    throw new Error(`Fallo al transcribir el PDF con Gemini: ${err?.message || 'Error desconocido'}`)
+    const msg = err instanceof Error ? err.message : 'Error desconocido'
+    throw new Error(`Fallo al transcribir el PDF con Gemini: ${msg}`)
   }
 }
 

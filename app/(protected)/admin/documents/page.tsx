@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import * as React from 'react'
+
 import { getAdminDocuments } from '@/lib/actions/admin-documents'
 import { DocumentsManager } from '@/components/admin/documents-manager'
 
 export const metadata: Metadata = {
   title: 'Ingesta de Documentos RAG • Panel Administrador',
-  description: 'Gestión, subida y clasificación de reglamentos universitarios oficiales con UploadThing y RAG.',
+  description:
+    'Gestión, subida y clasificación de reglamentos universitarios oficiales con UploadThing y RAG.'
 }
 
 export default async function AdminDocumentsPage() {

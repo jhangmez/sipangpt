@@ -6,7 +6,7 @@ import {
   createQuestionDirect,
   toggleQuestionActiveAction,
   deleteQuestionAction,
-  moveQuestionOrderAction,
+  moveQuestionOrderAction
 } from '@/lib/actions/admin-questions'
 import { IconPicker } from './icon-picker'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,7 @@ import {
   QuestionnaireTitle,
   QuestionnaireDescription,
   QuestionnaireChoices,
-  QuestionnaireChoice,
+  QuestionnaireChoice
 } from '@/components/ui/questionnaire'
 import {
   HelpCircle,
@@ -30,7 +30,7 @@ import {
   ArrowDown,
   Eye,
   Bot,
-  Tags,
+  Tags
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { QuestionItem, TopicCategoryItem } from '@/types'
@@ -42,13 +42,16 @@ interface QuestionsManagerProps {
 
 export function QuestionsManager({
   initialQuestions,
-  topicCategories,
+  topicCategories
 }: QuestionsManagerProps) {
-  const [questions, setQuestions] = React.useState<QuestionItem[]>(initialQuestions)
+  const [questions, setQuestions] =
+    React.useState<QuestionItem[]>(initialQuestions)
   const [text, setText] = React.useState('')
   const [icon, setIcon] = React.useState('📋')
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string>('none')
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = React.useState<string>('none')
+  const [selectedCategoryId, setSelectedCategoryId] =
+    React.useState<string>('none')
+  const [selectedSubcategoryId, setSelectedSubcategoryId] =
+    React.useState<string>('none')
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   // Subcategorías disponibles según la categoría seleccionada
@@ -60,9 +63,7 @@ export function QuestionsManager({
 
   // Preguntas activas ordenadas para la vista previa
   const activeQuestionsForPreview = React.useMemo(() => {
-    return questions
-      .filter((q) => q.isActive)
-      .sort((a, b) => a.order - b.order)
+    return questions.filter((q) => q.isActive).sort((a, b) => a.order - b.order)
   }, [questions])
 
   const handleCategorySelectChange = (newCatId: string) => {
@@ -75,7 +76,9 @@ export function QuestionsManager({
     if (!text.trim()) return
 
     const catObj = topicCategories.find((c) => c.id === selectedCategoryId)
-    const subObj = availableSubcategories.find((s) => s.id === selectedSubcategoryId)
+    const subObj = availableSubcategories.find(
+      (s) => s.id === selectedSubcategoryId
+    )
 
     setIsSubmitting(true)
     try {
@@ -84,8 +87,9 @@ export function QuestionsManager({
         icon,
         category: catObj ? catObj.name : 'General',
         categoryId: selectedCategoryId !== 'none' ? selectedCategoryId : null,
-        subcategoryId: selectedSubcategoryId !== 'none' ? selectedSubcategoryId : null,
-        order: questions.length,
+        subcategoryId:
+          selectedSubcategoryId !== 'none' ? selectedSubcategoryId : null,
+        order: questions.length
       })
 
       if (res.success && res.question) {
@@ -93,9 +97,13 @@ export function QuestionsManager({
           ...prev,
           {
             ...res.question,
-            categoryRel: catObj ? { id: catObj.id, name: catObj.name, code: catObj.code } : null,
-            subcategoryRel: subObj ? { id: subObj.id, name: subObj.name, code: subObj.code } : null,
-          } as QuestionItem,
+            categoryRel: catObj
+              ? { id: catObj.id, name: catObj.name, code: catObj.code }
+              : null,
+            subcategoryRel: subObj
+              ? { id: subObj.id, name: subObj.name, code: subObj.code }
+              : null
+          } as QuestionItem
         ])
         setText('')
         setIcon('📋')
@@ -118,7 +126,9 @@ export function QuestionsManager({
 
     try {
       await toggleQuestionActiveAction(id, nextState)
-      toast.success(nextState ? 'Pregunta activada en el chat' : 'Pregunta desactivada')
+      toast.success(
+        nextState ? 'Pregunta activada en el chat' : 'Pregunta desactivada'
+      )
     } catch (err: unknown) {
       setQuestions((prev) =>
         prev.map((q) => (q.id === id ? { ...q, isActive: currentActive } : q))
@@ -172,7 +182,9 @@ export function QuestionsManager({
             Gestión de Preguntas Frecuentes y Sugeridas
           </h2>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            Personaliza las opciones del cuestionario inicial para los estudiantes. Vincula opcionalmente cada pregunta a una categoría y subtema de la USS.
+            Personaliza las opciones del cuestionario inicial para los
+            estudiantes. Vincula opcionalmente cada pregunta a una categoría y
+            subtema de la USS.
           </p>
         </div>
       </div>
@@ -211,7 +223,10 @@ export function QuestionsManager({
           <div className='grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end'>
             {/* Selector de Categoría Temática USS */}
             <div className='sm:col-span-5 space-y-1.5'>
-              <Label htmlFor='qCatId' className='text-xs font-semibold flex items-center gap-1.5'>
+              <Label
+                htmlFor='qCatId'
+                className='text-xs font-semibold flex items-center gap-1.5'
+              >
                 <Tags className='w-3 h-3 text-primary' />
                 Categoría Temática (Opcional)
               </Label>
@@ -239,15 +254,18 @@ export function QuestionsManager({
                 id='qSubId'
                 value={selectedSubcategoryId}
                 onChange={(e) => setSelectedSubcategoryId(e.target.value)}
-                disabled={selectedCategoryId === 'none' || availableSubcategories.length === 0}
+                disabled={
+                  selectedCategoryId === 'none' ||
+                  availableSubcategories.length === 0
+                }
                 className='w-full h-10 rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-exo text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-40 disabled:cursor-not-allowed'
               >
                 <option value='none'>
                   {selectedCategoryId === 'none'
                     ? 'Selecciona una categoría primero'
                     : availableSubcategories.length === 0
-                    ? 'Sin subtemas disponibles'
-                    : 'Sin subtema específico'}
+                      ? 'Sin subtemas disponibles'
+                      : 'Sin subtema específico'}
                 </option>
                 {availableSubcategories.map((sub) => (
                   <option key={sub.id} value={sub.id}>
@@ -263,7 +281,8 @@ export function QuestionsManager({
                 disabled={isSubmitting}
                 className='w-full h-10 rounded-xl text-xs font-semibold gap-1.5 cursor-pointer shadow-xs'
               >
-                <Plus className='w-4 h-4' /> {isSubmitting ? 'Guardando...' : 'Agregar'}
+                <Plus className='w-4 h-4' />{' '}
+                {isSubmitting ? 'Guardando...' : 'Agregar'}
               </Button>
             </div>
           </div>
@@ -284,13 +303,18 @@ export function QuestionsManager({
         {questions.length === 0 ? (
           <div className='py-8 text-center text-xs text-muted-foreground space-y-1'>
             <HelpCircle className='w-6 h-6 mx-auto text-muted-foreground/60 mb-2' />
-            <p className='font-semibold text-foreground'>No hay preguntas configuradas</p>
-            <p className='text-[11px]'>Agrega sugerencias arriba para los estudiantes.</p>
+            <p className='font-semibold text-foreground'>
+              No hay preguntas configuradas
+            </p>
+            <p className='text-[11px]'>
+              Agrega sugerencias arriba para los estudiantes.
+            </p>
           </div>
         ) : (
           <div className='space-y-2.5'>
             {questions.map((q, idx) => {
-              const categoryLabel = q.categoryRel?.name || q.category || 'General'
+              const categoryLabel =
+                q.categoryRel?.name || q.category || 'General'
               const subcategoryLabel = q.subcategoryRel?.name
 
               return (
@@ -338,20 +362,31 @@ export function QuestionsManager({
                         {q.text}
                       </p>
                       <div className='flex items-center gap-1.5 flex-wrap'>
-                        <Badge variant='outline' className='text-[9px] uppercase font-bold py-0'>
+                        <Badge
+                          variant='outline'
+                          className='text-[9px] uppercase font-bold py-0'
+                        >
                           {categoryLabel}
                         </Badge>
                         {subcategoryLabel ? (
-                          <Badge variant='outline' className='text-[9px] text-primary border-primary/30 bg-primary/5 py-0'>
+                          <Badge
+                            variant='outline'
+                            className='text-[9px] text-primary border-primary/30 bg-primary/5 py-0'
+                          >
                             {subcategoryLabel}
                           </Badge>
                         ) : (
-                          <Badge variant='outline' className='text-[9px] text-muted-foreground/70 border-border/60 py-0 font-normal'>
+                          <Badge
+                            variant='outline'
+                            className='text-[9px] text-muted-foreground/70 border-border/60 py-0 font-normal'
+                          >
                             Sin subtema en específico
                           </Badge>
                         )}
                         {!q.isActive && (
-                          <span className='text-[10px] text-muted-foreground'>(Desactivada)</span>
+                          <span className='text-[10px] text-muted-foreground'>
+                            (Desactivada)
+                          </span>
                         )}
                       </div>
                     </div>
@@ -392,7 +427,8 @@ export function QuestionsManager({
                 Vista Previa en Vivo (Live Preview)
               </h3>
               <p className='text-xs text-muted-foreground'>
-                Así es exactamente como se visualiza el cuestionario para los estudiantes en la pantalla de inicio del chat.
+                Así es exactamente como se visualiza el cuestionario para los
+                estudiantes en la pantalla de inicio del chat.
               </p>
             </div>
           </div>
@@ -427,12 +463,17 @@ export function QuestionsManager({
                     Consultas Rápidas Sugeridas
                   </QuestionnaireTitle>
                   <QuestionnaireDescription className='text-[11px] text-muted-foreground px-1 pb-2 font-exo'>
-                    Selecciona un tema frecuente para consultar reglamentos y trámites oficiales:
+                    Selecciona un tema frecuente para consultar reglamentos y
+                    trámites oficiales:
                   </QuestionnaireDescription>
 
                   <QuestionnaireChoices className='grid grid-cols-1 sm:grid-cols-2 gap-2.5'>
                     {activeQuestionsForPreview.map((q) => {
-                      const badgeText = q.subcategoryRel?.name || q.categoryRel?.name || q.category || 'General'
+                      const badgeText =
+                        q.subcategoryRel?.name ||
+                        q.categoryRel?.name ||
+                        q.category ||
+                        'General'
 
                       return (
                         <QuestionnaireChoice

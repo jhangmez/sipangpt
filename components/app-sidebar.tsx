@@ -16,13 +16,13 @@ import {
   SidebarMenuButton,
   SidebarMenuAction,
   SidebarRail,
-  useSidebar,
+  useSidebar
 } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
@@ -30,12 +30,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog'
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger,
+  TooltipTrigger
 } from '@/components/ui/tooltip'
 import {
   Plus,
@@ -44,7 +44,7 @@ import {
   MoreHorizontal,
   Clock,
   Bot,
-  Sparkles,
+  Sparkles
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { SidebarChat } from '@/types/chat'
@@ -66,7 +66,7 @@ export function AppSidebar({
   user,
   latestPost,
   isLoading = false,
-  onDeleteChat,
+  onDeleteChat
 }: AppSidebarProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
@@ -113,9 +113,15 @@ export function AppSidebar({
                     </SidebarMenuButton>
                   }
                 />
-                <TooltipContent side='right' align='center' className='font-exo'>
+                <TooltipContent
+                  side='right'
+                  align='center'
+                  className='font-exo'
+                >
                   <p className='font-semibold'>SipánGPT</p>
-                  <p className='text-[10px] text-muted-foreground'>Asistente Oficial USS</p>
+                  <p className='text-[10px] text-muted-foreground'>
+                    Asistente Oficial USS
+                  </p>
                 </TooltipContent>
               </Tooltip>
             ) : (
@@ -191,8 +197,14 @@ export function AppSidebar({
                       {isCollapsed ? (
                         <Tooltip>
                           <TooltipTrigger render={menuButton} />
-                          <TooltipContent side='right' align='center' className='max-w-xs font-exo'>
-                            <p className='font-semibold line-clamp-2'>{chat.title}</p>
+                          <TooltipContent
+                            side='right'
+                            align='center'
+                            className='max-w-xs font-exo'
+                          >
+                            <p className='font-semibold line-clamp-2'>
+                              {chat.title}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -255,56 +267,64 @@ export function AppSidebar({
         {/* Sección Inferior: Card de Novedades USS + Botón Nueva Consulta */}
         <div className='pt-2 border-t border-border/40 space-y-2'>
           {/* Card Pequeño de Novedad / Nuevo Post con enlace directo */}
-          {latestPost && (() => {
-            const targetHref = latestPost.externalUrl || `/posts/${latestPost.slug}`
+          {latestPost &&
+            (() => {
+              const targetHref =
+                latestPost.externalUrl || `/posts/${latestPost.slug}`
 
-            return isCollapsed ? (
-              <div className='flex justify-center'>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <a
-                        href={targetHref}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition cursor-pointer'
-                      >
-                        <Sparkles className='w-4 h-4' />
-                      </a>
-                    }
-                  />
-                  <TooltipContent side='right' align='center' className='font-exo max-w-xs p-3 space-y-1'>
-                    <div className='flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase'>
-                      <Sparkles className='w-3 h-3' />
-                      <span>Nuevo Post</span>
-                    </div>
-                    <p className='font-semibold text-xs text-foreground'>{latestPost.title}</p>
-                    <p className='text-[11px] text-muted-foreground line-clamp-2 leading-tight'>
-                      {latestPost.excerpt || latestPost.content}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            ) : (
-              <a
-                href={targetHref}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='block rounded-2xl border border-primary/20 bg-primary/5 p-2.5 transition hover:bg-primary/10 select-none group cursor-pointer'
-              >
-                <div className='flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wide'>
-                  <Sparkles className='w-3 h-3' />
-                  <span>Nuevo Post</span>
+              return isCollapsed ? (
+                <div className='flex justify-center'>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <a
+                          href={targetHref}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition cursor-pointer'
+                        >
+                          <Sparkles className='w-4 h-4' />
+                        </a>
+                      }
+                    />
+                    <TooltipContent
+                      side='right'
+                      align='center'
+                      className='font-exo max-w-xs p-3 space-y-1'
+                    >
+                      <div className='flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase'>
+                        <Sparkles className='w-3 h-3' />
+                        <span>Nuevo Post</span>
+                      </div>
+                      <p className='font-semibold text-xs text-foreground'>
+                        {latestPost.title}
+                      </p>
+                      <p className='text-[11px] text-muted-foreground line-clamp-2 leading-tight'>
+                        {latestPost.excerpt || latestPost.content}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-                <p className='font-semibold text-xs text-foreground line-clamp-1 mt-1 leading-snug group-hover:text-primary transition-colors'>
-                  {latestPost.title}
-                </p>
-                <p className='text-[11px] text-muted-foreground line-clamp-1 mt-0.5 leading-tight'>
-                  {latestPost.excerpt || latestPost.content}
-                </p>
-              </a>
-            )
-          })()}
+              ) : (
+                <a
+                  href={targetHref}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='block rounded-2xl border border-primary/20 bg-primary/5 p-2.5 transition hover:bg-primary/10 select-none group cursor-pointer'
+                >
+                  <div className='flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wide'>
+                    <Sparkles className='w-3 h-3' />
+                    <span>Nuevo Post</span>
+                  </div>
+                  <p className='font-semibold text-xs text-foreground line-clamp-1 mt-1 leading-snug group-hover:text-primary transition-colors'>
+                    {latestPost.title}
+                  </p>
+                  <p className='text-[11px] text-muted-foreground line-clamp-1 mt-0.5 leading-tight'>
+                    {latestPost.excerpt || latestPost.content}
+                  </p>
+                </a>
+              )
+            })()}
 
           <SidebarMenu>
             <SidebarMenuItem>
@@ -320,9 +340,15 @@ export function AppSidebar({
                       </SidebarMenuButton>
                     }
                   />
-                  <TooltipContent side='right' align='center' className='font-exo'>
+                  <TooltipContent
+                    side='right'
+                    align='center'
+                    className='font-exo'
+                  >
                     <p className='font-semibold'>Nueva Consulta</p>
-                    <p className='text-[10px] text-muted-foreground'>Iniciar una nueva conversación</p>
+                    <p className='text-[10px] text-muted-foreground'>
+                      Iniciar una nueva conversación
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               ) : (

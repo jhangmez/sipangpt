@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { ModelSelector } from './model-selector'
 import type { ModelDefinition } from '@/constants/models'
@@ -14,7 +13,7 @@ interface ChatHeaderProps {
 export function ChatHeader({
   selectedModel,
   onSelectModel,
-  models,
+  models
 }: ChatHeaderProps) {
   return (
     <header className='flex items-center justify-between border-b border-border/40 pb-3 px-2 sm:px-4 shrink-0 font-exo gap-2 min-w-0'>

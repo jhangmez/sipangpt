@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma, ModelStatus, Role, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
+import { prisma, ModelStatus, Role, ModelProvider, TokenUsageConcept, type AIModelConfig } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 
@@ -97,7 +97,7 @@ export async function createAIModelAction(data: {
   const maxTokens = Math.max(1, Number(data.maxTokens) || 2048)
   const temperature = Math.min(2.0, Math.max(0.0, Number(data.temperature) ?? 0.3))
 
-  let model: any
+  let model: AIModelConfig | null = null
   try {
     model = await prisma.aIModelConfig.create({
       data: {

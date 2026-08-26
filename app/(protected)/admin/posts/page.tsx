@@ -1,11 +1,11 @@
-import * as React from 'react'
 import type { Metadata } from 'next'
 import { getAdminPostsData } from '@/lib/actions/admin-posts'
 import { PostsManager } from '@/components/admin/posts-manager'
 
 export const metadata: Metadata = {
   title: 'Publicaciones y Posts • Panel Administrador',
-  description: 'Gestión y redacción de comunicados oficiales, directivas académicas y noticias en SipánGPT.',
+  description:
+    'Gestión y redacción de comunicados oficiales, directivas académicas y noticias en SipánGPT.'
 }
 
 export default async function AdminPostsPage() {

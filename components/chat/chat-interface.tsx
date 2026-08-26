@@ -29,7 +29,12 @@ import {
   INITIAL_QUESTIONS,
   type SuggestedQuestionDefinition
 } from '@/constants/questions'
-import type { ChatMessage, AttachedFile, FeedbackState, MessageSource } from '@/types/chat'
+import type {
+  ChatMessage,
+  AttachedFile,
+  FeedbackState,
+  MessageSource
+} from '@/types/chat'
 import type { PostItem } from '@/types'
 import type { User } from 'next-auth'
 
@@ -108,7 +113,9 @@ export function ChatInterface({
     }
   }, [mappedModels, selectedModel.id])
   const router = useRouter()
-  const [currentConversationId, setCurrentConversationId] = React.useState<string | undefined>(conversationId)
+  const [currentConversationId, setCurrentConversationId] = React.useState<
+    string | undefined
+  >(conversationId)
 
   // Estados del chat
   const [messages, setMessages] = React.useState<ChatMessage[]>(initialMessages)
@@ -152,17 +159,22 @@ export function ChatInterface({
     }
     return posts.length > 0
   })
-  const [sidePanelTab, setSidePanelTab] = React.useState<'posts' | 'sources'>(() => {
-    if (initialMessages.length > 0 && initialSources.length > 0) {
-      return 'sources'
+  const [sidePanelTab, setSidePanelTab] = React.useState<'posts' | 'sources'>(
+    () => {
+      if (initialMessages.length > 0 && initialSources.length > 0) {
+        return 'sources'
+      }
+      return 'posts'
     }
-    return 'posts'
-  })
-  const [activeSources, setActiveSources] = React.useState<MessageSource[]>(initialSources)
+  )
+  const [activeSources, setActiveSources] =
+    React.useState<MessageSource[]>(initialSources)
 
   // Sincronizar fuentes si el último mensaje del asistente las contiene
   React.useEffect(() => {
-    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && m.sources && m.sources.length > 0)
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.role === 'assistant' && m.sources && m.sources.length > 0)
     if (lastAssistant?.sources && lastAssistant.sources.length > 0) {
       setActiveSources((prev) => {
         if (prev.length === lastAssistant.sources?.length) return prev
@@ -180,13 +192,12 @@ export function ChatInterface({
     setFeedbackData({
       messageId: message.id,
       userQuestion:
-        [...messages]
-          .reverse()
-          .find((m) => m.role === 'user')?.content || 'Consulta',
+        [...messages].reverse().find((m) => m.role === 'user')?.content ||
+        'Consulta',
       assistantResponse: message.content,
       modelName: message.modelName || selectedModel.name,
       type,
-      initialRating: rating,
+      initialRating: rating
     })
     setFeedbackModalOpen(true)
   }
@@ -209,7 +220,7 @@ export function ChatInterface({
     const files = e.target.files
     if (!files) return
 
-    const newFiles: AttachedFile[] = Array.from(files).map((file) => ({
+    const newFiles: AttachedFile[] = Array.from(files).map((file: File) => ({
       id: crypto.randomUUID(),
       name: file.name,
       size: `${(file.size / 1024).toFixed(1)} KB`,
@@ -240,7 +251,9 @@ export function ChatInterface({
 
   // Envío e inferencia de consulta con streaming en tiempo real
   const handleSendMessage = async (textOverride?: string) => {
-    const textToSend = (textOverride !== undefined ? textOverride : input).trim()
+    const textToSend = (
+      textOverride !== undefined ? textOverride : input
+    ).trim()
     if (!textToSend && attachedFiles.length === 0) return
 
     // Al realizar una pregunta, ocultar la sección de publicaciones/posts si está activa
@@ -256,7 +269,7 @@ export function ChatInterface({
       id: att.id,
       name: att.name,
       size: att.size,
-      type: att.type,
+      type: att.type
     }))
 
     const newUserMessage: ChatMessage = {
@@ -264,8 +277,7 @@ export function ChatInterface({
       role: 'user',
       content: textToSend,
       createdAt: nowIso,
-      attachments:
-        attachmentsForUi.length > 0 ? attachmentsForUi : undefined,
+      attachments: attachmentsForUi.length > 0 ? attachmentsForUi : undefined
     }
 
     const currentAttachments = [...attachedFiles]
@@ -289,7 +301,7 @@ export function ChatInterface({
             name: att.name,
             size: att.size,
             type: att.type,
-            data: base64Data,
+            data: base64Data
           }
         })
       )
@@ -302,8 +314,8 @@ export function ChatInterface({
           conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
           provider: selectedModel.provider,
-          attachments: attachmentsPayload,
-        }),
+          attachments: attachmentsPayload
+        })
       })
 
       if (!response.ok) {
@@ -317,7 +329,10 @@ export function ChatInterface({
       const headerConvId = response.headers.get('x-conversation-id')
       if (headerConvId && headerConvId !== currentConversationId) {
         setCurrentConversationId(headerConvId)
-        if (typeof window !== 'undefined' && !window.location.pathname.includes(headerConvId)) {
+        if (
+          typeof window !== 'undefined' &&
+          !window.location.pathname.includes(headerConvId)
+        ) {
           window.history.replaceState(null, '', `/chat/${headerConvId}`)
         }
       }
@@ -362,10 +377,20 @@ export function ChatInterface({
               // 1. Manejo de paquete 'start' o metadatos iniciales
               if (packet.type === 'start' && packet.messageMetadata) {
                 const meta = packet.messageMetadata
-                if (meta.conversationId && meta.conversationId !== currentConversationId) {
+                if (
+                  meta.conversationId &&
+                  meta.conversationId !== currentConversationId
+                ) {
                   setCurrentConversationId(meta.conversationId)
-                  if (typeof window !== 'undefined' && !window.location.pathname.includes(meta.conversationId)) {
-                    window.history.replaceState(null, '', `/chat/${meta.conversationId}`)
+                  if (
+                    typeof window !== 'undefined' &&
+                    !window.location.pathname.includes(meta.conversationId)
+                  ) {
+                    window.history.replaceState(
+                      null,
+                      '',
+                      `/chat/${meta.conversationId}`
+                    )
                   }
                 }
                 if (meta.sources && meta.sources.length > 0) {
@@ -380,12 +405,12 @@ export function ChatInterface({
                 packet.delta !== undefined
                   ? packet.delta
                   : packet.textDelta !== undefined
-                  ? packet.textDelta
-                  : packet.text !== undefined
-                  ? packet.text
-                  : currentEvent === 'delta'
-                  ? packet.text
-                  : null
+                    ? packet.textDelta
+                    : packet.text !== undefined
+                      ? packet.text
+                      : currentEvent === 'delta'
+                        ? packet.text
+                        : null
 
               if (textDelta) {
                 accumulatedText += textDelta
@@ -398,7 +423,7 @@ export function ChatInterface({
                     createdAt: new Date().toISOString(),
                     modelName: selectedModel.name,
                     modelProvider: selectedModel.provider,
-                    latencyMs: selectedModel.latencyMs || 140,
+                    latencyMs: selectedModel.latencyMs || 140
                   }
                   setMessages((prev) => [...prev, newAssistantMsg])
                 } else {
@@ -434,7 +459,8 @@ export function ChatInterface({
               }
 
               if (currentEvent === 'meta' || packet.type === 'metadata') {
-                const metaSources = packet.sources || packet.messageMetadata?.sources
+                const metaSources =
+                  packet.sources || packet.messageMetadata?.sources
                 if (metaSources && metaSources.length > 0) {
                   setActiveSources(metaSources)
                   setSidePanelTab('sources')
@@ -448,22 +474,38 @@ export function ChatInterface({
                           id: packet.id || msg.id,
                           sources: metaSources || msg.sources,
                           latencyMs: packet.latencyMs || msg.latencyMs,
-                          retrievalLatencyMs: packet.retrievalLatencyMs || msg.retrievalLatencyMs,
-                          generationLatencyMs: packet.generationLatencyMs || msg.generationLatencyMs,
-                          embeddingModel: packet.embeddingModel || msg.embeddingModel || 'gemini-embedding-2',
-                          modelName: packet.modelName || selectedModel.name,
+                          retrievalLatencyMs:
+                            packet.retrievalLatencyMs || msg.retrievalLatencyMs,
+                          generationLatencyMs:
+                            packet.generationLatencyMs ||
+                            msg.generationLatencyMs,
+                          embeddingModel:
+                            packet.embeddingModel ||
+                            msg.embeddingModel ||
+                            'gemini-embedding-2',
+                          modelName: packet.modelName || selectedModel.name
                         }
                       : msg
                   )
                 )
               }
 
-              if (packet.type === 'finish' && packet.messageMetadata?.conversationId) {
+              if (
+                packet.type === 'finish' &&
+                packet.messageMetadata?.conversationId
+              ) {
                 const finishConvId = packet.messageMetadata.conversationId
                 if (finishConvId !== currentConversationId) {
                   setCurrentConversationId(finishConvId)
-                  if (typeof window !== 'undefined' && !window.location.pathname.includes(finishConvId)) {
-                    window.history.replaceState(null, '', `/chat/${finishConvId}`)
+                  if (
+                    typeof window !== 'undefined' &&
+                    !window.location.pathname.includes(finishConvId)
+                  ) {
+                    window.history.replaceState(
+                      null,
+                      '',
+                      `/chat/${finishConvId}`
+                    )
                   }
                 }
               }
@@ -473,7 +515,7 @@ export function ChatInterface({
                   packet.error || 'Error reportado por el modelo de IA.'
                 )
               }
-            } catch (parseErr: any) {
+            } catch (parseErr: unknown) {
               if (trimmed.includes('"error"')) {
                 throw parseErr
               }
@@ -487,10 +529,9 @@ export function ChatInterface({
     } catch (err: unknown) {
       console.error('[CHAT_ERROR]', err)
       const rawErrMsg = getErrorMessage(err)
-      const friendlyMsg =
-        rawErrMsg?.includes('API key')
-          ? rawErrMsg
-          : 'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
+      const friendlyMsg = rawErrMsg?.includes('API key')
+        ? rawErrMsg
+        : 'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
       setError(friendlyMsg)
     } finally {
       setIsLoading(false)
@@ -512,7 +553,10 @@ export function ChatInterface({
         {/* Contenedor Central del Chat */}
         <div className='flex flex-col h-full w-full max-w-4xl mx-auto select-text font-exo flex-1 min-w-0'>
           {/* Scroll de Mensajes con MessageScroller */}
-          <MessageScrollerProvider autoScroll defaultScrollPosition='last-anchor'>
+          <MessageScrollerProvider
+            autoScroll
+            defaultScrollPosition='last-anchor'
+          >
             <MessageScroller className='flex-1 overflow-hidden'>
               <MessageScrollerViewport className='p-4'>
                 <MessageScrollerContent>
@@ -543,9 +587,10 @@ export function ChatInterface({
                   )}
 
                   {/* Indicador de Carga mientras se espera la primera respuesta */}
-                  {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                    <ChatLoadingItem />
-                  )}
+                  {isLoading &&
+                    messages[messages.length - 1]?.role === 'user' && (
+                      <ChatLoadingItem />
+                    )}
 
                   {/* Alerta de Error */}
                   {error && (
@@ -591,7 +636,9 @@ export function ChatInterface({
                 setFeedbackData((prev) => (prev ? { ...prev, type: t } : null))
               }
               initialRating={feedbackData.initialRating}
-              onRatingChange={(r) => handleRateMessage(feedbackData.messageId, r)}
+              onRatingChange={(r) =>
+                handleRateMessage(feedbackData.messageId, r)
+              }
             />
           )}
         </div>

@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 
 interface AdminHeaderProps {
@@ -10,7 +9,7 @@ interface AdminHeaderProps {
 
 export function AdminHeader({
   title = 'Panel de Administración',
-  subtitle = 'Gestión Institucional USS',
+  subtitle = 'Gestión Institucional USS'
 }: AdminHeaderProps) {
   return (
     <header className='relative flex items-center justify-between border-b border-border/40 pb-3 px-4 shrink-0 font-exo'>

@@ -7,14 +7,14 @@ import {
   createPostAction,
   updatePostAction,
   togglePostStatusAction,
-  deletePostAction,
+  deletePostAction
 } from '@/lib/actions/admin-posts'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,7 +31,7 @@ import {
   Calendar,
   Tags,
   Image as ImageIcon,
-  Link2,
+  Link2
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { PostItem, PostStatus } from '@/types'
@@ -49,7 +49,9 @@ interface PostsManagerProps {
 
 export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
   const [posts, setPosts] = React.useState<PostItem[]>(initialPosts)
-  const [statusFilter, setStatusFilter] = React.useState<'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'>('ALL')
+  const [statusFilter, setStatusFilter] = React.useState<
+    'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
+  >('ALL')
 
   // Modal de Crear / Editar
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
@@ -110,7 +112,7 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
           coverImage,
           externalUrl,
           excerpt,
-          content,
+          content
         })
         if (res.success && res.post) {
           setPosts((prev) =>
@@ -128,7 +130,7 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
           coverImage,
           externalUrl,
           excerpt,
-          content,
+          content
         })
         if (res.success && res.post) {
           setPosts((prev) => [res.post, ...prev])
@@ -162,7 +164,9 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar permanentemente esta publicación?')) {
+    if (
+      !confirm('¿Estás seguro de eliminar permanentemente esta publicación?')
+    ) {
       return
     }
 
@@ -190,7 +194,9 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
             Gestión de Publicaciones y Novedades USS
           </h2>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            Crea comunicados oficiales, directivas académicas o enlaces a páginas externas que se mostrarán a los estudiantes en el panel lateral del chat.
+            Crea comunicados oficiales, directivas académicas o enlaces a
+            páginas externas que se mostrarán a los estudiantes en el panel
+            lateral del chat.
           </p>
         </div>
 
@@ -217,9 +223,12 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
               }`}
             >
               {st === 'ALL' && `Todas (${posts.length})`}
-              {st === 'PUBLISHED' && `Publicadas (${posts.filter((p) => p.status === 'PUBLISHED').length})`}
-              {st === 'DRAFT' && `Borradores (${posts.filter((p) => p.status === 'DRAFT').length})`}
-              {st === 'ARCHIVED' && `Archivadas (${posts.filter((p) => p.status === 'ARCHIVED').length})`}
+              {st === 'PUBLISHED' &&
+                `Publicadas (${posts.filter((p) => p.status === 'PUBLISHED').length})`}
+              {st === 'DRAFT' &&
+                `Borradores (${posts.filter((p) => p.status === 'DRAFT').length})`}
+              {st === 'ARCHIVED' &&
+                `Archivadas (${posts.filter((p) => p.status === 'ARCHIVED').length})`}
             </button>
           ))}
         </div>
@@ -229,8 +238,12 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
       {filteredPosts.length === 0 ? (
         <div className='rounded-3xl border border-border/80 bg-card p-12 text-center text-xs text-muted-foreground space-y-2'>
           <Newspaper className='w-8 h-8 mx-auto text-muted-foreground/50' />
-          <p className='font-semibold text-foreground text-sm'>No se encontraron publicaciones</p>
-          <p className='text-xs'>Crea una nueva publicación para comunicar novedades institucionales.</p>
+          <p className='font-semibold text-foreground text-sm'>
+            No se encontraron publicaciones
+          </p>
+          <p className='text-xs'>
+            Crea una nueva publicación para comunicar novedades institucionales.
+          </p>
         </div>
       ) : (
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -267,15 +280,18 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
                           post.status === 'PUBLISHED'
                             ? 'default'
                             : post.status === 'DRAFT'
-                            ? 'secondary'
-                            : 'outline'
+                              ? 'secondary'
+                              : 'outline'
                         }
                         className='text-[9px] font-mono py-0'
                       >
                         {post.status}
                       </Badge>
                       {isExternal && (
-                        <Badge variant='secondary' className='text-[9px] gap-1 py-0'>
+                        <Badge
+                          variant='secondary'
+                          className='text-[9px] gap-1 py-0'
+                        >
                           <Link2 className='w-2.5 h-2.5' /> Enlace Externo
                         </Badge>
                       )}
@@ -283,10 +299,12 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
 
                     <span className='text-[11px] text-muted-foreground flex items-center gap-1'>
                       <Calendar className='w-3 h-3' />
-                      {new Date(post.publishedAt || post.createdAt).toLocaleDateString('es-PE', {
+                      {new Date(
+                        post.publishedAt || post.createdAt
+                      ).toLocaleDateString('es-PE', {
                         day: '2-digit',
                         month: 'short',
-                        year: 'numeric',
+                        year: 'numeric'
                       })}
                     </span>
                   </div>
@@ -361,7 +379,8 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
               {editingPost ? 'Editar Publicación' : 'Crear Nueva Publicación'}
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Redacta comunicados oficiales, convocatorias o define enlaces de redirección a páginas externas.
+              Redacta comunicados oficiales, convocatorias o define enlaces de
+              redirección a páginas externas.
             </DialogDescription>
           </DialogHeader>
 
@@ -382,7 +401,10 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
 
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div className='space-y-1.5'>
-                <Label htmlFor='postCategory' className='text-xs font-semibold flex items-center gap-1'>
+                <Label
+                  htmlFor='postCategory'
+                  className='text-xs font-semibold flex items-center gap-1'
+                >
                   <Tags className='w-3 h-3 text-primary' /> Categoría
                 </Label>
                 <select
@@ -419,8 +441,12 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
 
             {/* Enlace Externo de Redirección */}
             <div className='space-y-1.5'>
-              <Label htmlFor='postExternalUrl' className='text-xs font-semibold flex items-center gap-1'>
-                <Link2 className='w-3 h-3 text-primary' /> Enlace Externo / URL de Redirección (Opcional)
+              <Label
+                htmlFor='postExternalUrl'
+                className='text-xs font-semibold flex items-center gap-1'
+              >
+                <Link2 className='w-3 h-3 text-primary' /> Enlace Externo / URL
+                de Redirección (Opcional)
               </Label>
               <Input
                 id='postExternalUrl'
@@ -430,7 +456,8 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
                 className='rounded-xl text-xs font-mono'
               />
               <p className='text-[11px] text-muted-foreground'>
-                Si se define, los estudiantes serán redirigidos a esta web externa al hacer clic en el card.
+                Si se define, los estudiantes serán redirigidos a esta web
+                externa al hacer clic en el card.
               </p>
             </div>
 
@@ -448,8 +475,12 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
             </div>
 
             <div className='space-y-1.5'>
-              <Label htmlFor='postImage' className='text-xs font-semibold flex items-center gap-1'>
-                <ImageIcon className='w-3 h-3 text-primary' /> Imagen de Portada (Opcional)
+              <Label
+                htmlFor='postImage'
+                className='text-xs font-semibold flex items-center gap-1'
+              >
+                <ImageIcon className='w-3 h-3 text-primary' /> Imagen de Portada
+                (Opcional)
               </Label>
               <Input
                 id='postImage'
@@ -489,7 +520,11 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
                 disabled={isSubmitting}
                 className='rounded-xl text-xs font-semibold'
               >
-                {isSubmitting ? 'Guardando...' : editingPost ? 'Actualizar Post' : 'Publicar Post'}
+                {isSubmitting
+                  ? 'Guardando...'
+                  : editingPost
+                    ? 'Actualizar Post'
+                    : 'Publicar Post'}
               </Button>
             </div>
           </form>

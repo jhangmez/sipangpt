@@ -4,7 +4,7 @@ import * as React from 'react'
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
+  PopoverTrigger
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Smile, ChevronDown } from 'lucide-react'
@@ -17,20 +17,20 @@ interface IconPickerProps {
 const ICON_CATEGORIES = [
   {
     name: 'Trámites y Matrícula',
-    icons: ['📋', '📝', '📑', '📄', '📂', '📁', '📅', '🗓️', '⏰', '💳'],
+    icons: ['📋', '📝', '📑', '📄', '📂', '📁', '📅', '🗓️', '⏰', '💳']
   },
   {
     name: 'Académico y Universidad',
-    icons: ['🎓', '🏛️', '🏫', '📚', '📖', '💡', '🎯', '👨‍🎓', '👩‍🎓', '🎖️'],
+    icons: ['🎓', '🏛️', '🏫', '📚', '📖', '💡', '🎯', '👨‍🎓', '👩‍🎓', '🎖️']
   },
   {
     name: 'Reglamentos y Legal',
-    icons: ['⚖️', '📜', '🔒', '🛡️', '📌', '🔍', '🔎', '✅', '⚠️', 'ℹ️'],
+    icons: ['⚖️', '📜', '🔒', '🛡️', '📌', '🔍', '🔎', '✅', '⚠️', 'ℹ️']
   },
   {
     name: 'Carreras y Tecnología',
-    icons: ['💻', '🖥️', '⚡', '🤖', '🚀', '🌐', '🔬', '🎨', '💼', '📊'],
-  },
+    icons: ['💻', '🖥️', '⚡', '🤖', '🚀', '🌐', '🔬', '🎨', '💼', '📊']
+  }
 ]
 
 export function IconPicker({ value, onChange }: IconPickerProps) {
@@ -55,7 +55,10 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           </Button>
         }
       />
-      <PopoverContent className='w-72 p-3 font-exo rounded-2xl border border-border/80 shadow-xl' align='start'>
+      <PopoverContent
+        className='w-72 p-3 font-exo rounded-2xl border border-border/80 shadow-xl'
+        align='start'
+      >
         <div className='space-y-3'>
           <div className='flex items-center justify-between border-b border-border/40 pb-2'>
             <span className='text-xs font-bold text-foreground flex items-center gap-1.5'>

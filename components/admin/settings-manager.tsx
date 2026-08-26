@@ -12,16 +12,17 @@ import {
   Sparkles,
   Save,
   RefreshCw,
-  CheckCircle2,
+  CheckCircle2
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { getErrorMessage } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import {
   updateSystemSettingsAction,
-  type SystemSettingsData,
+  type SystemSettingsData
 } from '@/lib/actions/admin-settings'
 
 interface SettingsManagerProps {
@@ -29,7 +30,8 @@ interface SettingsManagerProps {
 }
 
 export function SettingsManager({ initialSettings }: SettingsManagerProps) {
-  const [settings, setSettings] = React.useState<SystemSettingsData>(initialSettings)
+  const [settings, setSettings] =
+    React.useState<SystemSettingsData>(initialSettings)
   const [isSaving, setIsSaving] = React.useState(false)
   const [hasChanges, setHasChanges] = React.useState(false)
 
@@ -55,7 +57,7 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
         maxDailyTokensPerUser: Number(settings.maxDailyTokensPerUser),
         maxPromptChars: Number(settings.maxPromptChars),
         enableVoiceInput: settings.enableVoiceInput,
-        maintenanceMode: settings.maintenanceMode,
+        maintenanceMode: settings.maintenanceMode
       })
 
       if (res.success) {
@@ -64,8 +66,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
       } else {
         toast.error(res.message)
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al guardar la configuración')
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al guardar la configuración')
     } finally {
       setIsSaving(false)
     }
@@ -81,7 +83,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             Políticas de Búsqueda y Capacidades de IA
           </h1>
           <p className='text-xs text-muted-foreground mt-1'>
-            Controla qué herramientas de recuperación y grounding tienen permitidas los modelos de IA al responder.
+            Controla qué herramientas de recuperación y grounding tienen
+            permitidas los modelos de IA al responder.
           </p>
         </div>
 
@@ -107,7 +110,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             Fuentes de Recuperación e Información Externa
           </h2>
           <p className='text-xs text-muted-foreground'>
-            Habilita o restringe las fuentes de información autorizadas para los modelos de SipánGPT.
+            Habilita o restringe las fuentes de información autorizadas para los
+            modelos de SipánGPT.
           </p>
         </div>
 
@@ -123,12 +127,17 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
                   <span className='font-bold text-sm text-foreground'>
                     Búsqueda Vectorial RAG (Documentos USS)
                   </span>
-                  <Badge variant='outline' className='text-[10px] text-emerald-600 bg-emerald-500/10 border-emerald-500/30'>
+                  <Badge
+                    variant='outline'
+                    className='text-[10px] text-emerald-600 bg-emerald-500/10 border-emerald-500/30'
+                  >
                     Recomendado por Defecto
                   </Badge>
                 </div>
                 <p className='text-xs text-muted-foreground leading-relaxed'>
-                  Permite al asistente buscar semánticamente dentro de los reglamentos, mallas curriculares y resoluciones oficiales indexadas en la base de datos Neon.
+                  Permite al asistente buscar semánticamente dentro de los
+                  reglamentos, mallas curriculares y resoluciones oficiales
+                  indexadas en la base de datos Neon.
                 </p>
               </div>
             </div>
@@ -155,7 +164,10 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
                   </Badge>
                 </div>
                 <p className='text-xs text-muted-foreground leading-relaxed'>
-                  Si se habilita, los modelos de Gemini podrán consultar noticias externas e internet público. Si está deshabilitado, el modelo solo responde basándose en el conocimiento institucional.
+                  Si se habilita, los modelos de Gemini podrán consultar
+                  noticias externas e internet público. Si está deshabilitado,
+                  el modelo solo responde basándose en el conocimiento
+                  institucional.
                 </p>
               </div>
             </div>
@@ -182,7 +194,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
                   </Badge>
                 </div>
                 <p className='text-xs text-muted-foreground leading-relaxed'>
-                  Permite resolver consultas de geolocalización, rutas, sedes físicas y campus de la USS a través de la API de Maps.
+                  Permite resolver consultas de geolocalización, rutas, sedes
+                  físicas y campus de la USS a través de la API de Maps.
                 </p>
               </div>
             </div>
@@ -204,18 +217,25 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
                   <span className='font-bold text-sm text-foreground'>
                     Análisis Multimodal de Archivos e Imágenes
                   </span>
-                  <Badge variant='outline' className='text-[10px] text-purple-600 bg-purple-500/10 border-purple-500/30'>
+                  <Badge
+                    variant='outline'
+                    className='text-[10px] text-purple-600 bg-purple-500/10 border-purple-500/30'
+                  >
                     Activo
                   </Badge>
                 </div>
                 <p className='text-xs text-muted-foreground leading-relaxed'>
-                  Permite a los usuarios adjuntar capturas, fotografías de formularios y documentos PDF para que la IA los analice visualmente.
+                  Permite a los usuarios adjuntar capturas, fotografías de
+                  formularios y documentos PDF para que la IA los analice
+                  visualmente.
                 </p>
               </div>
             </div>
             <Switch
               checked={settings.enableImageAnalysis}
-              onCheckedChange={(val) => handleChange('enableImageAnalysis', val)}
+              onCheckedChange={(val) =>
+                handleChange('enableImageAnalysis', val)
+              }
               className='shrink-0'
             />
           </div>
@@ -234,7 +254,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             </Badge>
           </div>
           <p className='text-xs text-muted-foreground mt-1'>
-            Controla qué tan estricta debe ser la coincidencia entre la pregunta del usuario y los fragmentos de reglamentos para ser citados.
+            Controla qué tan estricta debe ser la coincidencia entre la pregunta
+            del usuario y los fragmentos de reglamentos para ser citados.
           </p>
         </div>
 
@@ -258,7 +279,9 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             />
           </div>
           <p className='text-[11px] text-muted-foreground'>
-            Fragmentos con score inferior a <strong>{Math.round(settings.minSimilarityScore * 100)}%</strong> no serán inyectados en el contexto para prevenir alucinaciones.
+            Fragmentos con score inferior a{' '}
+            <strong>{Math.round(settings.minSimilarityScore * 100)}%</strong> no
+            serán inyectados en el contexto para prevenir alucinaciones.
           </p>
         </div>
       </div>
@@ -271,7 +294,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             Límites de Uso y Cuotas de Tokens
           </h2>
           <p className='text-xs text-muted-foreground'>
-            Previene abusos y sobrecostos en las APIs de Gemini fijando límites diarios por usuario.
+            Previene abusos y sobrecostos en las APIs de Gemini fijando límites
+            diarios por usuario.
           </p>
         </div>
 
@@ -283,7 +307,12 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             <Input
               type='number'
               value={settings.maxDailyTokensPerUser}
-              onChange={(e) => handleChange('maxDailyTokensPerUser', parseInt(e.target.value) || 0)}
+              onChange={(e) =>
+                handleChange(
+                  'maxDailyTokensPerUser',
+                  parseInt(e.target.value) || 0
+                )
+              }
               className='rounded-xl text-xs font-mono'
             />
             <span className='text-[10px] text-muted-foreground'>
@@ -298,7 +327,9 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
             <Input
               type='number'
               value={settings.maxPromptChars}
-              onChange={(e) => handleChange('maxPromptChars', parseInt(e.target.value) || 0)}
+              onChange={(e) =>
+                handleChange('maxPromptChars', parseInt(e.target.value) || 0)
+              }
               className='rounded-xl text-xs font-mono'
             />
             <span className='text-[10px] text-muted-foreground'>

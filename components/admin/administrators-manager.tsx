@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import {
   createAdminInvitation,
   revokeAdminInvitation,
-  removeAdminRole,
+  removeAdminRole
 } from '@/lib/actions/admin-invitations'
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +30,7 @@ import {
   Mail,
   UserX,
   Link as LinkIcon,
-  ShieldAlert,
+  ShieldAlert
 } from 'lucide-react'
 import { isInitialAdminEmail } from '@/constants/admin'
 import { getErrorMessage } from '@/lib/utils'
@@ -43,16 +43,19 @@ interface AdministratorsManagerProps {
 
 export function AdministratorsManager({
   initialAdmins,
-  initialInvitations,
+  initialInvitations
 }: AdministratorsManagerProps) {
   const [admins, setAdmins] = React.useState<AdminUserItem[]>(initialAdmins)
-  const [invitations, setInvitations] = React.useState<AdminInvitationItem[]>(initialInvitations)
+  const [invitations, setInvitations] =
+    React.useState<AdminInvitationItem[]>(initialInvitations)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [email, setEmail] = React.useState('')
   const [daysValid, setDaysValid] = React.useState(7)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [copiedLink, setCopiedLink] = React.useState(false)
-  const [createdInviteLink, setCreatedInviteLink] = React.useState<string | null>(null)
+  const [createdInviteLink, setCreatedInviteLink] = React.useState<
+    string | null
+  >(null)
 
   const getInviteUrl = (token: string) => {
     if (typeof window !== 'undefined') {
@@ -85,9 +88,9 @@ export function AdministratorsManager({
         setInvitations((prev) => [
           {
             ...res.invitation,
-            invitedBy: null,
+            invitedBy: null
           } as AdminInvitationItem,
-          ...prev.filter((i) => i.id !== res.invitation.id),
+          ...prev.filter((i) => i.id !== res.invitation.id)
         ])
         toast.success('Invitación y pre-registro generados exitosamente')
       }
@@ -116,7 +119,11 @@ export function AdministratorsManager({
       return
     }
 
-    if (!confirm(`¿Estás seguro de revocar el rol de administrador a ${adminEmail}?`)) {
+    if (
+      !confirm(
+        `¿Estás seguro de revocar el rol de administrador a ${adminEmail}?`
+      )
+    ) {
       return
     }
 
@@ -139,7 +146,9 @@ export function AdministratorsManager({
             Equipo de Administradores
           </h2>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            Gestiona los administradores actuales y genera invitaciones con enlace único o pre-registro automático para nuevos colaboradores institucionales.
+            Gestiona los administradores actuales y genera invitaciones con
+            enlace único o pre-registro automático para nuevos colaboradores
+            institucionales.
           </p>
         </div>
 
@@ -166,12 +175,17 @@ export function AdministratorsManager({
                 Generar Invitación de Administrador
               </DialogTitle>
               <DialogDescription className='text-xs text-muted-foreground'>
-                Crea un enlace único y un pre-registro. Al autenticarse con este correo, el usuario recibirá automáticamente el rol de Administrador.
+                Crea un enlace único y un pre-registro. Al autenticarse con este
+                correo, el usuario recibirá automáticamente el rol de
+                Administrador.
               </DialogDescription>
             </DialogHeader>
 
             {!createdInviteLink ? (
-              <form onSubmit={handleCreateInvitation} className='space-y-4 pt-2'>
+              <form
+                onSubmit={handleCreateInvitation}
+                className='space-y-4 pt-2'
+              >
                 <div className='space-y-2'>
                   <Label htmlFor='adminEmail' className='text-xs font-semibold'>
                     Correo Institucional
@@ -229,7 +243,8 @@ export function AdministratorsManager({
                     ¡Invitación y Pre-registro Creados!
                   </p>
                   <p className='text-muted-foreground text-[11px] leading-relaxed'>
-                    Comparte este enlace con el destinatario o pídele que inicie sesión con su cuenta institucional ({email}):
+                    Comparte este enlace con el destinatario o pídele que inicie
+                    sesión con su cuenta institucional ({email}):
                   </p>
                   <div className='flex items-center gap-2 pt-1'>
                     <Input
@@ -285,11 +300,13 @@ export function AdministratorsManager({
         <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
           {admins.map((admin) => {
             const isInitial = isInitialAdminEmail(admin.email)
-            const dateStr = new Date(admin.createdAt).toLocaleDateString('es-PE', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })
+            const dateStr = admin.createdAt
+              ? new Date(admin.createdAt).toLocaleDateString('es-PE', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : 'Reciente'
 
             return (
               <div
@@ -297,31 +314,24 @@ export function AdministratorsManager({
                 className='rounded-2xl border border-border/70 p-4 space-y-3 bg-card/60 flex flex-col justify-between'
               >
                 <div className='flex items-center gap-3'>
-                  <Avatar className='h-10 w-10 rounded-2xl border border-border shrink-0'>
-                    <AvatarImage src={admin.image || undefined} alt={admin.name || 'Admin'} />
-                    <AvatarFallback className='rounded-2xl font-exo text-xs font-semibold bg-primary/10 text-primary'>
-                      {admin.name ? admin.name.slice(0, 2).toUpperCase() : 'USS'}
+                  <Avatar className='h-10 w-10 border border-border/80'>
+                    <AvatarImage src={admin.image || undefined} />
+                    <AvatarFallback className='bg-primary/10 text-primary font-bold text-xs'>
+                      {admin.name?.charAt(0)?.toUpperCase() || 'A'}
                     </AvatarFallback>
                   </Avatar>
-                  <div className='min-w-0 flex-1'>
-                    <div className='flex items-center gap-2'>
-                      <p className='truncate text-xs font-bold text-foreground'>
-                        {admin.name || 'Administrador'}
-                      </p>
-                      {isInitial && (
-                        <Badge variant='default' className='text-[8px] py-0 px-1.5 font-bold uppercase'>
-                          Principal
-                        </Badge>
-                      )}
-                    </div>
-                    <p className='truncate text-[11px] text-muted-foreground'>
+                  <div className='min-w-0 flex-1 space-y-0.5'>
+                    <p className='text-xs font-bold text-foreground truncate'>
+                      {admin.name || 'Sin nombre registrado'}
+                    </p>
+                    <p className='text-[11px] text-muted-foreground truncate'>
                       {admin.email}
                     </p>
                   </div>
                 </div>
 
-                <div className='flex items-center justify-between pt-2 border-t border-border/30 text-[11px] text-muted-foreground'>
-                  <span>Desde: {dateStr}</span>
+                <div className='flex items-center justify-between pt-2 border-t border-border/40 text-[11px] text-muted-foreground'>
+                  <span>Alta: {dateStr}</span>
                   {!isInitial && (
                     <Button
                       variant='ghost'
@@ -351,8 +361,12 @@ export function AdministratorsManager({
         {invitations.length === 0 ? (
           <div className='py-8 text-center text-xs text-muted-foreground space-y-1'>
             <Mail className='w-6 h-6 mx-auto text-muted-foreground/60 mb-2' />
-            <p className='font-semibold text-foreground'>No hay invitaciones registradas</p>
-            <p className='text-[11px]'>Genera un enlace para añadir nuevos administradores al sistema.</p>
+            <p className='font-semibold text-foreground'>
+              No hay invitaciones registradas
+            </p>
+            <p className='text-[11px]'>
+              Genera un enlace para añadir nuevos administradores al sistema.
+            </p>
           </div>
         ) : (
           <div className='space-y-2.5'>
@@ -363,11 +377,13 @@ export function AdministratorsManager({
               const isExpired = inv.status === 'EXPIRED'
               const isRevoked = inv.status === 'REVOKED'
 
-              const expiresDate = new Date(inv.expiresAt).toLocaleDateString('es-PE', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })
+              const expiresDate = inv.expiresAt
+                ? new Date(inv.expiresAt).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : 'Sin fecha'
 
               return (
                 <div
@@ -380,28 +396,43 @@ export function AdministratorsManager({
                         {inv.email}
                       </span>
                       {isPending && (
-                        <Badge variant='outline' className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[9px] py-0'>
+                        <Badge
+                          variant='outline'
+                          className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[9px] py-0'
+                        >
                           Pendiente / Pre-registro
                         </Badge>
                       )}
                       {isAccepted && (
-                        <Badge variant='outline' className='border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[9px] py-0'>
+                        <Badge
+                          variant='outline'
+                          className='border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[9px] py-0'
+                        >
                           Aceptada
                         </Badge>
                       )}
                       {isExpired && (
-                        <Badge variant='outline' className='border-muted-foreground/40 text-muted-foreground text-[9px] py-0'>
+                        <Badge
+                          variant='outline'
+                          className='border-muted-foreground/40 text-muted-foreground text-[9px] py-0'
+                        >
                           Expirada
                         </Badge>
                       )}
                       {isRevoked && (
-                        <Badge variant='outline' className='border-rose-500/40 text-rose-600 bg-rose-500/10 text-[9px] py-0'>
+                        <Badge
+                          variant='outline'
+                          className='border-rose-500/40 text-rose-600 bg-rose-500/10 text-[9px] py-0'
+                        >
                           Cancelada
                         </Badge>
                       )}
                     </div>
                     <p className='text-[11px] text-muted-foreground'>
-                      Vence: {expiresDate} {inv.invitedBy?.email ? `• Creada por ${inv.invitedBy.email}` : ''}
+                      Vence: {expiresDate}{' '}
+                      {inv.invitedBy?.email
+                        ? `• Creada por ${inv.invitedBy.email}`
+                        : ''}
                     </p>
                   </div>
 

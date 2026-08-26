@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import {
   toggleUserMemory,
   deleteUserMemory,
-  createUserMemory,
+  createUserMemory
 } from '@/lib/actions/user-settings'
 import {
   Dialog,
@@ -13,14 +13,21 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Brain, Plus, Trash2, Sparkles, AlertCircle, ShieldCheck } from 'lucide-react'
+import {
+  Brain,
+  Plus,
+  Trash2,
+  Sparkles,
+  AlertCircle,
+  ShieldCheck
+} from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 
 interface UserMemoryItem {
@@ -36,7 +43,8 @@ interface MemoriesManagerProps {
 }
 
 export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
-  const [memories, setMemories] = React.useState<UserMemoryItem[]>(initialMemories)
+  const [memories, setMemories] =
+    React.useState<UserMemoryItem[]>(initialMemories)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [newFact, setNewFact] = React.useState('')
   const [newCategory, setNewCategory] = React.useState('academico')
@@ -101,14 +109,19 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
             Memoria Personalizada de SipánGPT
           </h3>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            SipánGPT recuerda datos académicos y preferencias que le proporciones para adaptar sus respuestas sin tener que repetirlas en cada conversación.
+            SipánGPT recuerda datos académicos y preferencias que le
+            proporciones para adaptar sus respuestas sin tener que repetirlas en
+            cada conversación.
           </p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger
             render={
-              <Button size='sm' className='gap-1.5 rounded-xl text-xs shrink-0 cursor-pointer'>
+              <Button
+                size='sm'
+                className='gap-1.5 rounded-xl text-xs shrink-0 cursor-pointer'
+              >
                 <Plus className='w-4 h-4' /> Agregar Recuerdo
               </Button>
             }
@@ -119,7 +132,8 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
                 Nuevo Recuerdo de Usuario
               </DialogTitle>
               <DialogDescription className='text-xs text-muted-foreground'>
-                Ingresa un dato sobre tu carrera, ciclo o intereses para que SipánGPT lo tenga en cuenta en futuras consultas.
+                Ingresa un dato sobre tu carrera, ciclo o intereses para que
+                SipánGPT lo tenga en cuenta en futuras consultas.
               </DialogDescription>
             </DialogHeader>
 
@@ -148,7 +162,9 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
                   onChange={(e) => setNewCategory(e.target.value)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-exo text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
                 >
-                  <option value='academico'>Académico (Carrera, Ciclo, Modalidad)</option>
+                  <option value='academico'>
+                    Académico (Carrera, Ciclo, Modalidad)
+                  </option>
                   <option value='preferencia'>Preferencia de Respuesta</option>
                   <option value='tramite'>Trámites de Interés</option>
                   <option value='general'>General</option>
@@ -186,7 +202,8 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
               Aún no tienes recuerdos registrados
             </p>
             <p className='text-[11px] text-muted-foreground max-w-sm mx-auto'>
-              Agrega tu carrera o ciclo actual para que SipánGPT te brinde información precisa en trámites y asignaturas.
+              Agrega tu carrera o ciclo actual para que SipánGPT te brinde
+              información precisa en trámites y asignaturas.
             </p>
           </div>
         ) : (
@@ -201,11 +218,16 @@ export function MemoriesManager({ initialMemories }: MemoriesManagerProps) {
             >
               <div className='space-y-1 min-w-0 flex-1'>
                 <div className='flex items-center gap-2'>
-                  <Badge variant='outline' className='text-[9px] uppercase font-bold py-0'>
+                  <Badge
+                    variant='outline'
+                    className='text-[9px] uppercase font-bold py-0'
+                  >
                     {mem.category || 'general'}
                   </Badge>
                   {!mem.isActive && (
-                    <span className='text-[10px] text-muted-foreground'>(Pausado)</span>
+                    <span className='text-[10px] text-muted-foreground'>
+                      (Pausado)
+                    </span>
                   )}
                 </div>
                 <p className='text-xs font-medium text-foreground leading-relaxed'>

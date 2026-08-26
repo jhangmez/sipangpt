@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import * as React from 'react'
+
 import { getAuthenticatedUser } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
@@ -9,7 +9,8 @@ import type { UserProfileData } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Perfil de Usuario • Configuraciones',
-  description: 'Gestiona tu perfil, datos de estudiante USS, validación de correo electrónico y contraseña en SipánGPT.',
+  description:
+    'Gestiona tu perfil, datos de estudiante USS, validación de correo electrónico y contraseña en SipánGPT.'
 }
 
 interface UsuarioSettingsPageProps {
@@ -19,7 +20,7 @@ interface UsuarioSettingsPageProps {
 }
 
 export default async function UsuarioSettingsPage({
-  searchParams,
+  searchParams
 }: UsuarioSettingsPageProps) {
   const authUser = await getAuthenticatedUser()
   if (!authUser) redirect('/login')
@@ -47,8 +48,8 @@ export default async function UsuarioSettingsPage({
       role: true,
       emailVerified: true,
       password: true,
-      createdAt: true,
-    },
+      createdAt: true
+    }
   })
 
   if (!user) redirect('/login')
@@ -63,7 +64,7 @@ export default async function UsuarioSettingsPage({
     role: user.role,
     emailVerified: user.emailVerified,
     hasPassword: !!user.password,
-    createdAt: user.createdAt,
+    createdAt: user.createdAt
   }
 
   return (
@@ -73,7 +74,8 @@ export default async function UsuarioSettingsPage({
           Perfil de Usuario
         </h1>
         <p className='text-xs text-muted-foreground'>
-          Gestiona tu identidad, afiliación institucional, validación de correo y credenciales de acceso.
+          Gestiona tu identidad, afiliación institucional, validación de correo
+          y credenciales de acceso.
         </p>
       </div>
 

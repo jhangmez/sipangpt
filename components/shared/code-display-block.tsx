@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import * as React from 'react'
 import { Check, Copy } from 'lucide-react'
@@ -6,7 +6,11 @@ import { toast } from 'sonner'
 import type { CodeBlockProps } from '@/types/chat'
 import { cn } from '@/lib/utils'
 
-export function CodeDisplayBlock({ code, lang = 'tsx', title }: CodeBlockProps) {
+export function CodeDisplayBlock({
+  code,
+  lang = 'tsx',
+  title
+}: CodeBlockProps) {
   const [isCopied, setIsCopied] = React.useState(false)
 
   const copyToClipboard = async () => {

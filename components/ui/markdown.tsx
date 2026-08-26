@@ -97,10 +97,10 @@ const CodeBlockContent: React.FC<{
 
 // Bloque de Código Principal
 const CodeBlock: React.FC<{
-  node?: any
+  node?: unknown
   inline?: boolean
   className?: string
-  children: React.ReactNode
+  children?: React.ReactNode
   theme: string
   showLineNumbers: boolean
 }> = ({ className, children, theme, showLineNumbers = false }) => {
@@ -116,7 +116,7 @@ const CodeBlock: React.FC<{
       return childNodes.map((child) => extractTextContent(child)).join('')
     }
     if (React.isValidElement(childNodes)) {
-      return extractTextContent((childNodes.props as any)?.children)
+      return extractTextContent((childNodes.props as { children?: React.ReactNode })?.children)
     }
     return ''
   }
@@ -387,20 +387,20 @@ export function MarkdownRenderer({
 
   const components = useMemo(
     () => ({
-      code: (props: any) => (
+      code: (props: React.HTMLAttributes<HTMLElement> & { inline?: boolean; node?: unknown }) => (
         <CodeBlock
           {...props}
           theme={codeTheme}
           showLineNumbers={showLineNumbers}
         />
       ),
-      a: (props: any) => {
+      a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { node?: unknown }) => {
         const { href = '', children } = props
-        const isDownload = href.match(/\.(pdf|doc|docx|zip|rar|tar|gz)$/i)
+        const isDownload = Boolean(href.match(/\.(pdf|doc|docx|zip|rar|tar|gz)$/i))
         const isExternal = href.startsWith('http') || href.startsWith('https')
         const isInternal = href.startsWith('#')
 
-        const handleClick = (event: React.MouseEvent) => {
+        const handleClick = (event: React.MouseEvent<Element>) => {
           if (isDownload && onDownloadClick) {
             event.preventDefault()
             onDownloadClick(href, href.split('/').pop() || 'documento')
@@ -429,41 +429,59 @@ export function MarkdownRenderer({
           </LinkRenderer>
         )
       },
-      p: (props: any) => <p {...props} className='mb-2.5 last:mb-0 leading-relaxed font-exo' />,
-      h1: (props: any) => (
+      p: (props: React.HTMLAttributes<HTMLParagraphElement> & { node?: unknown }) => (
+        <p {...props} className='mb-2.5 last:mb-0 leading-relaxed font-exo' />
+      ),
+      h1: (props: React.HTMLAttributes<HTMLHeadingElement> & { node?: unknown }) => (
         <h1 {...props} className='font-frances text-xl font-bold text-foreground mt-4 mb-2 first:mt-0 tracking-tight' />
       ),
-      h2: (props: any) => (
+      h2: (props: React.HTMLAttributes<HTMLHeadingElement> & { node?: unknown }) => (
         <h2 {...props} className='font-frances text-lg font-semibold text-foreground mt-3.5 mb-1.5 first:mt-0' />
       ),
-      h3: (props: any) => (
+      h3: (props: React.HTMLAttributes<HTMLHeadingElement> & { node?: unknown }) => (
         <h3 {...props} className='font-frances text-base font-semibold text-foreground mt-3 mb-1 first:mt-0' />
       ),
-      ul: (props: any) => <ul {...props} className='my-2 list-disc list-inside space-y-1 pl-1 font-exo' />,
-      ol: (props: any) => <ol {...props} className='my-2 list-decimal list-inside space-y-1 pl-1 font-exo' />,
-      li: (props: any) => <li {...props} className='leading-relaxed' />,
-      table: (props: any) => (
+      ul: (props: React.HTMLAttributes<HTMLUListElement> & { node?: unknown }) => (
+        <ul {...props} className='my-2 list-disc list-inside space-y-1 pl-1 font-exo' />
+      ),
+      ol: (props: React.HTMLAttributes<HTMLOListElement> & { node?: unknown }) => (
+        <ol {...props} className='my-2 list-decimal list-inside space-y-1 pl-1 font-exo' />
+      ),
+      li: (props: React.LiHTMLAttributes<HTMLLIElement> & { node?: unknown }) => (
+        <li {...props} className='leading-relaxed' />
+      ),
+      table: (props: React.TableHTMLAttributes<HTMLTableElement> & { node?: unknown }) => (
         <div className='my-3 overflow-x-auto rounded-xl border border-border/80 shadow-xs'>
           <table {...props} className='min-w-full divide-y divide-border/60 text-xs font-exo' />
         </div>
       ),
-      thead: (props: any) => <thead {...props} className='bg-muted/70' />,
-      tbody: (props: any) => <tbody {...props} className='divide-y divide-border/40 bg-card/40' />,
-      tr: (props: any) => <tr {...props} className='hover:bg-muted/30 transition-colors' />,
-      th: (props: any) => (
+      thead: (props: React.HTMLAttributes<HTMLTableSectionElement> & { node?: unknown }) => (
+        <thead {...props} className='bg-muted/70' />
+      ),
+      tbody: (props: React.HTMLAttributes<HTMLTableSectionElement> & { node?: unknown }) => (
+        <tbody {...props} className='divide-y divide-border/40 bg-card/40' />
+      ),
+      tr: (props: React.HTMLAttributes<HTMLTableRowElement> & { node?: unknown }) => (
+        <tr {...props} className='hover:bg-muted/30 transition-colors' />
+      ),
+      th: (props: React.ThHTMLAttributes<HTMLTableCellElement> & { node?: unknown }) => (
         <th
           {...props}
           className='px-3.5 py-2 text-left font-bold text-foreground uppercase tracking-wider text-[11px]'
         />
       ),
-      td: (props: any) => <td {...props} className='px-3.5 py-2 text-muted-foreground' />,
-      blockquote: (props: any) => (
+      td: (props: React.TdHTMLAttributes<HTMLTableCellElement> & { node?: unknown }) => (
+        <td {...props} className='px-3.5 py-2 text-muted-foreground' />
+      ),
+      blockquote: (props: React.BlockquoteHTMLAttributes<HTMLQuoteElement> & { node?: unknown }) => (
         <blockquote
           {...props}
           className='my-2.5 rounded-r-xl border-l-4 border-primary bg-primary/5 px-4 py-2 text-xs italic text-muted-foreground font-exo'
         />
       ),
-      hr: (props: any) => <hr {...props} className='my-3 border-border/60' />,
+      hr: (props: React.HTMLAttributes<HTMLHRElement> & { node?: unknown }) => (
+        <hr {...props} className='my-3 border-border/60' />
+      ),
     }),
     [codeTheme, showLineNumbers, linkTarget, onLinkClick, onDownloadClick]
   )

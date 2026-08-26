@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 
 interface SettingsHeaderProps {
@@ -10,7 +9,7 @@ interface SettingsHeaderProps {
 
 export function SettingsHeader({
   title = 'Configuraciones',
-  subtitle = 'Cuenta y Preferencias USS',
+  subtitle = 'Cuenta y Preferencias USS'
 }: SettingsHeaderProps) {
   return (
     <header className='relative flex items-center justify-between border-b border-border/40 pb-3 px-4 shrink-0 font-exo'>

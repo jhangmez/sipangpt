@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import {
   Newspaper,
   BookOpen,
@@ -12,7 +11,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ArrowLeft,
-  Search,
+  Search
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,7 +33,7 @@ export function ChatSidePanel({
   activeTab = 'posts',
   onTabChange,
   isOpen = true,
-  onToggleOpen,
+  onToggleOpen
 }: ChatSidePanelProps) {
   const isShowingSources = activeTab === 'sources' && activeSources.length > 0
 
@@ -227,7 +226,7 @@ export function ChatSidePanel({
                         post.publishedAt || post.createdAt
                       ).toLocaleDateString('es-PE', {
                         day: '2-digit',
-                        month: 'short',
+                        month: 'short'
                       })}
                     </span>
                   </div>

@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 
 interface ChatErrorAlertProps {

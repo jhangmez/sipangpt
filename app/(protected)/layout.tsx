@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import { requireAuth } from '@/lib/session'
 
 export default async function ProtectedLayout({

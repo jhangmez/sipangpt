@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import * as React from 'react'
+
 import { getAuthenticatedUser } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import { getUserMemories } from '@/lib/actions/user-settings'
@@ -7,7 +7,8 @@ import { MemoriesManager } from '@/components/configuraciones/memories-manager'
 
 export const metadata: Metadata = {
   title: 'Memorias y Recuerdos • Configuraciones',
-  description: 'Gestiona la memoria personalizada y preferencias contextuales de SipánGPT.',
+  description:
+    'Gestiona la memoria personalizada y preferencias contextuales de SipánGPT.'
 }
 
 export default async function MemoriasSettingsPage() {
@@ -23,7 +24,8 @@ export default async function MemoriasSettingsPage() {
           Recuerdos y Memoria de IA
         </h1>
         <p className='text-xs text-muted-foreground'>
-          Gestiona los hechos y preferencias que SipánGPT utiliza para contextualizar tus conversaciones.
+          Gestiona los hechos y preferencias que SipánGPT utiliza para
+          contextualizar tus conversaciones.
         </p>
       </div>
 

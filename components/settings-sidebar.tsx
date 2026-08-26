@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -15,12 +14,12 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
-  useSidebar,
+  useSidebar
 } from '@/components/ui/sidebar'
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger,
+  TooltipTrigger
 } from '@/components/ui/tooltip'
 import {
   User,
@@ -29,7 +28,7 @@ import {
   Brain,
   ArrowLeft,
   Bot,
-  Sliders,
+  Sliders
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { User as AuthUser } from 'next-auth'
@@ -43,26 +42,26 @@ const SETTINGS_NAV_ITEMS = [
     title: 'Perfil de Usuario',
     href: '/configuraciones/usuario',
     icon: User,
-    description: 'Datos personales y cuenta',
+    description: 'Datos personales y cuenta'
   },
   {
     title: 'Dispositivos y Sesiones',
     href: '/configuraciones/sesiones',
     icon: Smartphone,
-    description: 'Gestión de sesiones activas',
+    description: 'Gestión de sesiones activas'
   },
   {
     title: 'Consumo y Tokens',
     href: '/configuraciones/consumo',
     icon: Cpu,
-    description: 'Métricas de uso de IA',
+    description: 'Métricas de uso de IA'
   },
   {
     title: 'Recuerdos de IA',
     href: '/configuraciones/memorias',
     icon: Brain,
-    description: 'Preferencias y memoria persistente',
-  },
+    description: 'Preferencias y memoria persistente'
+  }
 ]
 
 export function SettingsSidebar({ user }: SettingsSidebarProps) {
@@ -93,9 +92,15 @@ export function SettingsSidebar({ user }: SettingsSidebarProps) {
                     </SidebarMenuButton>
                   }
                 />
-                <TooltipContent side='right' align='center' className='font-exo'>
+                <TooltipContent
+                  side='right'
+                  align='center'
+                  className='font-exo'
+                >
                   <p className='font-semibold'>SipánGPT</p>
-                  <p className='text-[10px] text-muted-foreground'>Configuraciones</p>
+                  <p className='text-[10px] text-muted-foreground'>
+                    Configuraciones
+                  </p>
                 </TooltipContent>
               </Tooltip>
             ) : (
@@ -130,7 +135,9 @@ export function SettingsSidebar({ user }: SettingsSidebarProps) {
               />
               <TooltipContent side='right' align='center' className='font-exo'>
                 <p className='font-semibold'>Ajustes del Sistema</p>
-                <p className='text-[10px] text-muted-foreground'>Opciones y Preferencias</p>
+                <p className='text-[10px] text-muted-foreground'>
+                  Opciones y Preferencias
+                </p>
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -164,9 +171,15 @@ export function SettingsSidebar({ user }: SettingsSidebarProps) {
                     {isCollapsed ? (
                       <Tooltip>
                         <TooltipTrigger render={menuButton} />
-                        <TooltipContent side='right' align='center' className='font-exo'>
+                        <TooltipContent
+                          side='right'
+                          align='center'
+                          className='font-exo'
+                        >
                           <p className='font-semibold'>{item.title}</p>
-                          <p className='text-[10px] text-muted-foreground'>{item.description}</p>
+                          <p className='text-[10px] text-muted-foreground'>
+                            {item.description}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     ) : (
@@ -195,9 +208,15 @@ export function SettingsSidebar({ user }: SettingsSidebarProps) {
                       </SidebarMenuButton>
                     }
                   />
-                  <TooltipContent side='right' align='center' className='font-exo'>
+                  <TooltipContent
+                    side='right'
+                    align='center'
+                    className='font-exo'
+                  >
                     <p className='font-semibold'>Volver al Chat</p>
-                    <p className='text-[10px] text-muted-foreground'>Regresar a tus conversaciones</p>
+                    <p className='text-[10px] text-muted-foreground'>
+                      Regresar a tus conversaciones
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               ) : (

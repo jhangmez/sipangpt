@@ -7,7 +7,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -17,7 +17,7 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
+  AccordionTrigger
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Star, Check } from 'lucide-react'
@@ -31,7 +31,7 @@ const NEGATIVE_REASONS = [
   'No entendió la consulta',
   'Respuesta confusa',
   'Faltaron fuentes oficiales',
-  'Respuesta lenta',
+  'Respuesta lenta'
 ]
 
 const POSITIVE_REASONS = [
@@ -40,7 +40,7 @@ const POSITIVE_REASONS = [
   'Buenas citas y fuentes',
   'Rápido y conciso',
   'Resolvió mi duda',
-  'Excelente tono',
+  'Excelente tono'
 ]
 
 const RATING_LABELS: Record<number, string> = {
@@ -48,7 +48,7 @@ const RATING_LABELS: Record<number, string> = {
   2: 'Poco claro / Insuficiente',
   3: 'Aceptable',
   4: 'Buena respuesta',
-  5: 'Excelente y muy claro',
+  5: 'Excelente y muy claro'
 }
 
 export function FeedbackModal({
@@ -62,10 +62,11 @@ export function FeedbackModal({
   feedbackType,
   setFeedbackType,
   initialRating = 0,
-  onRatingChange,
+  onRatingChange
 }: FeedbackModalProps) {
   const [rating, setRating] = React.useState<number>(
-    initialRating || (feedbackType === 'Adecuada' ? 5 : feedbackType === 'Inadecuada' ? 1 : 5)
+    initialRating ||
+      (feedbackType === 'Adecuada' ? 5 : feedbackType === 'Inadecuada' ? 1 : 5)
   )
   const [selectedReasons, setSelectedReasons] = React.useState<string[]>([])
   const [feedbackText, setFeedbackText] = React.useState('')
@@ -92,7 +93,9 @@ export function FeedbackModal({
 
   const toggleReason = (reason: string) => {
     setSelectedReasons((prev) =>
-      prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]
+      prev.includes(reason)
+        ? prev.filter((r) => r !== reason)
+        : [...prev, reason]
     )
   }
 
@@ -111,14 +114,14 @@ export function FeedbackModal({
       reasons: selectedReasons,
       feedback: feedbackText.trim() || null,
       consentimientoCorreo: consent,
-      time: new Date().toISOString(),
+      time: new Date().toISOString()
     }
 
     try {
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(feedbackData),
+        body: JSON.stringify(feedbackData)
       })
 
       const result = await response.json()
@@ -132,7 +135,9 @@ export function FeedbackModal({
         toast.error(result.error || 'Hubo un error al enviar el feedback.')
       }
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err) || 'Hubo un error al enviar tu feedback.')
+      toast.error(
+        getErrorMessage(err) || 'Hubo un error al enviar tu feedback.'
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -147,7 +152,8 @@ export function FeedbackModal({
             Calificar Respuesta de IA
           </DialogTitle>
           <DialogDescription className='text-xs text-muted-foreground leading-relaxed'>
-            Ayúdanos a evaluar la precisión y claridad de las respuestas para perfeccionar la base de conocimiento de la USS.
+            Ayúdanos a evaluar la precisión y claridad de las respuestas para
+            perfeccionar la base de conocimiento de la USS.
           </DialogDescription>
         </DialogHeader>
 
@@ -162,7 +168,10 @@ export function FeedbackModal({
                 {userQuestion || 'Consulta sin texto registrado.'}
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value='item-2' className='border-t border-border/40 px-2'>
+            <AccordionItem
+              value='item-2'
+              className='border-t border-border/40 px-2'
+            >
               <AccordionTrigger className='font-frances text-xs py-2 hover:no-underline text-foreground'>
                 Respuesta Generada
               </AccordionTrigger>
@@ -189,12 +198,18 @@ export function FeedbackModal({
                 )}
                 aria-label={`Calificar con ${value} estrellas`}
               >
-                <Star className={cn('h-7 w-7', value <= rating ? 'fill-current' : '')} />
+                <Star
+                  className={cn(
+                    'h-7 w-7',
+                    value <= rating ? 'fill-current' : ''
+                  )}
+                />
               </button>
             ))}
           </div>
           <p className='text-xs font-semibold text-foreground font-mono'>
-            {rating} de 5 estrellas • <span className='text-primary'>{RATING_LABELS[rating] || ''}</span>
+            {rating} de 5 estrellas •{' '}
+            <span className='text-primary'>{RATING_LABELS[rating] || ''}</span>
           </p>
         </div>
 
@@ -228,8 +243,14 @@ export function FeedbackModal({
 
         {/* Textarea de Comentarios Adicionales */}
         <div className='grid gap-1.5 py-1'>
-          <Label htmlFor='feedback-text' className='text-xs font-medium text-foreground'>
-            Comentarios adicionales <span className='text-[10px] text-muted-foreground font-normal'>(opcional)</span>
+          <Label
+            htmlFor='feedback-text'
+            className='text-xs font-medium text-foreground'
+          >
+            Comentarios adicionales{' '}
+            <span className='text-[10px] text-muted-foreground font-normal'>
+              (opcional)
+            </span>
           </Label>
           <Textarea
             id='feedback-text'
@@ -242,8 +263,12 @@ export function FeedbackModal({
 
         {/* Switch de consentimiento */}
         <div className='flex items-center justify-between rounded-2xl border border-border/60 p-3 bg-muted/20'>
-          <Label htmlFor='consent-switch' className='text-xs text-muted-foreground font-normal pr-3 leading-snug cursor-pointer'>
-            Permitir contacto por correo para encuestas de satisfacción institucional USS.
+          <Label
+            htmlFor='consent-switch'
+            className='text-xs text-muted-foreground font-normal pr-3 leading-snug cursor-pointer'
+          >
+            Permitir contacto por correo para encuestas de satisfacción
+            institucional USS.
           </Label>
           <Switch
             id='consent-switch'

@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -15,12 +14,12 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
-  useSidebar,
+  useSidebar
 } from '@/components/ui/sidebar'
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger,
+  TooltipTrigger
 } from '@/components/ui/tooltip'
 import {
   LayoutDashboard,
@@ -33,7 +32,7 @@ import {
   FileText,
   FolderTree,
   Newspaper,
-  Sliders,
+  Sliders
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { User as AuthUser } from 'next-auth'
@@ -47,50 +46,50 @@ const ADMIN_NAV_ITEMS = [
     title: 'Dashboard y Métricas',
     href: '/admin/dashboard',
     icon: LayoutDashboard,
-    description: 'Estadísticas e inferencias',
+    description: 'Estadísticas e inferencias'
   },
   {
     title: 'Modelos de IA',
     href: '/admin/models',
     icon: Sparkles,
-    description: 'Catálogo, tarifas y tokens',
+    description: 'Catálogo, tarifas y tokens'
   },
   {
     title: 'Preguntas Frecuentes',
     href: '/admin/questions',
     icon: HelpCircle,
-    description: 'Consultas sugeridas dinámicas',
+    description: 'Consultas sugeridas dinámicas'
   },
   {
     title: 'Administradores',
     href: '/admin/administradores',
     icon: ShieldCheck,
-    description: 'Asignaciones e invitaciones',
+    description: 'Asignaciones e invitaciones'
   },
   {
     title: 'Publicaciones y Posts',
     href: '/admin/posts',
     icon: Newspaper,
-    description: 'Comunicados y novedades USS',
+    description: 'Comunicados y novedades USS'
   },
   {
     title: 'Ingesta de Documentos',
     href: '/admin/documents',
     icon: FileText,
-    description: 'Base de conocimiento RAG',
+    description: 'Base de conocimiento RAG'
   },
   {
     title: 'Políticas y Búsqueda IA',
     href: '/admin/settings',
     icon: Sliders,
-    description: 'Control de RAG, Web y Maps',
+    description: 'Control de RAG, Web y Maps'
   },
   {
     title: 'Temas y Categorías',
     href: '/admin/categories',
     icon: FolderTree,
-    description: 'Catálogo temático y analítica',
-  },
+    description: 'Catálogo temático y analítica'
+  }
 ]
 
 export function AdminSidebar({ user }: AdminSidebarProps) {
@@ -121,9 +120,15 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                     </SidebarMenuButton>
                   }
                 />
-                <TooltipContent side='right' align='center' className='font-exo'>
+                <TooltipContent
+                  side='right'
+                  align='center'
+                  className='font-exo'
+                >
                   <p className='font-semibold'>SipánGPT</p>
-                  <p className='text-[10px] text-muted-foreground'>Panel de Administración</p>
+                  <p className='text-[10px] text-muted-foreground'>
+                    Panel de Administración
+                  </p>
                 </TooltipContent>
               </Tooltip>
             ) : (
@@ -158,7 +163,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
               />
               <TooltipContent side='right' align='center' className='font-exo'>
                 <p className='font-semibold'>Administración</p>
-                <p className='text-[10px] text-muted-foreground'>Gestión y Control</p>
+                <p className='text-[10px] text-muted-foreground'>
+                  Gestión y Control
+                </p>
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -192,9 +199,15 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                     {isCollapsed ? (
                       <Tooltip>
                         <TooltipTrigger render={menuButton} />
-                        <TooltipContent side='right' align='center' className='font-exo'>
+                        <TooltipContent
+                          side='right'
+                          align='center'
+                          className='font-exo'
+                        >
                           <p className='font-semibold'>{item.title}</p>
-                          <p className='text-[10px] text-muted-foreground'>{item.description}</p>
+                          <p className='text-[10px] text-muted-foreground'>
+                            {item.description}
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     ) : (
@@ -223,9 +236,15 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                       </SidebarMenuButton>
                     }
                   />
-                  <TooltipContent side='right' align='center' className='font-exo'>
+                  <TooltipContent
+                    side='right'
+                    align='center'
+                    className='font-exo'
+                  >
                     <p className='font-semibold'>Volver al Chat</p>
-                    <p className='text-[10px] text-muted-foreground'>Regresar al asistente</p>
+                    <p className='text-[10px] text-muted-foreground'>
+                      Regresar al asistente
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               ) : (

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getAllAIModels } from '@/lib/db/system'
 import { requireRole } from '@/lib/session'
-import { Role } from '@/lib/prisma'
+import { Role, type AIModelConfig } from '@/lib/prisma'
 import { ModelsManager } from '@/components/admin/models-manager'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default async function AdminModelsPage() {
   await requireRole(Role.ADMIN)
-  const models = await getAllAIModels()
+  const models: AIModelConfig[] = await getAllAIModels()
 
-  return <ModelsManager initialModels={models as any} />
+  return <ModelsManager initialModels={models} />
 }

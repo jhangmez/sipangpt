@@ -8,14 +8,14 @@ import {
   deleteTopicCategoryAction,
   createTopicSubcategoryAction,
   updateTopicSubcategoryAction,
-  deleteTopicSubcategoryAction,
+  deleteTopicSubcategoryAction
 } from '@/lib/actions/admin-topics'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ import {
   Edit2,
   FolderTree,
   Layers,
-  CornerDownRight,
+  CornerDownRight
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { TopicCategoryItem, TopicSubcategoryItem } from '@/types'
@@ -39,22 +39,28 @@ interface TopicCategoriesManagerProps {
 }
 
 export function TopicCategoriesManager({
-  initialCategories,
+  initialCategories
 }: TopicCategoriesManagerProps) {
-  const [categories, setCategories] = React.useState<TopicCategoryItem[]>(initialCategories)
+  const [categories, setCategories] =
+    React.useState<TopicCategoryItem[]>(initialCategories)
 
   // Modal para Categoría Principal
   const [isCategoryModalOpen, setIsCategoryModalOpen] = React.useState(false)
-  const [editingCategory, setEditingCategory] = React.useState<TopicCategoryItem | null>(null)
+  const [editingCategory, setEditingCategory] =
+    React.useState<TopicCategoryItem | null>(null)
   const [catName, setCatName] = React.useState('')
   const [catCode, setCatCode] = React.useState('')
   const [catDesc, setCatDesc] = React.useState('')
   const [catOrder, setCatOrder] = React.useState(0)
 
   // Modal para Subcategoría
-  const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = React.useState(false)
-  const [parentCategoryId, setParentCategoryId] = React.useState<string | null>(null)
-  const [editingSubcategory, setEditingSubcategory] = React.useState<TopicSubcategoryItem | null>(null)
+  const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] =
+    React.useState(false)
+  const [parentCategoryId, setParentCategoryId] = React.useState<string | null>(
+    null
+  )
+  const [editingSubcategory, setEditingSubcategory] =
+    React.useState<TopicSubcategoryItem | null>(null)
   const [subName, setSubName] = React.useState('')
   const [subCode, setSubCode] = React.useState('')
   const [subDesc, setSubDesc] = React.useState('')
@@ -109,10 +115,12 @@ export function TopicCategoriesManager({
           name: catName,
           code: catCode,
           description: catDesc,
-          order: catOrder,
+          order: catOrder
         })
         setCategories((prev) =>
-          prev.map((c) => (c.id === editingCategory.id ? { ...c, ...res.category } : c))
+          prev.map((c) =>
+            c.id === editingCategory.id ? { ...c, ...res.category } : c
+          )
         )
         toast.success('Categoría temática actualizada')
       } else {
@@ -120,9 +128,12 @@ export function TopicCategoriesManager({
           name: catName,
           code: catCode,
           description: catDesc,
-          order: catOrder,
+          order: catOrder
         })
-        setCategories((prev) => [...prev, { ...res.category, subcategories: [] }])
+        setCategories((prev) => [
+          ...prev,
+          { ...res.category, subcategories: [] }
+        ])
         toast.success('Categoría temática creada')
       }
       setIsCategoryModalOpen(false)
@@ -144,7 +155,7 @@ export function TopicCategoriesManager({
           id: editingSubcategory.id,
           name: subName,
           code: subCode,
-          description: subDesc,
+          description: subDesc
         })
         setCategories((prev) =>
           prev.map((cat) =>
@@ -152,8 +163,10 @@ export function TopicCategoriesManager({
               ? {
                   ...cat,
                   subcategories: cat.subcategories.map((s) =>
-                    s.id === editingSubcategory.id ? { ...s, ...res.subcategory } : s
-                  ),
+                    s.id === editingSubcategory.id
+                      ? { ...s, ...res.subcategory }
+                      : s
+                  )
                 }
               : cat
           )
@@ -164,14 +177,14 @@ export function TopicCategoriesManager({
           categoryId: parentCategoryId,
           name: subName,
           code: subCode,
-          description: subDesc,
+          description: subDesc
         })
         setCategories((prev) =>
           prev.map((cat) =>
             cat.id === parentCategoryId
               ? {
                   ...cat,
-                  subcategories: [...cat.subcategories, res.subcategory],
+                  subcategories: [...cat.subcategories, res.subcategory]
                 }
               : cat
           )
@@ -187,7 +200,11 @@ export function TopicCategoriesManager({
   }
 
   const handleDeleteCategory = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar la categoría "${name}" y todos sus subtemas asociados?`)) {
+    if (
+      !confirm(
+        `¿Eliminar la categoría "${name}" y todos sus subtemas asociados?`
+      )
+    ) {
       return
     }
 
@@ -210,7 +227,7 @@ export function TopicCategoriesManager({
           cat.id === catId
             ? {
                 ...cat,
-                subcategories: cat.subcategories.filter((s) => s.id !== subId),
+                subcategories: cat.subcategories.filter((s) => s.id !== subId)
               }
             : cat
         )
@@ -231,7 +248,9 @@ export function TopicCategoriesManager({
             Catálogo de Categorías y Subtemas Temáticos
           </h2>
           <p className='text-xs text-muted-foreground max-w-xl leading-relaxed'>
-            Estructura jerárquica para clasificar documentos RAG y preguntas de estudiantes. Permite generar analítica de temas más consultados en la USS.
+            Estructura jerárquica para clasificar documentos RAG y preguntas de
+            estudiantes. Permite generar analítica de temas más consultados en
+            la USS.
           </p>
         </div>
 
@@ -251,7 +270,10 @@ export function TopicCategoriesManager({
           <p className='font-semibold text-foreground text-sm'>
             No hay categorías temáticas registradas
           </p>
-          <Button onClick={openCreateCategory} className='rounded-xl text-xs gap-2 mt-2'>
+          <Button
+            onClick={openCreateCategory}
+            className='rounded-xl text-xs gap-2 mt-2'
+          >
             <Plus className='w-4 h-4' /> Crear Primera Categoría
           </Button>
         </div>
@@ -272,7 +294,10 @@ export function TopicCategoriesManager({
                     <h3 className='font-frances font-bold text-base text-foreground truncate'>
                       {cat.name}
                     </h3>
-                    <Badge variant='outline' className='font-mono text-[10px] font-bold text-primary border-primary/30 bg-primary/5 py-0'>
+                    <Badge
+                      variant='outline'
+                      className='font-mono text-[10px] font-bold text-primary border-primary/30 bg-primary/5 py-0'
+                    >
                       {cat.code}
                     </Badge>
                   </div>
@@ -329,7 +354,8 @@ export function TopicCategoriesManager({
 
                 {cat.subcategories.length === 0 ? (
                   <div className='rounded-2xl border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground'>
-                    No hay subtemas en esta categoría. Agrega el primero con el botón "+ Agregar Subtema".
+                    No hay subtemas en esta categoría. Agrega el primero con el
+                    botón "+ Agregar Subtema".
                   </div>
                 ) : (
                   <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5'>
@@ -368,7 +394,9 @@ export function TopicCategoriesManager({
                           <Button
                             size='icon-xs'
                             variant='ghost'
-                            onClick={() => handleDeleteSubcategory(sub.id, cat.id)}
+                            onClick={() =>
+                              handleDeleteSubcategory(sub.id, cat.id)
+                            }
                             className='h-6 w-6 rounded-md text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10'
                             title='Eliminar subtema'
                           >
@@ -390,10 +418,13 @@ export function TopicCategoriesManager({
         <DialogContent className='max-w-md rounded-3xl p-6 font-exo'>
           <DialogHeader className='space-y-1.5'>
             <DialogTitle className='font-frances text-xl'>
-              {editingCategory ? 'Editar Categoría' : 'Nueva Categoría Principal'}
+              {editingCategory
+                ? 'Editar Categoría'
+                : 'Nueva Categoría Principal'}
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Define el tema macro para la clasificación de normativas y consultas universitarias.
+              Define el tema macro para la clasificación de normativas y
+              consultas universitarias.
             </DialogDescription>
           </DialogHeader>
 
@@ -420,7 +451,11 @@ export function TopicCategoriesManager({
                 <Input
                   id='catCode'
                   value={catCode}
-                  onChange={(e) => setCatCode(e.target.value.toUpperCase().replace(/\s+/g, '_'))}
+                  onChange={(e) =>
+                    setCatCode(
+                      e.target.value.toUpperCase().replace(/\s+/g, '_')
+                    )
+                  }
                   placeholder='MATRICULA'
                   className='rounded-xl text-xs font-mono'
                   required
@@ -443,7 +478,10 @@ export function TopicCategoriesManager({
 
             <div className='space-y-1.5'>
               <Label htmlFor='catDesc' className='text-xs font-semibold'>
-                Descripción <span className='text-[10px] text-muted-foreground'>(Opcional)</span>
+                Descripción{' '}
+                <span className='text-[10px] text-muted-foreground'>
+                  (Opcional)
+                </span>
               </Label>
               <Textarea
                 id='catDesc'
@@ -468,7 +506,11 @@ export function TopicCategoriesManager({
                 disabled={isSubmitting}
                 className='rounded-xl text-xs font-semibold'
               >
-                {isSubmitting ? 'Guardando...' : editingCategory ? 'Guardar Cambios' : 'Crear Categoría'}
+                {isSubmitting
+                  ? 'Guardando...'
+                  : editingCategory
+                    ? 'Guardar Cambios'
+                    : 'Crear Categoría'}
               </Button>
             </div>
           </form>
@@ -476,14 +518,20 @@ export function TopicCategoriesManager({
       </Dialog>
 
       {/* Modal para Crear / Editar Subcategoría */}
-      <Dialog open={isSubcategoryModalOpen} onOpenChange={setIsSubcategoryModalOpen}>
+      <Dialog
+        open={isSubcategoryModalOpen}
+        onOpenChange={setIsSubcategoryModalOpen}
+      >
         <DialogContent className='max-w-md rounded-3xl p-6 font-exo'>
           <DialogHeader className='space-y-1.5'>
             <DialogTitle className='font-frances text-xl'>
-              {editingSubcategory ? 'Editar Subtema' : 'Nuevo Subtema Específico'}
+              {editingSubcategory
+                ? 'Editar Subtema'
+                : 'Nuevo Subtema Específico'}
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground'>
-              Crea una especialización temática subordinada a la categoría principal.
+              Crea una especialización temática subordinada a la categoría
+              principal.
             </DialogDescription>
           </DialogHeader>
 
@@ -509,7 +557,9 @@ export function TopicCategoriesManager({
               <Input
                 id='subCode'
                 value={subCode}
-                onChange={(e) => setSubCode(e.target.value.toUpperCase().replace(/\s+/g, '_'))}
+                onChange={(e) =>
+                  setSubCode(e.target.value.toUpperCase().replace(/\s+/g, '_'))
+                }
                 placeholder='MAT_EXTEMPORANEA'
                 className='rounded-xl text-xs font-mono'
                 required
@@ -518,7 +568,10 @@ export function TopicCategoriesManager({
 
             <div className='space-y-1.5'>
               <Label htmlFor='subDesc' className='text-xs font-semibold'>
-                Descripción <span className='text-[10px] text-muted-foreground'>(Opcional)</span>
+                Descripción{' '}
+                <span className='text-[10px] text-muted-foreground'>
+                  (Opcional)
+                </span>
               </Label>
               <Textarea
                 id='subDesc'
@@ -543,7 +596,11 @@ export function TopicCategoriesManager({
                 disabled={isSubmitting}
                 className='rounded-xl text-xs font-semibold'
               >
-                {isSubmitting ? 'Guardando...' : editingSubcategory ? 'Guardar Cambios' : 'Crear Subtema'}
+                {isSubmitting
+                  ? 'Guardando...'
+                  : editingSubcategory
+                    ? 'Guardar Cambios'
+                    : 'Crear Subtema'}
               </Button>
             </div>
           </form>

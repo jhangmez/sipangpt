@@ -1,11 +1,22 @@
-import type { DocumentStatus, InvitationStatus, Role } from '@/lib/prisma'
+import type {
+  DocumentStatus,
+  InvitationStatus,
+  Role,
+  AIModelConfig,
+  TokenUsageLog,
+  User,
+  SystemSetting,
+} from '@/lib/prisma'
 
 export interface TopicSubcategoryItem {
   id: string
   categoryId: string
   name: string
+  slug?: string
   code: string
   description: string | null
+  order?: number
+  isActive?: boolean
   _count?: {
     messages?: number
     preguntas?: number
@@ -15,14 +26,20 @@ export interface TopicSubcategoryItem {
 export interface TopicCategoryItem {
   id: string
   name: string
+  slug?: string
   code: string
   description: string | null
+  icon?: string | null
   order: number
+  isActive?: boolean
   subcategories: TopicSubcategoryItem[]
+  createdAt?: Date | string
+  updatedAt?: Date | string
   _count?: {
     documents?: number
     messages?: number
     preguntas?: number
+    subcategories?: number
   }
 }
 
@@ -34,19 +51,24 @@ export interface DocumentItem {
   publicUrl: string | null
   mimeType: string
   sizeBytes: number
+  fileSize?: number
   status: DocumentStatus
   chunkCount: number
   categoryId: string | null
+  subcategoryId?: string | null
+  categoryName?: string | null
+  subcategoryName?: string | null
   category?: {
     id: string
     name: string
     code: string
   } | null
-  createdAt: Date
+  createdAt: Date | string
+  updatedAt?: Date | string
   uploadedBy?: {
     name: string | null
     email: string
-  } | null
+  } | string | null
 }
 
 export interface QuestionItem {
@@ -60,15 +82,18 @@ export interface QuestionItem {
     id: string
     name: string
     code: string
+    slug?: string
   } | null
   subcategoryRel?: {
     id: string
     name: string
     code: string
+    slug?: string
   } | null
+  creadoPor?: { id: string; name: string | null; email: string } | null
   order: number
   isActive: boolean
-  createdAt: Date
+  createdAt?: Date | string
 }
 
 export interface AdminUserItem {
@@ -80,7 +105,8 @@ export interface AdminUserItem {
   email: string
   role: Role
   isPrimaryAdmin?: boolean
-  createdAt: Date
+  isInitialAdmin?: boolean
+  createdAt?: Date | string
 }
 
 export interface AdminInvitationItem {
@@ -89,10 +115,43 @@ export interface AdminInvitationItem {
   role: Role
   token: string
   status: InvitationStatus
-  expiresAt: Date
-  createdAt: Date
+  expiresAt: Date | string
+  createdAt?: Date | string
+  createdByName?: string
   invitedBy?: {
     name: string | null
     email: string
   } | null
+}
+
+export type TokenUsageLogWithUser = TokenUsageLog & {
+  user?: Pick<User, 'name' | 'email'> | null
+}
+
+export interface TokenUsageStats {
+  totalTokens: number
+  totalCostUsd: number
+  totalLogsCount: number
+  byConcept: Record<string, { tokens: number; cost: number; count: number }>
+  recentLogs: TokenUsageLogWithUser[]
+  modelsStats: Pick<
+    AIModelConfig,
+    | 'id'
+    | 'name'
+    | 'modelCode'
+    | 'provider'
+    | 'totalInferences'
+    | 'totalTokensUsed'
+    | 'estimatedCostUsd'
+    | 'inputPricePerMillion'
+    | 'outputPricePerMillion'
+  >[]
+}
+
+export type SystemSettingConfig = SystemSetting & {
+  enableRAG: boolean
+  enableWebSearch: boolean
+  enableMapsSearch: boolean
+  enableImageAnalysis: boolean
+  minSimilarityScore: number
 }

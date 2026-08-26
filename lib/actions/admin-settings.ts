@@ -49,34 +49,33 @@ export async function getSystemSettingsAction(): Promise<SystemSettingsData> {
       maxPromptChars: setting.maxPromptChars,
       maxDailyTokensPerUser: setting.maxDailyTokensPerUser,
       enableVoiceInput: setting.enableVoiceInput,
-      enableRAG: (setting as any).enableRAG ?? true,
-      enableWebSearch: (setting as any).enableWebSearch ?? false,
-      enableMapsSearch: (setting as any).enableMapsSearch ?? false,
-      enableImageAnalysis: (setting as any).enableImageAnalysis ?? true,
-      minSimilarityScore: (setting as any).minSimilarityScore ?? 0.5,
+      enableRAG: setting.enableRAG ?? true,
+      enableWebSearch: setting.enableWebSearch ?? false,
+      enableMapsSearch: setting.enableMapsSearch ?? false,
+      enableImageAnalysis: setting.enableImageAnalysis ?? true,
+      minSimilarityScore: setting.minSimilarityScore ?? 0.5,
       maintenanceMode: setting.maintenanceMode,
       updatedAt: setting.updatedAt.toISOString(),
     }
-  } catch (err) {
-    // Fallback directo a PostgreSQL por si Next.js Turbopack tiene en caché la instancia anterior del cliente
+  } catch {
     try {
-      const rows = await prisma.$queryRaw<any[]>`
+      const rows = await prisma.$queryRaw<Record<string, unknown>[]>`
         SELECT * FROM system_settings WHERE id = 'global_config' LIMIT 1
       `
       if (rows && rows.length > 0) {
         const row = rows[0]
         return {
-          id: row.id,
-          maxPromptChars: row.max_prompt_chars ?? 2000,
-          maxDailyTokensPerUser: row.max_daily_tokens_per_user ?? 50000,
-          enableVoiceInput: row.enable_voice_input ?? true,
-          enableRAG: row.enable_rag ?? true,
-          enableWebSearch: row.enable_web_search ?? false,
-          enableMapsSearch: row.enable_maps_search ?? false,
-          enableImageAnalysis: row.enable_image_analysis ?? true,
+          id: String(row.id || 'global_config'),
+          maxPromptChars: Number(row.max_prompt_chars ?? 2000),
+          maxDailyTokensPerUser: Number(row.max_daily_tokens_per_user ?? 50000),
+          enableVoiceInput: Boolean(row.enable_voice_input ?? true),
+          enableRAG: Boolean(row.enable_rag ?? true),
+          enableWebSearch: Boolean(row.enable_web_search ?? false),
+          enableMapsSearch: Boolean(row.enable_maps_search ?? false),
+          enableImageAnalysis: Boolean(row.enable_image_analysis ?? true),
           minSimilarityScore: Number(row.min_similarity_score ?? 0.5),
-          maintenanceMode: row.maintenance_mode ?? false,
-          updatedAt: (row.updated_at ? new Date(row.updated_at) : new Date()).toISOString(),
+          maintenanceMode: Boolean(row.maintenance_mode ?? false),
+          updatedAt: (row.updated_at ? new Date(String(row.updated_at)) : new Date()).toISOString(),
         }
       }
 

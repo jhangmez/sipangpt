@@ -56,7 +56,8 @@ export function UserSettings({ user }: UserSettingsProps) {
   const [copied, setCopied] = React.useState(false)
   const { theme, setTheme } = useTheme()
 
-  const userDisplayName = user?.name || user?.email?.split('@')[0] || 'Estudiante USS'
+  const userDisplayName =
+    user?.name || user?.email?.split('@')[0] || 'Estudiante USS'
   const userEmail = user?.email || 'estudiante@uss.edu.pe'
   const userImage = user?.image || undefined
   const isAdmin = user?.role === 'ADMIN'

@@ -6,14 +6,14 @@ import {
   updateUserProfile,
   setPasswordAction,
   changePasswordAction,
-  sendVerificationEmailAction,
+  sendVerificationEmailAction
 } from '@/lib/actions/user-settings'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +35,7 @@ import {
   Eye,
   EyeOff,
   Send,
-  Building,
+  Building
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import { getInstitutionalAffiliation } from '@/lib/utils/institutional'
@@ -51,7 +51,8 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
   const [lastName, setLastName] = React.useState(user.lastName || '')
   const [isSaving, setIsSaving] = React.useState(false)
   const [hasPassword, setHasPassword] = React.useState(user.hasPassword)
-  const [isSendingVerification, setIsSendingVerification] = React.useState(false)
+  const [isSendingVerification, setIsSendingVerification] =
+    React.useState(false)
 
   // Modales de Contraseña
   const [isSetPasswordOpen, setIsSetPasswordOpen] = React.useState(false)
@@ -84,7 +85,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
     try {
       const res = await updateUserProfile({
         firstName,
-        lastName,
+        lastName
       })
       if (res.success) {
         toast.success('Perfil actualizado correctamente')
@@ -103,10 +104,14 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
       if (res.isAlreadyVerified) {
         toast.info(res.message)
       } else {
-        toast.success(res.message || 'Enlace de verificación enviado a tu correo.')
+        toast.success(
+          res.message || 'Enlace de verificación enviado a tu correo.'
+        )
       }
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err) || 'Error al enviar validación de correo.')
+      toast.error(
+        getErrorMessage(err) || 'Error al enviar validación de correo.'
+      )
     } finally {
       setIsSendingVerification(false)
     }
@@ -176,7 +181,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
   const formattedDate = new Date(user.createdAt).toLocaleDateString('es-PE', {
     day: '2-digit',
     month: 'long',
-    year: 'numeric',
+    year: 'numeric'
   })
 
   // Validación en tiempo real para checklist
@@ -184,7 +189,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
     minChars: pwd.length >= 8,
     hasUpper: /[A-Z]/.test(pwd),
     hasNumber: /[0-9]/.test(pwd),
-    hasSpecial: /[^A-Za-z0-9]/.test(pwd),
+    hasSpecial: /[^A-Za-z0-9]/.test(pwd)
   })
 
   const setPwdCheck = passwordChecklist(newPassword)
@@ -196,7 +201,10 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
       <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
         <div className='flex items-center gap-4'>
           <Avatar className='h-16 w-16 rounded-2xl border-2 border-primary/20 shadow-xs'>
-            <AvatarImage src={user.image || undefined} alt={user.name || 'Usuario'} />
+            <AvatarImage
+              src={user.image || undefined}
+              alt={user.name || 'Usuario'}
+            />
             <AvatarFallback className='rounded-2xl bg-primary/10 font-frances text-xl font-bold text-primary'>
               {(user.name || user.email || 'U')[0].toUpperCase()}
             </AvatarFallback>
@@ -206,7 +214,10 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
               <h2 className='font-frances text-xl font-bold text-foreground'>
                 {user.name || 'Estudiante USS'}
               </h2>
-              <Badge variant='outline' className='text-[10px] font-mono uppercase font-bold py-0'>
+              <Badge
+                variant='outline'
+                className='text-[10px] font-mono uppercase font-bold py-0'
+              >
                 {user.role}
               </Badge>
               {affiliation.isUssStudent ? (
@@ -247,7 +258,10 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
       </div>
 
       {/* Formulario de Información Personal */}
-      <form onSubmit={handleSubmit} className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-6'>
+      <form
+        onSubmit={handleSubmit}
+        className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-6'
+      >
         <div className='border-b border-border/40 pb-3 flex items-center justify-between'>
           <h3 className='font-frances text-base font-bold text-foreground flex items-center gap-2'>
             <User className='w-4 h-4 text-primary' />
@@ -286,16 +300,25 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
         {/* Sección de Correo Electrónico y Validación */}
         <div className='space-y-3 pt-2 border-t border-border/40'>
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-2'>
-            <Label htmlFor='email' className='text-xs font-semibold flex items-center gap-1.5'>
+            <Label
+              htmlFor='email'
+              className='text-xs font-semibold flex items-center gap-1.5'
+            >
               <Mail className='w-3.5 h-3.5 text-primary' />
               Correo Electrónico
             </Label>
             {isEmailVerified ? (
-              <Badge variant='outline' className='border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] py-0 gap-1 w-fit'>
+              <Badge
+                variant='outline'
+                className='border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px] py-0 gap-1 w-fit'
+              >
                 <CheckCircle2 className='w-3 h-3' /> Correo Verificado
               </Badge>
             ) : (
-              <Badge variant='outline' className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[10px] py-0 gap-1 w-fit'>
+              <Badge
+                variant='outline'
+                className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[10px] py-0 gap-1 w-fit'
+              >
                 <AlertCircle className='w-3 h-3' /> Pendiente de Validación
               </Badge>
             )}
@@ -324,7 +347,8 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
             )}
           </div>
           <p className='text-[11px] text-muted-foreground'>
-            El correo electrónico es el identificador principal de tu cuenta y no puede ser modificado manualmente.
+            El correo electrónico es el identificador principal de tu cuenta y
+            no puede ser modificado manualmente.
           </p>
         </div>
 
@@ -353,9 +377,14 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
           <div className='space-y-1 min-w-0 flex-1'>
             <div className='flex items-center gap-2 flex-wrap'>
               <span className='font-semibold text-xs text-foreground'>
-                {hasPassword ? 'Contraseña Local Activa' : 'Sin Contraseña Local Asignada'}
+                {hasPassword
+                  ? 'Contraseña Local Activa'
+                  : 'Sin Contraseña Local Asignada'}
               </span>
-              <Badge variant={hasPassword ? 'default' : 'secondary'} className='text-[10px] py-0'>
+              <Badge
+                variant={hasPassword ? 'default' : 'secondary'}
+                className='text-[10px] py-0'
+              >
                 {hasPassword ? 'Protegido' : 'Acceso por Enlace / Google'}
               </Badge>
             </div>
@@ -402,7 +431,8 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
               Establecer Contraseña Local
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground leading-relaxed'>
-              Crea una contraseña para ingresar directamente con tu correo. Podrás seguir usando Google o enlaces mágicos.
+              Crea una contraseña para ingresar directamente con tu correo.
+              Podrás seguir usando Google o enlaces mágicos.
             </DialogDescription>
           </DialogHeader>
 
@@ -426,7 +456,11 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                   onClick={() => setShowNewPassword(!showNewPassword)}
                   className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer'
                 >
-                  {showNewPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                  {showNewPassword ? (
+                    <EyeOff className='w-4 h-4' />
+                  ) : (
+                    <Eye className='w-4 h-4' />
+                  )}
                 </button>
               </div>
             </div>
@@ -448,18 +482,46 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
 
             {/* Checklist de Políticas de Seguridad */}
             <div className='rounded-2xl p-3 bg-muted/30 border border-border/70 space-y-1 text-[11px]'>
-              <p className='font-semibold text-foreground text-[11px] pb-0.5'>Requisitos de seguridad:</p>
-              <p className={setPwdCheck.minChars ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+              <p className='font-semibold text-foreground text-[11px] pb-0.5'>
+                Requisitos de seguridad:
+              </p>
+              <p
+                className={
+                  setPwdCheck.minChars
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
                 {setPwdCheck.minChars ? '✓' : '•'} Al menos 8 caracteres
               </p>
-              <p className={setPwdCheck.hasUpper ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                {setPwdCheck.hasUpper ? '✓' : '•'} Al menos una letra mayúscula (A-Z)
+              <p
+                className={
+                  setPwdCheck.hasUpper
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
+                {setPwdCheck.hasUpper ? '✓' : '•'} Al menos una letra mayúscula
+                (A-Z)
               </p>
-              <p className={setPwdCheck.hasNumber ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+              <p
+                className={
+                  setPwdCheck.hasNumber
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
                 {setPwdCheck.hasNumber ? '✓' : '•'} Al menos un número (0-9)
               </p>
-              <p className={setPwdCheck.hasSpecial ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                {setPwdCheck.hasSpecial ? '✓' : '•'} Al menos un carácter especial (ej. !@#$%)
+              <p
+                className={
+                  setPwdCheck.hasSpecial
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
+                {setPwdCheck.hasSpecial ? '✓' : '•'} Al menos un carácter
+                especial (ej. !@#$%)
               </p>
             </div>
 
@@ -477,7 +539,9 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                 disabled={isPasswordSubmitting}
                 className='rounded-xl text-xs font-semibold'
               >
-                {isPasswordSubmitting ? 'Guardando...' : 'Establecer Contraseña'}
+                {isPasswordSubmitting
+                  ? 'Guardando...'
+                  : 'Establecer Contraseña'}
               </Button>
             </div>
           </form>
@@ -485,7 +549,10 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
       </Dialog>
 
       {/* MODAL: CAMBIAR CONTRASEÑA */}
-      <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+      <Dialog
+        open={isChangePasswordOpen}
+        onOpenChange={setIsChangePasswordOpen}
+      >
         <DialogContent className='max-w-md rounded-3xl p-6 font-exo'>
           <DialogHeader className='space-y-1.5'>
             <DialogTitle className='font-frances text-xl flex items-center gap-2'>
@@ -493,7 +560,8 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
               Cambiar Contraseña
             </DialogTitle>
             <DialogDescription className='text-xs text-muted-foreground leading-relaxed'>
-              Ingresa tu contraseña actual y define tu nueva clave de acceso seguro.
+              Ingresa tu contraseña actual y define tu nueva clave de acceso
+              seguro.
             </DialogDescription>
           </DialogHeader>
 
@@ -532,13 +600,20 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                   onClick={() => setShowChangePassword(!showChangePassword)}
                   className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer'
                 >
-                  {showChangePassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                  {showChangePassword ? (
+                    <EyeOff className='w-4 h-4' />
+                  ) : (
+                    <Eye className='w-4 h-4' />
+                  )}
                 </button>
               </div>
             </div>
 
             <div className='space-y-1.5'>
-              <Label htmlFor='changeConfirmPwd' className='text-xs font-semibold'>
+              <Label
+                htmlFor='changeConfirmPwd'
+                className='text-xs font-semibold'
+              >
                 Confirmar Nueva Contraseña
               </Label>
               <Input
@@ -554,18 +629,46 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
 
             {/* Checklist de Requisitos */}
             <div className='rounded-2xl p-3 bg-muted/30 border border-border/70 space-y-1 text-[11px]'>
-              <p className='font-semibold text-foreground text-[11px] pb-0.5'>Requisitos de seguridad:</p>
-              <p className={changePwdCheck.minChars ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+              <p className='font-semibold text-foreground text-[11px] pb-0.5'>
+                Requisitos de seguridad:
+              </p>
+              <p
+                className={
+                  changePwdCheck.minChars
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
                 {changePwdCheck.minChars ? '✓' : '•'} Al menos 8 caracteres
               </p>
-              <p className={changePwdCheck.hasUpper ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                {changePwdCheck.hasUpper ? '✓' : '•'} Al menos una letra mayúscula (A-Z)
+              <p
+                className={
+                  changePwdCheck.hasUpper
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
+                {changePwdCheck.hasUpper ? '✓' : '•'} Al menos una letra
+                mayúscula (A-Z)
               </p>
-              <p className={changePwdCheck.hasNumber ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+              <p
+                className={
+                  changePwdCheck.hasNumber
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
                 {changePwdCheck.hasNumber ? '✓' : '•'} Al menos un número (0-9)
               </p>
-              <p className={changePwdCheck.hasSpecial ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                {changePwdCheck.hasSpecial ? '✓' : '•'} Al menos un carácter especial (ej. !@#$%)
+              <p
+                className={
+                  changePwdCheck.hasSpecial
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-muted-foreground'
+                }
+              >
+                {changePwdCheck.hasSpecial ? '✓' : '•'} Al menos un carácter
+                especial (ej. !@#$%)
               </p>
             </div>
 
@@ -583,7 +686,9 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                 disabled={isPasswordSubmitting}
                 className='rounded-xl text-xs font-semibold'
               >
-                {isPasswordSubmitting ? 'Guardando...' : 'Actualizar Contraseña'}
+                {isPasswordSubmitting
+                  ? 'Guardando...'
+                  : 'Actualizar Contraseña'}
               </Button>
             </div>
           </form>

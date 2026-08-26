@@ -1,6 +1,5 @@
 'use client'
 
-import * as React from 'react'
 import { Bot, Sparkles, ArrowRight } from 'lucide-react'
 import type { SuggestedQuestionDefinition } from '@/constants/questions'
 
@@ -13,7 +12,7 @@ interface ChatEmptyStateProps {
 export function ChatEmptyState({
   userDisplayName,
   questions = [],
-  onSelectQuestion,
+  onSelectQuestion
 }: ChatEmptyStateProps) {
   return (
     <div className='flex flex-col items-center justify-center min-h-[420px] text-center space-y-6 max-w-xl mx-auto my-auto py-8'>
@@ -41,7 +40,8 @@ export function ChatEmptyState({
               Consultas Rápidas Sugeridas
             </h2>
             <p className='text-xs text-muted-foreground mt-0.5'>
-              Selecciona un tema frecuente para consultar reglamentos y trámites oficiales:
+              Selecciona un tema frecuente para consultar reglamentos y trámites
+              oficiales:
             </p>
           </div>
 
