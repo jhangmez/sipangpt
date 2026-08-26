@@ -42,8 +42,8 @@ export async function performSafeLogout(redirectTo: string = '/login') {
 
   try {
     await signOut({ redirect: false })
-  } catch (err) {
-    console.error('[AUTH_SIGNOUT_ERROR]', err)
+  } catch {
+    // Si la sesión ya expiró en el servidor o devuelve redirección directa, proceder al login
   } finally {
     window.location.href = redirectTo
   }

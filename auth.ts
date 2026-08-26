@@ -7,6 +7,9 @@ import { SESSION_LIMIT_PER_ROLE, DEFAULT_MAX_SESSIONS } from '@/constants'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  trustHost: true,
+  secret: process.env.AUTH_SECRET,
+  basePath: '/api/auth',
   session: {
     strategy: 'jwt',
   },
