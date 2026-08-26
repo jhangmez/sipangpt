@@ -9,6 +9,8 @@ export interface ModelDefinition {
   status: ModelStatus
   latencyMs?: number | null
   isDefault: boolean
+  inputPricePerMillion?: number
+  outputPricePerMillion?: number
 }
 
 export const DEFAULT_MODEL_CODE = 'gemini-3.1-flash-lite'
@@ -25,16 +27,20 @@ export const SYSTEM_MODELS: ModelDefinition[] = [
     status: 'ONLINE',
     latencyMs: 140,
     isDefault: true,
+    inputPricePerMillion: 0.075,
+    outputPricePerMillion: 0.30,
   },
   {
     id: 'gemini-flash',
-    name: 'Gemini 3.6 Flash',
-    modelCode: 'gemini-3.6-flash',
+    name: 'Gemini 2.5 Flash',
+    modelCode: 'gemini-2.5-flash',
     provider: 'GEMINI',
-    description: 'Modelo oficial de alta velocidad y multimodal.',
+    description: 'Modelo oficial multimodal de alta velocidad y OCR.',
     status: 'ONLINE',
     latencyMs: 210,
     isDefault: false,
+    inputPricePerMillion: 0.10,
+    outputPricePerMillion: 0.40,
   },
   {
     id: 'local-mac',
@@ -45,6 +51,8 @@ export const SYSTEM_MODELS: ModelDefinition[] = [
     status: 'ONLINE',
     latencyMs: 95,
     isDefault: false,
+    inputPricePerMillion: 0.00,
+    outputPricePerMillion: 0.00,
   },
   {
     id: 'gpt-4o-mini',
@@ -55,5 +63,7 @@ export const SYSTEM_MODELS: ModelDefinition[] = [
     status: 'DEGRADED',
     latencyMs: 920,
     isDefault: false,
+    inputPricePerMillion: 0.15,
+    outputPricePerMillion: 0.60,
   },
 ]

@@ -53,7 +53,7 @@ const ADMIN_NAV_ITEMS = [
     title: 'Modelos de IA',
     href: '/admin/models',
     icon: Sparkles,
-    description: 'Gestión y salud de modelos',
+    description: 'Catálogo, tarifas y tokens',
   },
   {
     title: 'Preguntas Frecuentes',

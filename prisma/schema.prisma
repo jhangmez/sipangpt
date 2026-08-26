@@ -70,6 +70,14 @@ enum ResolutionStatus {
   ERROR_OCCURRED          // Fallo técnico en el modelo o en la base de datos
 }
 
+enum TokenUsageConcept {
+  CHAT_COMPLETION            // Respuesta conversacional del asistente
+  RAG_EMBEDDING              // Generación de vector embeddings para fragmentos
+  DOCUMENT_OCR_TRANSCRIPTION // Transcripción de PDF/documento a Markdown con Gemini OCR
+  QUERY_ANALYSIS             // Clasificación semántica de intención / categorías
+  OTHER
+}
+
 // -------------------------------------------------------------
 // AUTENTICACIÓN & USUARIOS
 // -------------------------------------------------------------
@@ -103,6 +111,7 @@ model User {
   uploadedDocs    Document[]        @relation("AdminUploadedDocs")
   sentInvitations AdminInvitation[] @relation("SentAdminInvitations")
   usage           UserUsage?
+  tokenUsageLogs  TokenUsageLog[]
 
   @@map("users")
 }
@@ -236,8 +245,9 @@ model Conversation {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages Message[]
+  user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       Message[]
+  tokenUsageLogs TokenUsageLog[]
 
   @@map("conversations")
 }
@@ -362,24 +372,57 @@ model UserMemory {
 // -------------------------------------------------------------
 
 model AIModelConfig {
-  id           String        @id @default(cuid())
-  name         String        @unique // Ej: "Gemma 4 Fine-Tuned (Local)", "Gemini 2.5 Flash"
-  modelCode    String        @map("model_code")
-  provider     ModelProvider @default(LOCAL_MAC)
-  description  String?       @db.Text
-  endpointUrl  String?       @map("endpoint_url")
-  apiKeyEnvVar String?       @map("api_key_env_var")
-  status       ModelStatus   @default(ONLINE)
-  latencyMs    Int?          @map("latency_ms")
-  isActive     Boolean       @default(true) @map("is_active")
-  isDefault    Boolean       @default(false) @map("is_default")
-  order        Int           @default(0)
-  maxTokens    Int           @default(2048) @map("max_tokens")
-  temperature  Float         @default(0.3)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  id                    String        @id @default(cuid())
+  name                  String        @unique // Ej: "Gemini 3.1 Flash Lite", "GPT-4o Mini"
+  modelCode             String        @map("model_code")
+  provider              ModelProvider @default(LOCAL_MAC)
+  description           String?       @db.Text
+  endpointUrl           String?       @map("endpoint_url")
+  apiKeyEnvVar          String?       @map("api_key_env_var")
+  status                ModelStatus   @default(ONLINE)
+  latencyMs             Int?          @map("latency_ms")
+  isActive              Boolean       @default(true) @map("is_active")
+  isDefault             Boolean       @default(false) @map("is_default")
+  order                 Int           @default(0)
+  maxTokens             Int           @default(2048) @map("max_tokens")
+  temperature           Float         @default(0.3)
+
+  // Precios y Métricas de Uso Referenciales
+  inputPricePerMillion  Float         @default(0.0) @map("input_price_per_million")  // Costo en USD por 1M tokens de entrada
+  outputPricePerMillion Float         @default(0.0) @map("output_price_per_million") // Costo en USD por 1M tokens de salida
+  totalInferences       Int           @default(0) @map("total_inferences")           // Total de invocaciones / vistas
+  totalTokensUsed       Int           @default(0) @map("total_tokens_used")          // Total de tokens consumidos
+  estimatedCostUsd      Float         @default(0.0) @map("estimated_cost_usd")       // Costo total estimado acumulado (USD)
+
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
 
   @@map("ai_model_configs")
+}
+
+model TokenUsageLog {
+  id               String            @id @default(cuid())
+  userId           String?           @map("user_id")
+  conversationId   String?           @map("conversation_id")
+  messageId        String?           @map("message_id")
+  modelCode        String            @map("model_code")
+  provider         ModelProvider     @default(GEMINI)
+  concept          TokenUsageConcept @default(CHAT_COMPLETION)
+  promptTokens     Int               @default(0) @map("prompt_tokens")
+  completionTokens Int               @default(0) @map("completion_tokens")
+  totalTokens      Int               @default(0) @map("total_tokens")
+  estimatedCostUsd Float             @default(0.0) @map("estimated_cost_usd")
+  latencyMs        Int?              @map("latency_ms")
+  metadata         Json?
+  createdAt        DateTime          @default(now()) @map("created_at")
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([concept])
+  @@index([modelCode])
+  @@index([createdAt])
+  @@map("token_usage_logs")
 }
 
 model SystemSetting {

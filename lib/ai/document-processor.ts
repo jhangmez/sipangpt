@@ -1,6 +1,7 @@
-import { prisma } from '@/lib/prisma'
+import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import { generateText } from 'ai'
 import { google } from '@/lib/ai/providers'
+import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 
 export interface TextChunk {
   content: string
@@ -62,6 +63,15 @@ Reglas de Estructuración:
           ],
         },
       ],
+    })
+
+    // Registrar consumo de tokens por OCR / Transcripción de PDF
+    await recordTokenUsageLog({
+      modelCode: 'gemini-2.5-flash',
+      provider: ModelProvider.GEMINI,
+      concept: TokenUsageConcept.DOCUMENT_OCR_TRANSCRIPTION,
+      promptTokens: result.usage?.inputTokens || 0,
+      completionTokens: result.usage?.outputTokens || 0,
     })
 
     return result.text.trim()

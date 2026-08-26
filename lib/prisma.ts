@@ -12,6 +12,7 @@ export {
   DocumentStatus,
   InvitationStatus,
   ResolutionStatus,
+  TokenUsageConcept,
 } from '@prisma/client'
 export type {
   User,
@@ -34,6 +35,7 @@ export type {
   RequestLog,
   Pregunta,
   AdminInvitation,
+  TokenUsageLog,
 } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }

@@ -84,13 +84,15 @@ El administrador dispone de un panel visual exclusivo para regular las capacidad
 
 ---
 
-### 5. 🤖 Catálogo Multimodelo y Ruteo Inteligente (`/admin/models`)
-- **Google Gemini:** `gemini-3.1-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-flash-thinking`.
-- **OpenAI:** `gpt-4o`, `gpt-4o-mini`, `o3-mini`.
-- **Anthropic:** `claude-3-5-sonnet-latest`.
-- **Groq:** `llama-3.3-70b-versatile`.
-- **Inferencia Local:** Conexión con Mac Mini M4 mediante Cloudflare Tunnel para modelos como `DeepSeek R1` y `Llama 3.3`.
-- **Monitor de Salud en Tiempo Real:** Estados `ONLINE`, `DEGRADED`, `OFFLINE` y `DISABLED`.
+### 5. 🤖 Catálogo Multimodelo, Tarifas y Logs de Tokens (`/admin/models`)
+- **Modelos en la Nube y Locales:** Gemini 3.1 Flash-Lite, Gemini 2.5 Flash, Gemini 2.5 Pro, GPT-4o Mini, GPT-4o, Claude 3.5 Sonnet, Groq Llama 3.3 y Mac Mini M4 local vía Cloudflare Tunnel.
+- **Registro y Configuración de Modelos:** Permite a los administradores registrar nuevos modelos, definir proveedor, endpoints y parámetros (`maxTokens`, `temperature`).
+- **Tarifas y Precios Referenciales (USD / 1M Tokens):** Configuración de precios por millón de tokens de entrada (Prompt) y salida (Completion) para estimación de costos en tiempo real.
+- **Métricas y Vistas Acumuladas:** Contador de invocaciones/vistas (`totalInferences`), tokens totales consumidos y costo estimado acumulado por cada modelo.
+- **🪙 Historial y Logs de Consumo por Concepto (`TokenUsageLog`):**
+  - Auditoría cronológica de tokens y costo en USD.
+  - Clasificación por concepto: `CHAT_COMPLETION` (Chat Asistente), `DOCUMENT_OCR_TRANSCRIPTION` (Transcripción de PDFs), `RAG_EMBEDDING` (Vectorización semántica) y `QUERY_ANALYSIS` (Clasificación).
+  - Monitor de salud en tiempo real (`ONLINE`, `DEGRADED`, `OFFLINE` y `DISABLED`).
 
 ---
 

@@ -11,7 +11,8 @@ import { auth } from '@/auth'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { searchKnowledgeBase } from '@/lib/ai/rag'
 import { detectResolutionStatus } from '@/lib/ai/resolution-detector'
-import { prisma, ModelProvider, ResolutionStatus } from '@/lib/prisma'
+import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept } from '@/lib/prisma'
+import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import {
   buildSystemPromptWithSources,
   DEFAULT_MODEL_CODE,
@@ -329,6 +330,19 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
               })
               .catch((err) => console.error('[USER_USAGE_PERSIST_ERROR]', err))
           }
+
+          // Registrar log de consumo de tokens y costos referenciales por concepto
+          await recordTokenUsageLog({
+            userId: session.user.id,
+            conversationId: activeConvId,
+            messageId: assistantMsg?.id,
+            modelCode,
+            provider,
+            concept: TokenUsageConcept.CHAT_COMPLETION,
+            promptTokens: usage?.inputTokens || 0,
+            completionTokens: usage?.outputTokens || 0,
+            latencyMs: totalDurationMs,
+          })
 
           // Registrar log de auditoría
           await prisma.requestLog
