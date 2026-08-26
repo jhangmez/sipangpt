@@ -39,11 +39,24 @@ La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation)*
 
 ---
 
-### 2. 🧠 Motor RAG & Base de Conocimiento Institucional
-- **Embeddings Vectoriales:** Generación de representaciones semánticas con `gemini-embedding-2` / `text-embedding-004`.
-- **Cálculo de Similitud Coseno:** Ranking semántico en tiempo real para recuperar los fragmentos normativos más relevantes.
-- **Citación y Trazabilidad:** Cada respuesta fundamentada muestra las fuentes oficiales utilizadas con número de página, fragmento extraído y enlace directo al PDF original.
-- **Panel Lateral de Novedades y Fuentes:** Panel colapsable que alterna dinámicamente entre comunicados institucionales USS y las fuentes citadas del mensaje seleccionado.
+### 2. 🧠 Motor RAG & Pipeline de Indexación Inteligente
+SipánGPT incorpora una arquitectura RAG de 5 fases para procesar y consultar reglamentos oficiales de la USS:
+
+```mermaid
+graph TD
+    A["📄 1. Ingesta de Documento (PDF / TXT en UploadThing CDN)"] --> B["🤖 2. Transcripción a Markdown Enriquecido (Gemini 2.5 Flash OCR)"]
+    B --> C["✂️ 3. Segmentación Semántica con Overlap (650 chars / 90 overlap)"]
+    C --> D["📐 4. Generación de Embeddings Vectoriales (gemini-embedding-2)"]
+    D --> E["🗄️ 5. Indexación en Neon PostgreSQL (DocumentChunk - Estado INDEXED)"]
+    E --> F["💬 6. Consulta en Chat RAG (Similitud Coseno + Citación en Markdown con Enlace al PDF)"]
+```
+
+#### Las 5 Fases del Pipeline de Indexación:
+1. **☁️ Fase 1: Almacenamiento en CDN (UploadThing):** El archivo PDF institucional se carga a servidores CDN seguros, generándose su URL pública oficial (`publicUrl`) y su registro en base de datos con estado inicial `PROCESSING`.
+2. **🤖 Fase 2: Transcripción y Estructuración a Markdown (Gemini Multimodal OCR):** Gemini 2.5 Flash procesa el archivo binario página por página y lo transcribe a **Markdown estructurado** con encabezados (`#`, `##`), listas, tablas y delimitadores (`--- Página X ---`). Esto asegura que las citas y referencias en el chat conserven formato legible y profesional.
+3. **✂️ Fase 3: Fragmentación Semántica y Solapamiento (*Chunking & Overlap*):** El texto Markdown se segmenta en bloques coherentes de **650 caracteres** con **90 caracteres de solapamiento**, garantizando que ninguna normativa ni artículo se corte a la mitad.
+4. **📐 Fase 4: Vectorización Semántica (*Embeddings*):** Cada fragmento es procesado por el modelo `gemini-embedding-2` / `text-embedding-004`, convirtiéndose en un vector denso multidimensional.
+5. **🟢 Fase 5: Indexación Activa y Citación en Chat:** Los fragmentos se guardan en la tabla `DocumentChunk` de Neon PostgreSQL. El documento pasa a estado **`INDEXED`**. Cuando un estudiante pregunta algo, SipánGPT compara el coseno de similitud, inyecta los mejores fragmentos y genera citas oficiales con enlace directo al PDF original.
 
 ---
 
