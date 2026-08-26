@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { Role } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS } from '@/constants'
 
 export interface SystemSettingsData {
   id: string
@@ -166,9 +167,9 @@ export async function updateSystemSettingsAction(
       `
     }
 
-    revalidatePath('/admin/settings')
-    revalidatePath('/admin/models')
-    revalidatePath('/chat')
+    revalidatePath(CACHE_PATHS.ADMIN_SETTINGS)
+    revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+    revalidatePath(CACHE_PATHS.CHAT)
 
     return {
       success: true,

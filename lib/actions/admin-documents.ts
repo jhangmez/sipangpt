@@ -3,6 +3,7 @@
 import { prisma, Role, type DocumentStatus } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS } from '@/constants'
 import {
   indexDocumentContent,
   extractAndStructureToMarkdown,
@@ -94,7 +95,7 @@ export async function createDocumentDirectAction(data: {
   // Indexar chunks inmediatamente
   const result = await indexDocumentContent(doc.id, data.content)
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: doc, chunkCount: result.chunkCount }
 }
 
@@ -138,7 +139,7 @@ export async function updateDocumentChunkAction(
     },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, chunk: updated }
 }
 
@@ -179,7 +180,7 @@ export async function addDocumentChunkAction(
     },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, chunk: newChunk }
 }
 
@@ -199,7 +200,7 @@ export async function deleteDocumentChunkAction(chunkId: string) {
     })
   }
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true }
 }
 
@@ -211,7 +212,7 @@ export async function reindexDocumentAction(documentId: string, content: string)
   }
 
   const result = await indexDocumentContent(documentId, content)
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return result
 }
 
@@ -242,7 +243,7 @@ export async function updateDocumentDetailsAction(
     },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
 }
 
@@ -254,7 +255,7 @@ export async function toggleDocumentStatus(documentId: string, status: DocumentS
     data: { status },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
 }
 
@@ -266,7 +267,7 @@ export async function updateDocumentCategory(documentId: string, categoryId: str
     data: { categoryId: categoryId || null },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
 }
 
@@ -277,7 +278,7 @@ export async function deleteDocumentAction(documentId: string) {
     where: { id: documentId },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true }
 }
 
@@ -289,7 +290,7 @@ export async function markDocumentAsIndexed(documentId: string) {
     data: { status: 'INDEXED' },
   })
 
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
 }
 
@@ -329,8 +330,8 @@ export async function processAndIndexDocumentAction(documentId: string) {
     // 3. Segmentar semánticamente en chunks con solapamiento e indexar en Neon
     const result = await indexDocumentContent(documentId, markdownContent)
 
-    revalidatePath('/admin/documents')
-    revalidatePath('/admin/dashboard')
+    revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
+    revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
 
     return {
       success: true,

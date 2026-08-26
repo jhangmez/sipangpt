@@ -3,7 +3,7 @@
 import { prisma, Role } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
-import { INITIAL_TOPIC_CATEGORIES } from '@/constants/topic-categories'
+import { INITIAL_TOPIC_CATEGORIES, CACHE_PATHS } from '@/constants'
 
 export async function getTopicCategoriesData() {
   await requireRole(Role.ADMIN)
@@ -96,8 +96,8 @@ export async function createTopicCategoryAction(data: {
     },
   })
 
-  revalidatePath('/admin/categories')
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, category }
 }
 
@@ -127,8 +127,8 @@ export async function updateTopicCategoryAction(data: {
     },
   })
 
-  revalidatePath('/admin/categories')
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, category }
 }
 
@@ -139,8 +139,8 @@ export async function deleteTopicCategoryAction(id: string) {
     where: { id },
   })
 
-  revalidatePath('/admin/categories')
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true }
 }
 
@@ -168,7 +168,7 @@ export async function createTopicSubcategoryAction(data: {
     },
   })
 
-  revalidatePath('/admin/categories')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
   return { success: true, subcategory }
 }
 
@@ -196,7 +196,7 @@ export async function updateTopicSubcategoryAction(data: {
     },
   })
 
-  revalidatePath('/admin/categories')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
   return { success: true, subcategory }
 }
 
@@ -207,7 +207,7 @@ export async function deleteTopicSubcategoryAction(id: string) {
     where: { id },
   })
 
-  revalidatePath('/admin/categories')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
   return { success: true }
 }
 
@@ -257,8 +257,8 @@ export async function seedInitialTopicCategoriesAction() {
     }
   }
 
-  revalidatePath('/admin/categories')
-  revalidatePath('/admin/documents')
+  revalidatePath(CACHE_PATHS.ADMIN_CATEGORIES)
+  revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return {
     success: true,
     createdCategoriesCount,

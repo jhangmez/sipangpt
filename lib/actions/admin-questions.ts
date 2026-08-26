@@ -3,6 +3,7 @@
 import { prisma, Role } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS } from '@/constants'
 
 export async function getAllQuestionsWithTopics() {
   await requireRole(Role.ADMIN)
@@ -55,8 +56,8 @@ export async function createQuestionAction(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/questions')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_QUESTIONS)
+  revalidatePath(CACHE_PATHS.CHAT)
 }
 
 export async function createQuestionDirect(data: {
@@ -96,8 +97,8 @@ export async function createQuestionDirect(data: {
     },
   })
 
-  revalidatePath('/admin/questions')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_QUESTIONS)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true, question }
 }
 
@@ -136,8 +137,8 @@ export async function updateQuestionAction(data: {
     },
   })
 
-  revalidatePath('/admin/questions')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_QUESTIONS)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true, question }
 }
 
@@ -149,8 +150,8 @@ export async function toggleQuestionActiveAction(id: string, isActive: boolean) 
     data: { isActive },
   })
 
-  revalidatePath('/admin/questions')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_QUESTIONS)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true, question }
 }
 
@@ -161,8 +162,8 @@ export async function deleteQuestionAction(id: string) {
     where: { id },
   })
 
-  revalidatePath('/admin/questions')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_QUESTIONS)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true }
 }
 
@@ -196,7 +197,7 @@ export async function moveQuestionOrderAction(id: string, direction: 'up' | 'dow
     }),
   ])
 
-  revalidatePath('/admin/questions')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_QUESTIONS)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true }
 }

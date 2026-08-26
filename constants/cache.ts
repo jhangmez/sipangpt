@@ -1,0 +1,16 @@
+export const CACHE_PATHS = {
+  HOME: '/',
+  CHAT: '/chat',
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_POSTS: '/admin/posts',
+  ADMIN_DOCUMENTS: '/admin/documents',
+  ADMIN_MODELS: '/admin/models',
+  ADMIN_QUESTIONS: '/admin/questions',
+  ADMIN_ADMINISTRADORES: '/admin/administradores',
+  ADMIN_SETTINGS: '/admin/settings',
+  ADMIN_CATEGORIES: '/admin/categories',
+  CONFIG_SESIONES: '/configuraciones/sesiones',
+  CONFIG_MEMORIAS: '/configuraciones/memorias',
+  CONFIG_USUARIO: '/configuraciones/usuario',
+  CONFIG_CONSUMO: '/configuraciones/consumo',
+} as const

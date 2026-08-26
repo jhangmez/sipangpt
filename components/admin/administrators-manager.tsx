@@ -33,6 +33,10 @@ import {
   ShieldAlert
 } from 'lucide-react'
 import { isInitialAdminEmail } from '@/constants/admin'
+import {
+  INVITATION_VALIDITY_DAYS_OPTIONS,
+  DEFAULT_INVITATION_VALIDITY_DAYS
+} from '@/constants'
 import { getErrorMessage } from '@/lib/utils'
 import type { AdminUserItem, AdminInvitationItem } from '@/types'
 
@@ -50,7 +54,7 @@ export function AdministratorsManager({
     React.useState<AdminInvitationItem[]>(initialInvitations)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [email, setEmail] = React.useState('')
-  const [daysValid, setDaysValid] = React.useState(7)
+  const [daysValid, setDaysValid] = React.useState<number>(DEFAULT_INVITATION_VALIDITY_DAYS)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [copiedLink, setCopiedLink] = React.useState(false)
   const [createdInviteLink, setCreatedInviteLink] = React.useState<
@@ -211,10 +215,11 @@ export function AdministratorsManager({
                     onChange={(e) => setDaysValid(Number(e.target.value))}
                     className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-exo text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
                   >
-                    <option value={3}>3 días</option>
-                    <option value={7}>7 días (Recomendado)</option>
-                    <option value={14}>14 días</option>
-                    <option value={30}>30 días</option>
+                    {INVITATION_VALIDITY_DAYS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

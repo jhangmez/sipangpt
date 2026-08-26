@@ -3,6 +3,7 @@
 import { prisma, ModelStatus, Role, ModelProvider, TokenUsageConcept, type AIModelConfig } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS } from '@/constants'
 
 /**
  * Server Action para actualizar el estado de salud y latencia de un modelo
@@ -22,8 +23,8 @@ export async function updateModelStatusAction(
     },
   })
 
-  revalidatePath('/admin/models')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
 }
 
 /**
@@ -43,8 +44,8 @@ export async function setDefaultModelAction(modelId: string) {
     data: { isDefault: true, isActive: true },
   })
 
-  revalidatePath('/admin/models')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
 }
 
 /**
@@ -61,8 +62,8 @@ export async function toggleModelActiveAction(modelId: string, isActive: boolean
     },
   })
 
-  revalidatePath('/admin/models')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
 }
 
 /**
@@ -132,8 +133,8 @@ export async function createAIModelAction(data: {
     model = await prisma.aIModelConfig.findUnique({ where: { id: fallbackId } })
   }
 
-  revalidatePath('/admin/models')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
   return {
     success: true,
     model: {
@@ -188,8 +189,8 @@ export async function updateAIModelPricingAction(
     },
   })
 
-  revalidatePath('/admin/models')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
 
   return {
     success: true,
@@ -213,7 +214,7 @@ export async function deleteAIModelAction(modelId: string) {
   }
 
   await prisma.aIModelConfig.delete({ where: { id: modelId } })
-  revalidatePath('/admin/models')
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
   return { success: true }
 }
 

@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthenticatedUser } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS } from '@/constants'
 import {
   validatePasswordPolicy,
   hashPassword,
@@ -92,8 +93,8 @@ export async function updateUserProfile(data: {
     },
   })
 
-  revalidatePath('/configuraciones/usuario')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.CONFIG_USUARIO)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true, user: updated }
 }
 
@@ -122,7 +123,7 @@ export async function setPasswordAction(newPassword: string) {
     data: { password: hashedPassword },
   })
 
-  revalidatePath('/configuraciones/usuario')
+  revalidatePath(CACHE_PATHS.CONFIG_USUARIO)
   return { success: true, message: 'Contraseña establecida exitosamente.' }
 }
 
@@ -156,7 +157,7 @@ export async function changePasswordAction(currentPassword: string, newPassword:
     data: { password: hashedPassword },
   })
 
-  revalidatePath('/configuraciones/usuario')
+  revalidatePath(CACHE_PATHS.CONFIG_USUARIO)
   return { success: true, message: 'Contraseña actualizada con éxito.' }
 }
 
@@ -234,7 +235,7 @@ export async function verifyEmailWithTokenAction(token: string) {
     }),
   ])
 
-  revalidatePath('/configuraciones/usuario')
+  revalidatePath(CACHE_PATHS.CONFIG_USUARIO)
   return { success: true, message: '¡Correo electrónico verificado exitosamente!' }
 }
 
@@ -248,51 +249,56 @@ export async function getUserMemories() {
   })
 }
 
-export async function toggleUserMemory(memoryId: string, isActive: boolean) {
+export async function toggleUserMemory(id: string, isActive: boolean) {
   const user = await getAuthenticatedUser()
   if (!user?.id) throw new Error('No autenticado')
 
-  const memory = await prisma.userMemory.findFirst({
-    where: { id: memoryId, userId: user.id },
-  })
-  if (!memory) throw new Error('Recuerdo no encontrado')
-
-  const updated = await prisma.userMemory.update({
-    where: { id: memoryId },
+  await prisma.userMemory.update({
+    where: { id, userId: user.id },
     data: { isActive },
   })
 
-  revalidatePath('/configuraciones/memorias')
-  return { success: true, memory: updated }
+  revalidatePath(CACHE_PATHS.CONFIG_MEMORIAS)
+  return { success: true }
 }
 
-export async function deleteUserMemory(memoryId: string) {
+export async function deleteUserMemory(id: string) {
   const user = await getAuthenticatedUser()
   if (!user?.id) throw new Error('No autenticado')
 
   await prisma.userMemory.delete({
-    where: { id: memoryId },
+    where: { id, userId: user.id },
   })
 
-  revalidatePath('/configuraciones/memorias')
+  revalidatePath(CACHE_PATHS.CONFIG_MEMORIAS)
   return { success: true }
 }
 
-export async function createUserMemory(fact: string, category: string = 'general') {
+export async function createUserMemory(fact: string, category?: string) {
   const user = await getAuthenticatedUser()
   if (!user?.id) throw new Error('No autenticado')
 
-  if (!fact.trim()) throw new Error('El texto del recuerdo es obligatorio.')
+  if (!fact.trim()) {
+    throw new Error('El contenido de la memoria no puede estar vacío.')
+  }
+
+  const count = await prisma.userMemory.count({
+    where: { userId: user.id },
+  })
+
+  if (count >= 50) {
+    throw new Error('Has alcanzado el límite máximo de 50 memorias activas.')
+  }
 
   const memory = await prisma.userMemory.create({
     data: {
       userId: user.id,
       fact: fact.trim(),
-      category: category.trim() || 'general',
+      category: category?.trim() || null,
       isActive: true,
     },
   })
 
-  revalidatePath('/configuraciones/memorias')
+  revalidatePath(CACHE_PATHS.CONFIG_MEMORIAS)
   return { success: true, memory }
 }

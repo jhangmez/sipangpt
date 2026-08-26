@@ -3,6 +3,7 @@
 import { prisma, Role } from '@/lib/prisma'
 import { requireAuth } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS } from '@/constants'
 
 /**
  * Server Action para revocar/cerrar una sesión específica.
@@ -28,9 +29,9 @@ export async function closeSessionAction(sessionToken: string) {
     where: { sessionToken },
   })
 
-  revalidatePath('/admin/dashboard')
-  revalidatePath('/configuraciones/sesiones')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
+  revalidatePath(CACHE_PATHS.CONFIG_SESIONES)
+  revalidatePath(CACHE_PATHS.CHAT)
 
   return { success: true, message: 'Sesión finalizada correctamente.' }
 }
@@ -48,8 +49,8 @@ export async function closeOtherSessionsAction(keepSessionToken?: string) {
     },
   })
 
-  revalidatePath('/configuraciones/sesiones')
-  revalidatePath('/admin/dashboard')
-  revalidatePath('/chat')
+  revalidatePath(CACHE_PATHS.CONFIG_SESIONES)
+  revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
+  revalidatePath(CACHE_PATHS.CHAT)
   return { success: true, message: 'Se han cerrado todas las demás sesiones.' }
 }

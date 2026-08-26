@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma, Role } from '@/lib/prisma'
 import { isInitialAdminEmail } from '@/constants/admin'
+import { SESSION_LIMIT_PER_ROLE, DEFAULT_MAX_SESSIONS } from '@/constants'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -106,7 +107,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Control de límite de sesiones activas en base de datos
         try {
-          const maxSessions = session.user.role === Role.ADMIN ? 5 : 3
+          const maxSessions =
+            SESSION_LIMIT_PER_ROLE[session.user.role as keyof typeof SESSION_LIMIT_PER_ROLE] ||
+            DEFAULT_MAX_SESSIONS
           const userSessions = await prisma.session.findMany({
             where: {
               userId,

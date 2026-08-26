@@ -4,6 +4,7 @@ import { prisma, Role } from '@/lib/prisma'
 import { requireRole, getCurrentUser } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { isInitialAdminEmail } from '@/constants/admin'
+import { CACHE_PATHS, INVITATION_STATUSES } from '@/constants'
 
 export async function getAdministratorsData() {
   await requireRole(Role.ADMIN)
@@ -80,7 +81,7 @@ export async function createAdminInvitation(email: string, daysValid: number = 7
     },
   })
 
-  revalidatePath('/admin/administradores')
+  revalidatePath(CACHE_PATHS.ADMIN_ADMINISTRADORES)
   return { success: true, invitation }
 }
 
@@ -92,7 +93,7 @@ export async function revokeAdminInvitation(invitationId: string) {
     data: { status: 'REVOKED' },
   })
 
-  revalidatePath('/admin/administradores')
+  revalidatePath(CACHE_PATHS.ADMIN_ADMINISTRADORES)
   return { success: true }
 }
 
@@ -117,7 +118,7 @@ export async function removeAdminRole(userId: string) {
     data: { role: Role.USER },
   })
 
-  revalidatePath('/admin/administradores')
+  revalidatePath(CACHE_PATHS.ADMIN_ADMINISTRADORES)
   return { success: true }
 }
 
@@ -165,7 +166,7 @@ export async function acceptAdminInvitation(token: string) {
     }),
   ])
 
-  revalidatePath('/admin/dashboard')
-  revalidatePath('/admin/administradores')
+  revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
+  revalidatePath(CACHE_PATHS.ADMIN_ADMINISTRADORES)
   return { success: true }
 }

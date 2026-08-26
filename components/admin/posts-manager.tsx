@@ -35,6 +35,13 @@ import {
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { PostItem, PostStatus } from '@/types'
+import {
+  POST_FILTER_OPTIONS,
+  POST_STATUSES,
+  POST_STATUS_LABELS,
+  DEFAULT_POST_STATUS,
+  type PostFilterOption
+} from '@/constants'
 
 interface CategoryItem {
   id: string
@@ -49,9 +56,7 @@ interface PostsManagerProps {
 
 export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
   const [posts, setPosts] = React.useState<PostItem[]>(initialPosts)
-  const [statusFilter, setStatusFilter] = React.useState<
-    'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED'
-  >('ALL')
+  const [statusFilter, setStatusFilter] = React.useState<PostFilterOption>('ALL')
 
   // Modal de Crear / Editar
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
@@ -61,7 +66,7 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
   const [title, setTitle] = React.useState('')
   const [slug, setSlug] = React.useState('')
   const [categoryId, setCategoryId] = React.useState<string>('none')
-  const [status, setStatus] = React.useState<PostStatus>('PUBLISHED')
+  const [status, setStatus] = React.useState<PostStatus>(DEFAULT_POST_STATUS)
   const [coverImage, setCoverImage] = React.useState('')
   const [externalUrl, setExternalUrl] = React.useState('')
   const [excerpt, setExcerpt] = React.useState('')
@@ -153,7 +158,7 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
           prev.map((p) => (p.id === res.post.id ? res.post : p))
         )
         toast.success(
-          res.post.status === 'PUBLISHED'
+          res.post.status === POST_STATUSES.PUBLISHED
             ? 'Publicación activada en vivo'
             : 'Publicación guardada como borrador'
         )
@@ -211,26 +216,27 @@ export function PostsManager({ initialPosts, categories }: PostsManagerProps) {
       {/* Barra de Filtros por Estado */}
       <div className='flex items-center justify-between gap-4 flex-wrap'>
         <div className='flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border/60'>
-          {(['ALL', 'PUBLISHED', 'DRAFT', 'ARCHIVED'] as const).map((st) => (
-            <button
-              key={st}
-              type='button'
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                statusFilter === st
-                  ? 'bg-background text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {st === 'ALL' && `Todas (${posts.length})`}
-              {st === 'PUBLISHED' &&
-                `Publicadas (${posts.filter((p) => p.status === 'PUBLISHED').length})`}
-              {st === 'DRAFT' &&
-                `Borradores (${posts.filter((p) => p.status === 'DRAFT').length})`}
-              {st === 'ARCHIVED' &&
-                `Archivadas (${posts.filter((p) => p.status === 'ARCHIVED').length})`}
-            </button>
-          ))}
+          {POST_FILTER_OPTIONS.map((st) => {
+            const count =
+              st === 'ALL'
+                ? posts.length
+                : posts.filter((p) => p.status === st).length
+
+            return (
+              <button
+                key={st}
+                type='button'
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  statusFilter === st
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {POST_STATUS_LABELS[st]} ({count})
+              </button>
+            )
+          })}
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { prisma, PostStatus } from '@/lib/prisma'
 import { getAuthenticatedUser, requireRole } from '@/lib/session'
 import { Role } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { CACHE_PATHS, POST_STATUSES } from '@/constants'
 import type { PostItem } from '@/types'
 
 function generateSlug(title: string): string {
@@ -88,9 +89,9 @@ export async function createPostAction(data: {
     },
   })
 
-  revalidatePath('/admin/posts')
-  revalidatePath('/chat')
-  revalidatePath('/')
+  revalidatePath(CACHE_PATHS.ADMIN_POSTS)
+  revalidatePath(CACHE_PATHS.CHAT)
+  revalidatePath(CACHE_PATHS.HOME)
   return { success: true, post: post as PostItem }
 }
 
@@ -162,46 +163,45 @@ export async function updatePostAction(
     },
   })
 
-  revalidatePath('/admin/posts')
+  revalidatePath(CACHE_PATHS.ADMIN_POSTS)
   revalidatePath(`/posts/${post.slug}`)
-  revalidatePath('/chat')
-  revalidatePath('/')
+  revalidatePath(CACHE_PATHS.CHAT)
+  revalidatePath(CACHE_PATHS.HOME)
   return { success: true, post: post as PostItem }
 }
 
-export async function togglePostStatusAction(id: string, currentStatus: PostStatus) {
+export async function togglePostStatusAction(postId: string, currentStatus: PostStatus) {
   await requireRole(Role.ADMIN)
 
   const newStatus =
-    currentStatus === PostStatus.PUBLISHED ? PostStatus.DRAFT : PostStatus.PUBLISHED
+    currentStatus === POST_STATUSES.PUBLISHED ? POST_STATUSES.DRAFT : POST_STATUSES.PUBLISHED
 
   const post = await prisma.post.update({
-    where: { id },
+    where: { id: postId },
     data: {
       status: newStatus,
-      publishedAt: newStatus === PostStatus.PUBLISHED ? new Date() : undefined,
+      publishedAt: newStatus === POST_STATUSES.PUBLISHED ? new Date() : null,
     },
     include: {
-      author: { select: { name: true, email: true, image: true } },
       category: { select: { id: true, name: true, slug: true } },
     },
   })
 
-  revalidatePath('/admin/posts')
-  revalidatePath('/chat')
-  revalidatePath('/')
-  return { success: true, post: post as PostItem }
+  revalidatePath(CACHE_PATHS.ADMIN_POSTS)
+  revalidatePath(CACHE_PATHS.CHAT)
+  revalidatePath(CACHE_PATHS.HOME)
+  return { success: true, post: post as unknown as PostItem }
 }
 
-export async function deletePostAction(id: string) {
+export async function deletePostAction(postId: string) {
   await requireRole(Role.ADMIN)
 
   await prisma.post.delete({
-    where: { id },
+    where: { id: postId },
   })
 
-  revalidatePath('/admin/posts')
-  revalidatePath('/chat')
-  revalidatePath('/')
+  revalidatePath(CACHE_PATHS.ADMIN_POSTS)
+  revalidatePath(CACHE_PATHS.CHAT)
+  revalidatePath(CACHE_PATHS.HOME)
   return { success: true }
 }
