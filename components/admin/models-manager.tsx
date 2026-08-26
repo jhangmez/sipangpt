@@ -55,7 +55,7 @@ import {
   User as UserIcon,
   Tag,
 } from 'lucide-react'
-import { ModelProvider, ModelStatus, TokenUsageConcept } from '@/lib/prisma'
+import type { ModelProvider, ModelStatus, TokenUsageConcept } from '@/lib/prisma'
 import { getErrorMessage } from '@/lib/utils'
 
 interface AIModelItem {
@@ -85,6 +85,42 @@ interface ModelsManagerProps {
   initialModels: AIModelItem[]
 }
 
+/**
+ * Helper para formatear y controlar inputs decimales ergonómicos:
+ * - Convierte automáticamente '.' a ','
+ * - No permite signos negativos '-' ni letras/símbolos
+ * - Permite borrar el '0' completamente (campo vacío)
+ * - Evita prefijos redundantes de ceros (ej: '0150' -> '150')
+ * - Admite una única coma decimal
+ */
+function handleDecimalInputChange(rawVal: string, setter: (val: string) => void) {
+  let val = rawVal.replace(/\./g, ',')
+  val = val.replace(/[^0-9,]/g, '')
+  const parts = val.split(',')
+  if (parts.length > 2) {
+    val = parts[0] + ',' + parts.slice(1).join('')
+  }
+  if (/^0[0-9]/.test(val)) {
+    val = val.replace(/^0+/, '')
+  }
+  setter(val)
+}
+
+function handleIntegerInputChange(rawVal: string, setter: (val: string) => void) {
+  let val = rawVal.replace(/[^0-9]/g, '')
+  if (/^0[0-9]/.test(val)) {
+    val = val.replace(/^0+/, '')
+  }
+  setter(val)
+}
+
+function parseDecimalToFloat(val: string, fallback: number = 0): number {
+  if (!val || val.trim() === '') return fallback
+  const normalized = val.replace(',', '.').trim()
+  const num = parseFloat(normalized)
+  return isNaN(num) || num < 0 ? fallback : num
+}
+
 export function ModelsManager({ initialModels }: ModelsManagerProps) {
   const [models, setModels] = React.useState<AIModelItem[]>(initialModels)
   const [activeTab, setActiveTab] = React.useState<'models' | 'logs'>('models')
@@ -97,31 +133,27 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
     provider: ModelProvider
     description: string
     endpointUrl: string
-    inputPricePerMillion: number
-    outputPricePerMillion: number
-    maxTokens: number
-    temperature: number
     isDefault: boolean
   }>({
     name: '',
     modelCode: '',
-    provider: ModelProvider.GEMINI,
+    provider: 'GEMINI',
     description: '',
     endpointUrl: '',
-    inputPricePerMillion: 0.10,
-    outputPricePerMillion: 0.40,
-    maxTokens: 2048,
-    temperature: 0.3,
     isDefault: false,
   })
+  const [createPriceInputStr, setCreatePriceInputStr] = React.useState('0,10')
+  const [createPriceOutputStr, setCreatePriceOutputStr] = React.useState('0,40')
+  const [createMaxTokensStr, setCreateMaxTokensStr] = React.useState('2048')
+  const [createTemperatureStr, setCreateTemperatureStr] = React.useState('0,3')
   const [isCreating, setIsCreating] = React.useState(false)
 
   // Estado para Editar Precios y Parámetros
   const [editingModel, setEditingModel] = React.useState<AIModelItem | null>(null)
-  const [editPriceInput, setEditPriceInput] = React.useState<number>(0)
-  const [editPriceOutput, setEditPriceOutput] = React.useState<number>(0)
-  const [editMaxTokens, setEditMaxTokens] = React.useState<number>(2048)
-  const [editTemperature, setEditTemperature] = React.useState<number>(0.3)
+  const [editPriceInputStr, setEditPriceInputStr] = React.useState<string>('0')
+  const [editPriceOutputStr, setEditPriceOutputStr] = React.useState<string>('0')
+  const [editMaxTokensStr, setEditMaxTokensStr] = React.useState<string>('2048')
+  const [editTemperatureStr, setEditTemperatureStr] = React.useState<string>('0,3')
   const [editDescription, setEditDescription] = React.useState<string>('')
   const [isSavingPricing, setIsSavingPricing] = React.useState(false)
 
@@ -168,23 +200,39 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       return
     }
 
+    const inputPrice = parseDecimalToFloat(createPriceInputStr, 0)
+    const outputPrice = parseDecimalToFloat(createPriceOutputStr, 0)
+    const maxTokens = parseInt(createMaxTokensStr, 10) || 2048
+    const temperature = parseDecimalToFloat(createTemperatureStr, 0.3)
+
     setIsCreating(true)
     try {
-      const res = await createAIModelAction(createForm)
+      const res = await createAIModelAction({
+        name: createForm.name.trim(),
+        modelCode: createForm.modelCode.trim(),
+        provider: createForm.provider,
+        description: createForm.description,
+        endpointUrl: createForm.endpointUrl,
+        inputPricePerMillion: inputPrice,
+        outputPricePerMillion: outputPrice,
+        maxTokens,
+        temperature,
+        isDefault: createForm.isDefault,
+      })
       setModels((prev) => [...prev, res.model as any])
       setIsCreateOpen(false)
       setCreateForm({
         name: '',
         modelCode: '',
-        provider: ModelProvider.GEMINI,
+        provider: 'GEMINI',
         description: '',
         endpointUrl: '',
-        inputPricePerMillion: 0.10,
-        outputPricePerMillion: 0.40,
-        maxTokens: 2048,
-        temperature: 0.3,
         isDefault: false,
       })
+      setCreatePriceInputStr('0,10')
+      setCreatePriceOutputStr('0,40')
+      setCreateMaxTokensStr('2048')
+      setCreateTemperatureStr('0,3')
       toast.success(`¡Modelo "${res.model.name}" registrado con éxito!`)
     } catch (err: unknown) {
       toast.error(getErrorMessage(err) || 'Error al registrar modelo.')
@@ -196,10 +244,10 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
   // Abrir modal de edición de precios
   const handleOpenEditPricing = (model: AIModelItem) => {
     setEditingModel(model)
-    setEditPriceInput(model.inputPricePerMillion || 0)
-    setEditPriceOutput(model.outputPricePerMillion || 0)
-    setEditMaxTokens(model.maxTokens || 2048)
-    setEditTemperature(model.temperature ?? 0.3)
+    setEditPriceInputStr(String(model.inputPricePerMillion ?? 0).replace('.', ','))
+    setEditPriceOutputStr(String(model.outputPricePerMillion ?? 0).replace('.', ','))
+    setEditMaxTokensStr(String(model.maxTokens ?? 2048))
+    setEditTemperatureStr(String(model.temperature ?? 0.3).replace('.', ','))
     setEditDescription(model.description || '')
   }
 
@@ -208,13 +256,18 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
     e.preventDefault()
     if (!editingModel) return
 
+    const inputPrice = parseDecimalToFloat(editPriceInputStr, 0)
+    const outputPrice = parseDecimalToFloat(editPriceOutputStr, 0)
+    const maxTokens = parseInt(editMaxTokensStr, 10) || 2048
+    const temperature = parseDecimalToFloat(editTemperatureStr, 0.3)
+
     setIsSavingPricing(true)
     try {
       const res = await updateAIModelPricingAction(editingModel.id, {
-        inputPricePerMillion: Number(editPriceInput),
-        outputPricePerMillion: Number(editPriceOutput),
-        maxTokens: Number(editMaxTokens),
-        temperature: Number(editTemperature),
+        inputPricePerMillion: inputPrice,
+        outputPricePerMillion: outputPrice,
+        maxTokens,
+        temperature,
         description: editDescription,
       })
 
@@ -258,7 +311,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
             ? {
                 ...m,
                 isActive: newActive,
-                status: newActive ? ModelStatus.ONLINE : ModelStatus.DISABLED,
+                status: newActive ? 'ONLINE' : 'DISABLED',
               }
             : m
         )
@@ -573,7 +626,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                   <div className='flex items-center gap-1.5'>
                     <button
                       type='button'
-                      onClick={() => handleUpdateStatus(model.id, ModelStatus.ONLINE, 120)}
+                      onClick={() => handleUpdateStatus(model.id, 'ONLINE', 120)}
                       className='rounded-lg border border-border/60 px-2 py-1 text-[10px] font-semibold text-emerald-600 hover:bg-emerald-500/10 cursor-pointer'
                       title='Marcar como Estable'
                     >
@@ -581,7 +634,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                     </button>
                     <button
                       type='button'
-                      onClick={() => handleUpdateStatus(model.id, ModelStatus.DEGRADED, 950)}
+                      onClick={() => handleUpdateStatus(model.id, 'DEGRADED', 950)}
                       className='rounded-lg border border-border/60 px-2 py-1 text-[10px] font-semibold text-amber-600 hover:bg-amber-500/10 cursor-pointer'
                       title='Marcar como Inestable'
                     >
@@ -589,7 +642,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                     </button>
                     <button
                       type='button'
-                      onClick={() => handleUpdateStatus(model.id, ModelStatus.OFFLINE)}
+                      onClick={() => handleUpdateStatus(model.id, 'OFFLINE')}
                       className='rounded-lg border border-border/60 px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-500/10 cursor-pointer'
                       title='Marcar como Offline'
                     >
@@ -842,13 +895,11 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                   Precio Entrada (USD / 1M Tokens)
                 </label>
                 <input
-                  type='number'
-                  step='0.001'
-                  min='0'
-                  value={createForm.inputPricePerMillion}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, inputPricePerMillion: parseFloat(e.target.value) || 0 })
-                  }
+                  type='text'
+                  inputMode='decimal'
+                  placeholder='0,00'
+                  value={createPriceInputStr}
+                  onChange={(e) => handleDecimalInputChange(e.target.value, setCreatePriceInputStr)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
                 />
               </div>
@@ -858,13 +909,37 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                   Precio Salida (USD / 1M Tokens)
                 </label>
                 <input
-                  type='number'
-                  step='0.001'
-                  min='0'
-                  value={createForm.outputPricePerMillion}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, outputPricePerMillion: parseFloat(e.target.value) || 0 })
-                  }
+                  type='text'
+                  inputMode='decimal'
+                  placeholder='0,00'
+                  value={createPriceOutputStr}
+                  onChange={(e) => handleDecimalInputChange(e.target.value, setCreatePriceOutputStr)}
+                  className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
+                />
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+              <div className='space-y-1.5'>
+                <label className='text-xs font-semibold text-foreground'>Max Tokens de Salida</label>
+                <input
+                  type='text'
+                  inputMode='numeric'
+                  placeholder='2048'
+                  value={createMaxTokensStr}
+                  onChange={(e) => handleIntegerInputChange(e.target.value, setCreateMaxTokensStr)}
+                  className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
+                />
+              </div>
+
+              <div className='space-y-1.5'>
+                <label className='text-xs font-semibold text-foreground'>Temperatura (0,0 - 1,0)</label>
+                <input
+                  type='text'
+                  inputMode='decimal'
+                  placeholder='0,3'
+                  value={createTemperatureStr}
+                  onChange={(e) => handleDecimalInputChange(e.target.value, setCreateTemperatureStr)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
                 />
               </div>
@@ -923,11 +998,11 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                   Precio Entrada (USD / 1M Tokens)
                 </label>
                 <input
-                  type='number'
-                  step='0.0001'
-                  min='0'
-                  value={editPriceInput}
-                  onChange={(e) => setEditPriceInput(parseFloat(e.target.value) || 0)}
+                  type='text'
+                  inputMode='decimal'
+                  placeholder='0,00'
+                  value={editPriceInputStr}
+                  onChange={(e) => handleDecimalInputChange(e.target.value, setEditPriceInputStr)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
                 />
               </div>
@@ -937,11 +1012,11 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                   Precio Salida (USD / 1M Tokens)
                 </label>
                 <input
-                  type='number'
-                  step='0.0001'
-                  min='0'
-                  value={editPriceOutput}
-                  onChange={(e) => setEditPriceOutput(parseFloat(e.target.value) || 0)}
+                  type='text'
+                  inputMode='decimal'
+                  placeholder='0,00'
+                  value={editPriceOutputStr}
+                  onChange={(e) => handleDecimalInputChange(e.target.value, setEditPriceOutputStr)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
                 />
               </div>
@@ -951,22 +1026,23 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
               <div className='space-y-1.5'>
                 <label className='text-xs font-semibold text-foreground'>Max Tokens de Salida</label>
                 <input
-                  type='number'
-                  value={editMaxTokens}
-                  onChange={(e) => setEditMaxTokens(parseInt(e.target.value, 10) || 2048)}
+                  type='text'
+                  inputMode='numeric'
+                  placeholder='2048'
+                  value={editMaxTokensStr}
+                  onChange={(e) => handleIntegerInputChange(e.target.value, setEditMaxTokensStr)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
                 />
               </div>
 
               <div className='space-y-1.5'>
-                <label className='text-xs font-semibold text-foreground'>Temperatura (0.0 - 1.0)</label>
+                <label className='text-xs font-semibold text-foreground'>Temperatura (0,0 - 1,0)</label>
                 <input
-                  type='number'
-                  step='0.05'
-                  min='0'
-                  max='1'
-                  value={editTemperature}
-                  onChange={(e) => setEditTemperature(parseFloat(e.target.value) || 0.3)}
+                  type='text'
+                  inputMode='decimal'
+                  placeholder='0,3'
+                  value={editTemperatureStr}
+                  onChange={(e) => handleDecimalInputChange(e.target.value, setEditTemperatureStr)}
                   className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
                 />
               </div>

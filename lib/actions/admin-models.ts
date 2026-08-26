@@ -92,6 +92,11 @@ export async function createAIModelAction(data: {
     })
   }
 
+  const inputPrice = Math.max(0, Number(data.inputPricePerMillion) || 0)
+  const outputPrice = Math.max(0, Number(data.outputPricePerMillion) || 0)
+  const maxTokens = Math.max(1, Number(data.maxTokens) || 2048)
+  const temperature = Math.min(2.0, Math.max(0.0, Number(data.temperature) ?? 0.3))
+
   const model = await prisma.aIModelConfig.create({
     data: {
       name: data.name.trim(),
@@ -99,10 +104,10 @@ export async function createAIModelAction(data: {
       provider: data.provider,
       description: data.description?.trim() || null,
       endpointUrl: data.endpointUrl?.trim() || null,
-      inputPricePerMillion: Number(data.inputPricePerMillion) || 0,
-      outputPricePerMillion: Number(data.outputPricePerMillion) || 0,
-      maxTokens: Number(data.maxTokens) || 2048,
-      temperature: Number(data.temperature) || 0.3,
+      inputPricePerMillion: inputPrice,
+      outputPricePerMillion: outputPrice,
+      maxTokens: maxTokens,
+      temperature: temperature,
       isDefault: Boolean(data.isDefault),
       status: ModelStatus.ONLINE,
       isActive: true,
@@ -129,13 +134,21 @@ export async function updateAIModelPricingAction(
 ) {
   await requireRole(Role.ADMIN)
 
+  const inputPrice = Math.max(0, Number(data.inputPricePerMillion) || 0)
+  const outputPrice = Math.max(0, Number(data.outputPricePerMillion) || 0)
+  const maxTokens = data.maxTokens ? Math.max(1, Number(data.maxTokens)) : undefined
+  const temperature =
+    data.temperature !== undefined
+      ? Math.min(2.0, Math.max(0.0, Number(data.temperature)))
+      : undefined
+
   const updated = await prisma.aIModelConfig.update({
     where: { id: modelId },
     data: {
-      inputPricePerMillion: Number(data.inputPricePerMillion) || 0,
-      outputPricePerMillion: Number(data.outputPricePerMillion) || 0,
-      maxTokens: data.maxTokens ? Number(data.maxTokens) : undefined,
-      temperature: data.temperature !== undefined ? Number(data.temperature) : undefined,
+      inputPricePerMillion: inputPrice,
+      outputPricePerMillion: outputPrice,
+      maxTokens: maxTokens,
+      temperature: temperature,
       description: data.description !== undefined ? data.description.trim() : undefined,
     },
   })
