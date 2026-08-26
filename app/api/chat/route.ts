@@ -17,6 +17,8 @@ import {
   buildSystemPromptWithSources,
   DEFAULT_MODEL_CODE,
   DEFAULT_PROVIDER,
+  MAX_QUESTIONS_PER_CONVERSATION,
+  CHAT_LIMIT_MESSAGES,
 } from '@/constants'
 
 export interface ChatAttachment {
@@ -33,6 +35,9 @@ export interface ChatRequestBody {
   modelCode?: string
   provider?: ModelProvider
   isVoiceInput?: boolean
+  isRegeneration?: boolean
+  regeneratedFromId?: string
+  parentId?: string
   messages?: UIMessage[]
   message?: string
   attachments?: ChatAttachment[]
@@ -71,6 +76,38 @@ export async function POST(req: Request) {
   const modelCode: string = body.modelCode || DEFAULT_MODEL_CODE
   const provider: ModelProvider = body.provider || DEFAULT_PROVIDER
   const isVoiceInput: boolean = Boolean(body.isVoiceInput)
+  const isRegeneration: boolean = Boolean(body.isRegeneration)
+  const regeneratedFromId: string | undefined = body.regeneratedFromId
+  const parentId: string | undefined = body.parentId
+
+  // 1.5 Validar límite de consultas por conversación (máximo 20 preguntas por chat)
+  if (conversationId && !isRegeneration) {
+    try {
+      const userQuestionsCount = await prisma.message.count({
+        where: {
+          conversationId,
+          role: 'USER',
+        },
+      })
+
+      if (userQuestionsCount >= MAX_QUESTIONS_PER_CONVERSATION) {
+        return new Response(
+          JSON.stringify({
+            error: CHAT_LIMIT_MESSAGES.DESCRIPTION,
+            code: 'CONVERSATION_LIMIT_REACHED',
+            currentCount: userQuestionsCount,
+            maxCount: MAX_QUESTIONS_PER_CONVERSATION,
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        )
+      }
+    } catch (countErr) {
+      console.warn('[CHAT_COUNT_CHECK_WARN]', countErr)
+    }
+  }
 
   // 2. Normalizar mensajes de entrada (soporta useChat UIMessage[] y solicitudes directas)
   let rawMessages: UIMessage[] = []
@@ -218,17 +255,24 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
         .catch(() => {})
     }
 
-    // Persistir mensaje del usuario inmediatamente
-    await prisma.message.create({
-      data: {
-        conversationId: activeConvId,
-        role: 'USER',
-        content:
-          userText ||
-          `[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`,
-        isVoiceInput,
-      },
-    }).catch(() => {})
+    // Persistir mensaje del usuario inmediatamente solo si es una nueva consulta
+    let createdUserMsgId: string | null = null
+    if (!isRegeneration) {
+      const userMsg = await prisma.message.create({
+        data: {
+          conversationId: activeConvId,
+          role: 'USER',
+          content:
+            userText ||
+            `[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`,
+          isVoiceInput,
+          parentId: parentId || null,
+        },
+      }).catch(() => null)
+      createdUserMsgId = userMsg?.id || null
+    }
+
+    const assistantParentId = createdUserMsgId || parentId || null
 
     // 10. Inferencia con streamText de Vercel AI SDK (conciso y rápido)
     const generationStartTime = Date.now()
@@ -279,6 +323,9 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                 generationLatencyMs,
                 resolutionStatus,
                 categoryId: docCategoryId,
+                isRegeneration,
+                regeneratedFromId: regeneratedFromId || null,
+                parentId: assistantParentId,
               },
             })
           } catch (createErr) {
@@ -329,7 +376,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
             }
           }
 
-          // Actualizar consumo de tokens del usuario
+          // Actualizar consumo de tokens del usuario (suma tanto consultas nuevas como regeneraciones)
           const tokensToAdd = usage?.totalTokens || 0
           if (tokensToAdd > 0) {
             await prisma.userUsage
@@ -361,6 +408,9 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
             promptTokens: usage?.inputTokens || 0,
             completionTokens: usage?.outputTokens || 0,
             latencyMs: totalDurationMs,
+            metadata: isRegeneration
+              ? { isRegeneration: true, regeneratedFromId }
+              : undefined,
           })
 
           // Registrar log de auditoría

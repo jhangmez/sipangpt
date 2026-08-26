@@ -15,6 +15,7 @@ export interface ModelDefinition {
 
 export const DEFAULT_MODEL_CODE = 'gemini-3.1-flash-lite'
 export const DEFAULT_PROVIDER: ModelProvider = 'GEMINI'
+export const DOCUMENT_TRANSCRIPTION_MODEL_CODE = 'gemini-3.1-flash-lite'
 
 export const SYSTEM_MODELS: ModelDefinition[] = [
   {

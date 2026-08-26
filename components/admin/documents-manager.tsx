@@ -12,9 +12,10 @@ import {
   updateDocumentChunkAction,
   deleteDocumentChunkAction,
   addDocumentChunkAction,
-  processAndIndexDocumentAction
+  processAndIndexDocumentAction,
+  getAdminDocuments
 } from '@/lib/actions/admin-documents'
-import { UploadDropzone } from '@/lib/uploadthing'
+import { DocumentUploadZone } from '@/components/admin/document-upload-zone'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,7 +56,14 @@ import {
   Power,
   Link as LinkIcon,
   FileCode,
-  Eye
+  Eye,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { DocumentStatus } from '@/lib/prisma'
@@ -91,15 +99,16 @@ export function DocumentsManager({
     'documents'
   )
 
-  // Estado para Modal de Crear Documento Directo
+  // Estado para Crear Documento Directo
   const [isCreateOpen, setIsCreateOpen] = React.useState(false)
   const [newTitle, setNewTitle] = React.useState('')
+  const [newFileName, setNewFileName] = React.useState('')
   const [newPublicUrl, setNewPublicUrl] = React.useState('')
   const [newCategoryId, setNewCategoryId] = React.useState('none')
   const [newContent, setNewContent] = React.useState('')
   const [isCreating, setIsCreating] = React.useState(false)
 
-  // Estado para Modal de Editar Enlace / Metadatos del Documento
+  // Estado para Edición Rápida de Enlace y Metadatos
   const [editingDoc, setEditingDoc] = React.useState<DocumentItem | null>(null)
   const [editDocTitle, setEditDocTitle] = React.useState('')
   const [editDocPublicUrl, setEditDocPublicUrl] = React.useState('')
@@ -124,6 +133,15 @@ export function DocumentsManager({
   const [editChunkPage, setEditChunkPage] = React.useState<number | ''>('')
   const [isSavingChunk, setIsSavingChunk] = React.useState(false)
 
+  // Paginación de Fragmentos (Chunks)
+  const [chunkPage, setChunkPage] = React.useState(1)
+  const [chunkPageSize, setChunkPageSize] = React.useState<number>(10)
+
+  // Reset de página al cambiar de documento, búsqueda o tamaño de página
+  React.useEffect(() => {
+    setChunkPage(1)
+  }, [selectedDocForChunks?.id, chunkSearchQuery, chunkPageSize])
+
   // Estado para Agregar Nuevo Fragmento
   const [isAddingChunk, setIsAddingChunk] = React.useState(false)
   const [newChunkContent, setNewChunkContent] = React.useState('')
@@ -147,6 +165,30 @@ export function DocumentsManager({
     null
   )
   const [showPipelineInfo, setShowPipelineInfo] = React.useState(false)
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
+
+  // Función para refrescar el estado de los documentos desde la base de datos
+  const handleRefreshDocuments = React.useCallback(async (silent = false) => {
+    if (!silent) setIsRefreshing(true)
+    try {
+      const data = await getAdminDocuments()
+      setDocuments(data.documents as unknown as DocumentItem[])
+      setStats(data.stats)
+      if (!silent) {
+        toast.success('Estado de los documentos actualizado.')
+      }
+    } catch (err: unknown) {
+      if (!silent) {
+        toast.error(
+          getErrorMessage(err) || 'Error al actualizar el estado de los documentos.'
+        )
+      }
+    } finally {
+      if (!silent) setIsRefreshing(false)
+    }
+  }, [])
+
+
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
@@ -326,12 +368,16 @@ export function DocumentsManager({
 
   // Procesar y Transcribir a Markdown con Gemini OCR
   const handleProcessAndIndex = async (doc: DocumentItem) => {
+    console.log(`[CLIENT_DOCUMENTS] 👉 Iniciando procesamiento con IA para "${doc.title || doc.fileName}" (ID: ${doc.id})`)
     setProcessingDocId(doc.id)
     const toastId = toast.loading(
       `Extrayendo texto y transcribiendo "${doc.title || doc.fileName}" a Markdown con Gemini...`
     )
     try {
+      console.log(`[CLIENT_DOCUMENTS] ⏳ Invocando Server Action processAndIndexDocumentAction("${doc.id}")...`)
       const res = await processAndIndexDocumentAction(doc.id)
+      console.log(`[CLIENT_DOCUMENTS] 🎉 Server Action respondió exitosamente:`, res)
+
       setDocuments((prev) =>
         prev.map((d) =>
           d.id === doc.id
@@ -361,6 +407,12 @@ export function DocumentsManager({
         { id: toastId }
       )
     } catch (err: unknown) {
+      console.error(`[CLIENT_DOCUMENTS] 💥 Error en Server Action:`, err)
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === doc.id ? { ...d, status: 'ERROR' as DocumentStatus } : d
+        )
+      )
       toast.error(
         getErrorMessage(err) || 'Error al procesar el documento con IA.',
         { id: toastId }
@@ -479,6 +531,15 @@ export function DocumentsManager({
       ? c.content.toLowerCase().includes(chunkSearchQuery.toLowerCase()) ||
         String(c.pageNumber || '').includes(chunkSearchQuery)
       : true
+  )
+
+  const totalFilteredChunks = filteredChunks.length
+  const totalPages = Math.max(1, Math.ceil(totalFilteredChunks / chunkPageSize))
+  const safeChunkPage = Math.min(Math.max(1, chunkPage), totalPages)
+  const startIndex = (safeChunkPage - 1) * chunkPageSize
+  const paginatedChunks = filteredChunks.slice(
+    startIndex,
+    startIndex + chunkPageSize
   )
 
   return (
@@ -601,45 +662,35 @@ export function DocumentsManager({
             </div>
           </div>
 
-          {/* Zona de Carga Rápida con UploadThing */}
-          <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4'>
-            <div className='border-b border-border/40 pb-3 flex items-center justify-between'>
-              <div>
-                <h2 className='font-frances text-base font-bold text-foreground flex items-center gap-2'>
-                  <UploadCloud className='w-4 h-4 text-primary' />
-                  Subir Archivos PDF / TXT
-                </h2>
-                <p className='text-xs text-muted-foreground'>
-                  Arrastra o selecciona reglamentos oficiales universitarios
-                  (hasta 16 MB).
-                </p>
-              </div>
-            </div>
-
-            <div className='pt-2'>
-              <UploadDropzone
-                endpoint='documentUploader'
-                onClientUploadComplete={(res) => {
-                  toast.success(
-                    `¡${res?.length || 1} archivo(s) subido(s) con éxito!`
-                  )
-                  window.location.reload()
-                }}
-                onUploadError={(error: Error) => {
-                  toast.error(`Error al subir archivo: ${error.message}`)
-                }}
-                className='border-2 border-dashed border-border/80 rounded-3xl p-6 hover:border-primary/50 transition-colors bg-background/50 ut-button:bg-primary ut-button:rounded-xl ut-button:text-xs ut-button:font-semibold ut-label:text-primary ut-label:text-sm'
-              />
-            </div>
-          </div>
+          {/* Zona de Carga Rápida con UploadThing y Shadcn Attachment */}
+          <DocumentUploadZone />
 
           {/* Listado de Documentos */}
           <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4'>
-            <div className='border-b border-border/40 pb-3 flex items-center justify-between'>
-              <h2 className='font-frances text-base font-bold text-foreground flex items-center gap-2'>
-                <Layers className='w-4 h-4 text-primary' />
-                Documentos en la Base de Conocimiento ({documents.length})
-              </h2>
+            <div className='border-b border-border/40 pb-3 flex flex-wrap items-center justify-between gap-3'>
+              <div className='flex items-center gap-2.5'>
+                <h2 className='font-frances text-base font-bold text-foreground flex items-center gap-2'>
+                  <Layers className='w-4 h-4 text-primary' />
+                  Documentos en la Base de Conocimiento ({documents.length})
+                </h2>
+              </div>
+
+              <div className='flex items-center gap-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='xs'
+                  onClick={() => handleRefreshDocuments(false)}
+                  disabled={isRefreshing}
+                  className='rounded-xl text-xs font-semibold gap-1.5 cursor-pointer border-border/80 hover:bg-muted/40'
+                  title='Comprobar el estado más reciente de los documentos'
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-primary' : 'text-muted-foreground'}`}
+                  />
+                  {isRefreshing ? 'Comprobando...' : 'Comprobar Estado'}
+                </Button>
+              </div>
             </div>
 
             {documents.length === 0 ? (
@@ -717,9 +768,19 @@ export function DocumentsManager({
                             {isProcessing && (
                               <Badge
                                 variant='outline'
-                                className='border-sky-500/40 text-sky-600 dark:text-sky-400 bg-sky-500/10 text-[9px] py-0'
+                                className='border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 text-[9px] font-bold py-0 gap-1 animate-pulse'
                               >
-                                En Proceso
+                                <Loader2 className='size-2.5 animate-spin text-amber-500' />
+                                Procesando con IA...
+                              </Badge>
+                            )}
+                            {doc.status === 'ERROR' && (
+                              <Badge
+                                variant='outline'
+                                className='border-destructive/40 text-destructive bg-destructive/10 text-[9px] font-bold py-0 gap-1'
+                              >
+                                <AlertCircle className='size-2.5' />
+                                Error de procesamiento
                               </Badge>
                             )}
                           </div>
@@ -812,23 +873,29 @@ export function DocumentsManager({
                           </Button>
                         )}
 
-                        {/* 5. Botón Transcribir e Indexar a Markdown con Gemini (si no tiene chunks o está en proceso) */}
-                        {((doc.chunkCount || 0) === 0 ||
-                          doc.status === 'PROCESSING' ||
-                          doc.status === 'ERROR') && (
+                        {/* 5. Botón Reintentar con IA (solo si está en ERROR o PROCESSING sin indexar) */}
+                        {(!isIndexed && (doc.status === 'ERROR' || doc.status === 'PROCESSING' || (doc.chunkCount || 0) === 0)) && (
                           <Button
                             size='xs'
                             onClick={() => handleProcessAndIndex(doc)}
                             disabled={processingDocId === doc.id}
-                            className='gap-1 text-[11px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-xs cursor-pointer'
-                            title='Transcribir PDF a Markdown con Gemini OCR y generar fragmentos RAG'
+                            className={`gap-1 text-[11px] rounded-xl font-semibold shadow-xs cursor-pointer ${
+                              doc.status === 'ERROR'
+                                ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                                : 'bg-amber-600 hover:bg-amber-700 text-white'
+                            }`}
+                            title='Transcribir PDF a Markdown con Gemini 3.1 Flash-Lite e indexar en RAG'
                           >
-                            <Sparkles
-                              className={`w-3.5 h-3.5 ${processingDocId === doc.id ? 'animate-spin' : ''}`}
-                            />
+                            {processingDocId === doc.id ? (
+                              <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                            ) : (
+                              <Sparkles className='w-3.5 h-3.5' />
+                            )}
                             {processingDocId === doc.id
-                              ? 'Transcribiendo...'
-                              : 'Procesar con IA a Markdown'}
+                              ? 'Indexando...'
+                              : doc.status === 'ERROR'
+                              ? 'Reintentar con IA'
+                              : 'Procesar con IA'}
                           </Button>
                         )}
 
@@ -1025,7 +1092,7 @@ export function DocumentsManager({
             </div>
           )}
 
-          {/* Listado de Chunks */}
+          {/* Listado de Chunks con Paginación */}
           <div className='space-y-4'>
             {isLoadingChunks ? (
               <div className='py-16 text-center text-xs text-muted-foreground space-y-2 rounded-3xl border border-border/80 bg-card p-6'>
@@ -1060,144 +1127,296 @@ export function DocumentsManager({
                 )}
               </Empty>
             ) : (
-              filteredChunks.map((chunk) => {
-                const isEditing = editingChunkId === chunk.id
+              <>
+                {/* Barra de Control de Paginación Superior */}
+                <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/70 p-3.5 rounded-2xl shadow-2xs'>
+                  <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                    <span>Mostrando</span>
+                    <span className='font-semibold text-foreground'>
+                      {startIndex + 1} -{' '}
+                      {Math.min(startIndex + chunkPageSize, totalFilteredChunks)}
+                    </span>
+                    <span>de</span>
+                    <span className='font-semibold text-foreground font-mono'>
+                      {totalFilteredChunks}
+                    </span>
+                    <span>fragmento(s)</span>
+                  </div>
 
-                return (
-                  <div
-                    key={chunk.id}
-                    className='rounded-3xl border border-border/70 bg-card p-4 sm:p-5 space-y-3 shadow-xs hover:border-border transition-colors'
-                  >
-                    <div className='flex items-center justify-between border-b border-border/40 pb-2.5'>
-                      <div className='flex items-center gap-2 flex-wrap'>
-                        <Badge
-                          variant='secondary'
-                          className='text-[10px] font-mono py-0.5 font-bold'
-                        >
-                          Fragmento #{chunk.chunkIndex + 1}
-                        </Badge>
-                        {chunk.pageNumber && (
-                          <Badge
-                            variant='outline'
-                            className='text-[10px] text-muted-foreground py-0.5'
-                          >
-                            Pág. {chunk.pageNumber}
-                          </Badge>
-                        )}
-                        {chunk._count?.citations ? (
-                          <Badge
-                            variant='outline'
-                            className='text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/30 py-0.5'
-                          >
-                            {chunk._count.citations} citas realizadas
-                          </Badge>
-                        ) : null}
-                        <span className='text-[10px] text-muted-foreground font-mono'>
-                          ({chunk.content.length} caracteres)
-                        </span>
-                      </div>
-
-                      <div className='flex items-center gap-1.5'>
-                        {!isEditing ? (
-                          <>
-                            <Button
-                              size='xs'
-                              variant='outline'
-                              onClick={() => {
-                                setEditingChunkId(chunk.id)
-                                setEditChunkContent(chunk.content)
-                                setEditChunkPage(chunk.pageNumber ?? '')
-                              }}
-                              className='gap-1 text-[11px] rounded-xl cursor-pointer'
-                              title='Editar texto del fragmento'
-                            >
-                              <Edit3 className='w-3 h-3' /> Editar
-                            </Button>
-                            <Button
-                              size='xs'
-                              variant='ghost'
-                              onClick={() =>
-                                setDeleteConfirm({
-                                  isOpen: true,
-                                  type: 'chunk',
-                                  id: chunk.id,
-                                  title: `Fragmento #${chunk.chunkIndex + 1}`
-                                })
-                              }
-                              className='text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 text-[11px] rounded-xl cursor-pointer'
-                              title='Eliminar fragmento'
-                            >
-                              <Trash2 className='w-3.5 h-3.5' />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size='xs'
-                            variant='ghost'
-                            onClick={() => setEditingChunkId(null)}
-                            className='gap-1 text-[11px] rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
-                            title='Cancelar edición'
-                          >
-                            <X className='w-3.5 h-3.5' /> Cancelar
-                          </Button>
-                        )}
-                      </div>
+                  <div className='flex items-center gap-3 flex-wrap justify-between sm:justify-end'>
+                    {/* Selector de Fragmentos por Página */}
+                    <div className='flex items-center gap-2'>
+                      <span className='text-xs text-muted-foreground whitespace-nowrap'>
+                        Mostrar:
+                      </span>
+                      <NativeSelect
+                        value={String(chunkPageSize)}
+                        onChange={(e) => setChunkPageSize(Number(e.target.value))}
+                        className='w-28 text-xs py-1 h-8'
+                      >
+                        <NativeSelectOption value='5'>5 / pág</NativeSelectOption>
+                        <NativeSelectOption value='10'>10 / pág</NativeSelectOption>
+                        <NativeSelectOption value='25'>25 / pág</NativeSelectOption>
+                        <NativeSelectOption value='50'>50 / pág</NativeSelectOption>
+                        <NativeSelectOption value='100'>100 / pág</NativeSelectOption>
+                      </NativeSelect>
                     </div>
 
-                    {isEditing ? (
-                      <div className='space-y-3 pt-1'>
-                        <div className='flex items-center gap-2'>
-                          <label className='text-xs font-semibold text-foreground'>
-                            Número de Página:
-                          </label>
-                          <input
-                            type='number'
-                            value={editChunkPage}
-                            onChange={(e) =>
-                              setEditChunkPage(
-                                e.target.value === ''
-                                  ? ''
-                                  : Number(e.target.value)
-                              )
-                            }
-                            className='w-20 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-mono'
-                          />
-                        </div>
+                    {/* Botones de Navegación de Página */}
+                    {totalPages > 1 && (
+                      <div className='flex items-center gap-1'>
+                        <Button
+                          size='icon-xs'
+                          variant='outline'
+                          disabled={safeChunkPage === 1}
+                          onClick={() => setChunkPage(1)}
+                          className='rounded-lg cursor-pointer h-7 w-7'
+                          title='Primera página'
+                        >
+                          <ChevronsLeft className='size-3.5' />
+                        </Button>
+                        <Button
+                          size='icon-xs'
+                          variant='outline'
+                          disabled={safeChunkPage === 1}
+                          onClick={() => setChunkPage((p) => Math.max(1, p - 1))}
+                          className='rounded-lg cursor-pointer h-7 w-7'
+                          title='Página anterior'
+                        >
+                          <ChevronLeft className='size-3.5' />
+                        </Button>
 
-                        <textarea
-                          rows={6}
-                          value={editChunkContent}
-                          onChange={(e) => setEditChunkContent(e.target.value)}
-                          className='w-full rounded-2xl border border-border bg-background p-3 text-xs font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary'
-                        />
+                        <span className='text-xs font-medium px-2 text-foreground select-none'>
+                          {safeChunkPage} / {totalPages}
+                        </span>
 
-                        <div className='flex justify-end gap-2'>
-                          <Button
-                            size='xs'
-                            variant='ghost'
-                            onClick={() => setEditingChunkId(null)}
-                            className='rounded-xl text-xs cursor-pointer'
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            size='xs'
-                            disabled={isSavingChunk}
-                            onClick={() => handleSaveChunk(chunk.id)}
-                            className='gap-1.5 rounded-xl text-xs font-semibold cursor-pointer'
-                          >
-                            <Save className='w-3.5 h-3.5' /> Guardar Cambios
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className='rounded-2xl bg-muted/20 border border-border/50 p-3.5 text-xs font-mono leading-relaxed text-foreground whitespace-pre-wrap select-text'>
-                        {chunk.content}
+                        <Button
+                          size='icon-xs'
+                          variant='outline'
+                          disabled={safeChunkPage === totalPages}
+                          onClick={() =>
+                            setChunkPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          className='rounded-lg cursor-pointer h-7 w-7'
+                          title='Página siguiente'
+                        >
+                          <ChevronRight className='size-3.5' />
+                        </Button>
+                        <Button
+                          size='icon-xs'
+                          variant='outline'
+                          disabled={safeChunkPage === totalPages}
+                          onClick={() => setChunkPage(totalPages)}
+                          className='rounded-lg cursor-pointer h-7 w-7'
+                          title='Última página'
+                        >
+                          <ChevronsRight className='size-3.5' />
+                        </Button>
                       </div>
                     )}
                   </div>
-                )
-              })
+                </div>
+
+                {/* Renderizado de Chunks Paginados */}
+                {paginatedChunks.map((chunk) => {
+                  const isEditing = editingChunkId === chunk.id
+
+                  return (
+                    <div
+                      key={chunk.id}
+                      className='rounded-3xl border border-border/70 bg-card p-4 sm:p-5 space-y-3 shadow-xs hover:border-border transition-colors'
+                    >
+                      <div className='flex items-center justify-between border-b border-border/40 pb-2.5'>
+                        <div className='flex items-center gap-2 flex-wrap'>
+                          <Badge
+                            variant='secondary'
+                            className='text-[10px] font-mono py-0.5 font-bold'
+                          >
+                            Fragmento #{chunk.chunkIndex + 1}
+                          </Badge>
+                          {chunk.pageNumber && (
+                            <Badge
+                              variant='outline'
+                              className='text-[10px] text-muted-foreground py-0.5'
+                            >
+                              Pág. {chunk.pageNumber}
+                            </Badge>
+                          )}
+                          {chunk._count?.citations ? (
+                            <Badge
+                              variant='outline'
+                              className='text-[9px] text-emerald-600 bg-emerald-500/10 border-emerald-500/30 py-0.5'
+                            >
+                              {chunk._count.citations} citas realizadas
+                            </Badge>
+                          ) : null}
+                          <span className='text-[10px] text-muted-foreground font-mono'>
+                            ({chunk.content.length} caracteres)
+                          </span>
+                        </div>
+
+                        <div className='flex items-center gap-1.5'>
+                          {!isEditing ? (
+                            <>
+                              <Button
+                                size='xs'
+                                variant='outline'
+                                onClick={() => {
+                                  setEditingChunkId(chunk.id)
+                                  setEditChunkContent(chunk.content)
+                                  setEditChunkPage(chunk.pageNumber ?? '')
+                                }}
+                                className='gap-1 text-[11px] rounded-xl cursor-pointer'
+                                title='Editar texto del fragmento'
+                              >
+                                <Edit3 className='w-3 h-3' /> Editar
+                              </Button>
+                              <Button
+                                size='xs'
+                                variant='ghost'
+                                onClick={() =>
+                                  setDeleteConfirm({
+                                    isOpen: true,
+                                    type: 'chunk',
+                                    id: chunk.id,
+                                    title: `Fragmento #${chunk.chunkIndex + 1}`
+                                  })
+                                }
+                                className='text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 text-[11px] rounded-xl cursor-pointer'
+                                title='Eliminar fragmento'
+                              >
+                                <Trash2 className='w-3.5 h-3.5' />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size='xs'
+                              variant='ghost'
+                              onClick={() => setEditingChunkId(null)}
+                              className='gap-1 text-[11px] rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
+                              title='Cancelar edición'
+                            >
+                              <X className='w-3.5 h-3.5' /> Cancelar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {isEditing ? (
+                        <div className='space-y-3 pt-1'>
+                          <div className='flex items-center gap-2'>
+                            <label className='text-xs font-semibold text-foreground'>
+                              Número de Página:
+                            </label>
+                            <input
+                              type='number'
+                              value={editChunkPage}
+                              onChange={(e) =>
+                                setEditChunkPage(
+                                  e.target.value === ''
+                                    ? ''
+                                    : Number(e.target.value)
+                                )
+                              }
+                              className='w-20 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-mono'
+                            />
+                          </div>
+
+                          <textarea
+                            rows={6}
+                            value={editChunkContent}
+                            onChange={(e) => setEditChunkContent(e.target.value)}
+                            className='w-full rounded-2xl border border-border bg-background p-3 text-xs font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary'
+                          />
+
+                          <div className='flex justify-end gap-2'>
+                            <Button
+                              size='xs'
+                              variant='ghost'
+                              onClick={() => setEditingChunkId(null)}
+                              className='rounded-xl text-xs cursor-pointer'
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              size='xs'
+                              disabled={isSavingChunk}
+                              onClick={() => handleSaveChunk(chunk.id)}
+                              className='gap-1.5 rounded-xl text-xs font-semibold cursor-pointer'
+                            >
+                              <Save className='w-3.5 h-3.5' /> Guardar Cambios
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className='rounded-2xl bg-muted/20 border border-border/50 p-3.5 text-xs font-mono leading-relaxed text-foreground whitespace-pre-wrap select-text'>
+                          {chunk.content}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Barra de Control de Paginación Inferior */}
+                {totalPages > 1 && (
+                  <div className='flex items-center justify-between gap-3 bg-card border border-border/70 p-3.5 rounded-2xl shadow-2xs flex-wrap'>
+                    <span className='text-xs text-muted-foreground'>
+                      Página <span className='font-semibold text-foreground'>{safeChunkPage}</span> de{' '}
+                      <span className='font-semibold text-foreground'>{totalPages}</span> ({totalFilteredChunks} fragmentos en total)
+                    </span>
+
+                    <div className='flex items-center gap-1'>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeChunkPage === 1}
+                        onClick={() => setChunkPage(1)}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Primera página'
+                      >
+                        <ChevronsLeft className='size-3.5' />
+                      </Button>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeChunkPage === 1}
+                        onClick={() => setChunkPage((p) => Math.max(1, p - 1))}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Página anterior'
+                      >
+                        <ChevronLeft className='size-3.5' />
+                      </Button>
+
+                      <span className='text-xs font-medium px-2 text-foreground select-none'>
+                        {safeChunkPage} / {totalPages}
+                      </span>
+
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeChunkPage === totalPages}
+                        onClick={() =>
+                          setChunkPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Página siguiente'
+                      >
+                        <ChevronRight className='size-3.5' />
+                      </Button>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeChunkPage === totalPages}
+                        onClick={() => setChunkPage(totalPages)}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Última página'
+                      >
+                        <ChevronsRight className='size-3.5' />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

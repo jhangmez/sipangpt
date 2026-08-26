@@ -279,7 +279,10 @@ export function ActiveSessionsManager() {
                         {sessionData.location}
                       </span>
                     )}
-                    <span className='flex items-center gap-1 text-[11px]'>
+                    <span
+                      suppressHydrationWarning
+                      className='flex items-center gap-1 text-[11px]'
+                    >
                       <Calendar className='h-3.5 w-3.5 text-muted-foreground' />
                       {formatDate(sessionData.createdAt)}
                     </span>

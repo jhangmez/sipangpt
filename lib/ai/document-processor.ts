@@ -1,7 +1,6 @@
 import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
-import { generateText } from 'ai'
-import { google } from '@/lib/ai/providers'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
+import { DOCUMENT_TRANSCRIPTION_MODEL_CODE } from '@/constants'
 
 export interface TextChunk {
   content: string
@@ -11,74 +10,261 @@ export interface TextChunk {
 
 /**
  * Transcribe y estructura cualquier documento (PDF, TXT o Markdown) a formato Markdown enriquecido
- * utilizando el modelo multimodal Gemini 2.5 Flash de Google
+ * utilizando el modelo multimodal Gemini oficial configurado en constantes
  */
 export async function extractAndStructureToMarkdown(
   fileUrl: string,
   mimeType: string = 'application/pdf'
 ): Promise<string> {
+  const logPrefix = `[RAG_INDEXER] [${new Date().toISOString()}]`
   const cleanUrl = fileUrl.trim()
   if (!cleanUrl) {
+    console.error(`${logPrefix} ❌ URL de documento vacía o inválida.`)
     throw new Error('La URL del documento no es válida.')
   }
 
-  // 1. Descargar el binario del documento desde UploadThing u origen
-  const response = await fetch(cleanUrl)
+  console.log(`${logPrefix} 🚀 [Paso 1/3] Iniciando descarga de archivo...`)
+  console.log(`${logPrefix} 🔗 URL: ${cleanUrl}`)
+  console.log(`${logPrefix} 📋 MimeType esperado: ${mimeType}`)
+
+  // 1. Descargar el binario del documento desde UploadThing u origen (timeout: 30s)
+  let response: Response
+  const downloadStart = Date.now()
+  try {
+    response = await fetch(cleanUrl, {
+      signal: AbortSignal.timeout(30_000)
+    })
+  } catch (err: unknown) {
+    const isTimeout = err instanceof DOMException && err.name === 'TimeoutError'
+    console.error(`${logPrefix} ❌ [Paso 1/3] Error en fetch de archivo:`, err)
+    throw new Error(
+      isTimeout
+        ? 'Tiempo de espera agotado al descargar el archivo desde UploadThing (>30s).'
+        : `Error de red al descargar el archivo: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+
   if (!response.ok) {
-    throw new Error(`Error al descargar el archivo: ${response.statusText}`)
+    console.error(
+      `${logPrefix} ❌ [Paso 1/3] Respuesta HTTP no exitosa: ${response.status} ${response.statusText}`
+    )
+    throw new Error(
+      `No se pudo descargar el archivo (HTTP ${response.status} ${response.statusText}). Verifica que la URL sea accesible.`
+    )
   }
 
   const arrayBuffer = await response.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
+  const downloadDurationMs = Date.now() - downloadStart
+
+  console.log(
+    `${logPrefix} ✅ [Paso 1/3] Archivo descargado en ${downloadDurationMs}ms: ${buffer.byteLength} bytes (${(buffer.byteLength / 1024).toFixed(1)} KB)`
+  )
 
   // Si es un archivo de texto plano o markdown simple
-  if (mimeType.includes('text/plain') || mimeType.includes('markdown') || cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md')) {
+  if (
+    mimeType.includes('text/plain') ||
+    mimeType.includes('markdown') ||
+    cleanUrl.endsWith('.txt') ||
+    cleanUrl.endsWith('.md')
+  ) {
+    console.log(
+      `${logPrefix} 📄 Archivo de texto plano detectado. Omitiendo OCR y retornando texto directo.`
+    )
     return buffer.toString('utf-8')
   }
 
-  // 2. Si es un PDF, transcribir y estructurar a Markdown mediante Gemini Multimodal
+  // 2. Si es un PDF, transcribir y estructurar a Markdown mediante Gemini Multimodal (DOCUMENT_TRANSCRIPTION_MODEL_CODE)
+  console.log(
+    `${logPrefix} 🤖 [Paso 2/3] Procesando PDF con Gemini (${DOCUMENT_TRANSCRIPTION_MODEL_CODE})...`
+  )
+  const ocrStart = Date.now()
+  const apiKey =
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || ''
+
+  if (!apiKey) {
+    console.error(
+      `${logPrefix} ❌ GOOGLE_GENERATIVE_AI_API_KEY no encontrada en variables de entorno.`
+    )
+    throw new Error('API Key de Google no configurada en el servidor.')
+  }
+
+  const systemTranscriptionPrompt = `Analiza y extrae de manera estructurada y completa todo el contenido, normativas, capítulos, artículos, tablas, cronogramas y directivas presentes en este documento de la Universidad Señor de Sipán (USS).
+
+Reglas de Estructuración en Markdown (.md):
+1. Organiza por secciones y encabezados (#, ##, ###) según los capítulos, reglamentos o títulos del documento.
+2. Si hay páginas identificadas, usa separadores tipo "--- Página X ---".
+3. Si hay tablas o cronogramas, represéntalos en tablas Markdown con sintaxis GFM.
+4. Extrae toda la información operativa, requisitos, procedimientos, artículos y normativas de forma detallada y fidedigna para el sistema RAG de preguntas y respuestas de la universidad.
+5. Mantén la terminología y formalidad institucional de la USS.`
+
+  let googleFileName: string | null = null
+  let fileUri: string | null = null
+
+  // 2.1 Intentar subir a Google Files API para procesamiento ultrarrápido y soporte de archivos pesados
   try {
-    const result = await generateText({
-      model: google('gemini-2.5-flash'),
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Eres el transcriptor y estructurador oficial de normativas de la Universidad Señor de Sipán (USS).
-Tu misión es transcribir este documento de manera completa, fiel y estructurada en formato Markdown (.md).
-
-Reglas de Estructuración:
-1. Por cada página identificada, inserta un encabezado claro con el formato: "--- Página X ---".
-2. Emplea sintaxis Markdown estándar: encabezados (#, ##, ###), viñetas (-), listas numeradas y tablas GFM si existen cuadros.
-3. No resumas, no omitas artículos, directivas, cronogramas, aulas ni resoluciones. Transcribe todo el texto íntegro.
-4. Mantén la terminología y formalidad institucional de la USS.`,
-            },
-            {
-              type: 'file',
-              data: buffer,
-              mediaType: 'application/pdf',
-            },
-          ],
+    console.log(`${logPrefix} 📤 Subiendo binario a Google Files API...`)
+    const initRes = await fetch(
+      `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': buffer.byteLength.toString(),
+          'X-Goog-Upload-Header-Content-Type': 'application/pdf',
+          'Content-Type': 'application/json'
         },
-      ],
-    })
+        body: JSON.stringify({
+          file: { display_name: 'Documento USS RAG' }
+        }),
+        signal: AbortSignal.timeout(30_000)
+      }
+    )
 
-    // Registrar consumo de tokens por OCR / Transcripción de PDF
-    await recordTokenUsageLog({
-      modelCode: 'gemini-2.5-flash',
-      provider: ModelProvider.GEMINI,
-      concept: TokenUsageConcept.DOCUMENT_OCR_TRANSCRIPTION,
-      promptTokens: result.usage?.inputTokens || 0,
-      completionTokens: result.usage?.outputTokens || 0,
-    })
+    const uploadUrl = initRes.headers.get('x-goog-upload-url')
+    if (uploadUrl) {
+      const uploadBinaryRes = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Length': buffer.byteLength.toString(),
+          'X-Goog-Upload-Offset': '0',
+          'X-Goog-Upload-Command': 'upload, finalize'
+        },
+        body: buffer,
+        signal: AbortSignal.timeout(60_000)
+      })
 
-    return result.text.trim()
+      const fileData = await uploadBinaryRes.json()
+      if (fileData.file?.uri) {
+        fileUri = fileData.file.uri
+        googleFileName = fileData.file.name
+        console.log(
+          `${logPrefix} 📦 Archivo registrado en Google Files: ${fileUri}`
+        )
+      }
+    }
+  } catch (fileApiErr) {
+    console.warn(
+      `${logPrefix} ⚠️ No se pudo usar Google Files API, usando payload inline:`,
+      fileApiErr
+    )
+  }
+
+  // Preparar payload para Gemini
+  const parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string }; inlineData?: { mimeType: string; data: string } }> = [
+    { text: systemTranscriptionPrompt }
+  ]
+
+  if (fileUri) {
+    parts.push({
+      fileData: {
+        mimeType: 'application/pdf',
+        fileUri
+      }
+    })
+  } else {
+    parts.push({
+      inlineData: {
+        mimeType: 'application/pdf',
+        data: buffer.toString('base64')
+      }
+    })
+  }
+
+  const payload = {
+    contents: [
+      {
+        role: 'user',
+        parts
+      }
+    ]
+  }
+
+  try {
+    const apiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(180_000) // 180s para documentos pesados
+      }
+    )
+
+    const data = await apiRes.json()
+    const ocrDuration = Date.now() - ocrStart
+
+    if (!apiRes.ok || data.error) {
+      const errMsg =
+        data.error?.message || `HTTP ${apiRes.status} ${apiRes.statusText}`
+      console.error(
+        `${logPrefix} ❌ [Paso 2/3] Error de Google Generative AI:`,
+        errMsg
+      )
+      throw new Error(
+        `Fallo al transcribir el PDF con Gemini (${DOCUMENT_TRANSCRIPTION_MODEL_CODE}): ${errMsg}`
+      )
+    }
+
+    const transcribedText =
+      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+
+    if (!transcribedText || transcribedText.length < 20) {
+      const finishReason = data.candidates?.[0]?.finishReason
+      console.error(
+        `${logPrefix} ❌ [Paso 2/3] Gemini devolvió respuesta vacía o insuficiente (finishReason=${finishReason}):`,
+        data
+      )
+      throw new Error(
+        `El modelo no devolvió contenido legible del PDF (motivo: ${finishReason || 'sin datos'}). El archivo puede estar protegido o dañado.`
+      )
+    }
+
+    console.log(
+      `${logPrefix} ✅ [Paso 2/3] Transcripción completada en ${ocrDuration}ms con ${DOCUMENT_TRANSCRIPTION_MODEL_CODE}. Total caracteres: ${transcribedText.length}`
+    )
+
+    // Registrar consumo de tokens
+    const inputTokens = data.usageMetadata?.promptTokenCount || 0
+    const outputTokens = data.usageMetadata?.candidatesTokenCount || 0
+    try {
+      await recordTokenUsageLog({
+        modelCode: DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+        provider: ModelProvider.GEMINI,
+        concept: TokenUsageConcept.DOCUMENT_OCR_TRANSCRIPTION,
+        promptTokens: inputTokens,
+        completionTokens: outputTokens
+      })
+      console.log(
+        `${logPrefix} 📊 Tokens registrados: input=${inputTokens}, output=${outputTokens}`
+      )
+    } catch (logErr) {
+      console.warn(
+        `${logPrefix} ⚠️ No se pudo registrar token usage log (no crítico):`,
+        logErr
+      )
+    }
+
+    return transcribedText
   } catch (err: unknown) {
-    console.error('[PDF_GEMINI_OCR_ERROR]', err)
-    const msg = err instanceof Error ? err.message : 'Error desconocido'
-    throw new Error(`Fallo al transcribir el PDF con Gemini: ${msg}`)
+    const isTimeout = err instanceof DOMException && err.name === 'AbortError'
+    console.error(`${logPrefix} 💥 [Paso 2/3] Excepción durante transcripción:`, err)
+    throw new Error(
+      isTimeout
+        ? `Tiempo de espera agotado al transcribir el PDF con Gemini (>180s).`
+        : err instanceof Error ? err.message : 'Error desconocido al transcribir documento con Gemini.'
+    )
+  } finally {
+    // Limpiar archivo temporal de Google Files si fue subido
+    if (googleFileName) {
+      fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${googleFileName}?key=${apiKey}`,
+        { method: 'DELETE' }
+      ).catch((delErr) =>
+        console.warn(`${logPrefix} ⚠️ Error limpiando archivo temporal de Google Files:`, delErr)
+      )
+    }
   }
 }
 
@@ -95,7 +281,7 @@ export function splitTextIntoChunks(
   if (!clean) return []
 
   const chunks: TextChunk[] = []
-  
+
   // Dividir por párrafos primero para preservar límites semánticos naturales
   const paragraphs = clean
     .split(/\n\s*\n/)
@@ -120,13 +306,15 @@ export function splitTextIntoChunks(
         chunks.push({
           content: currentChunk.trim(),
           pageNumber: currentPage,
-          chunkIndex,
+          chunkIndex
         })
         chunkIndex++
-        
+
         // Conservar solapamiento final
         const words = currentChunk.split(/\s+/)
-        const overlapText = words.slice(-Math.max(1, Math.floor(overlap / 10))).join(' ')
+        const overlapText = words
+          .slice(-Math.max(1, Math.floor(overlap / 10)))
+          .join(' ')
         currentChunk = overlapText ? `${overlapText}\n\n${para}` : para
       } else {
         // Párrafo muy largo, dividir por frases
@@ -139,7 +327,7 @@ export function splitTextIntoChunks(
               chunks.push({
                 content: currentChunk.trim(),
                 pageNumber: currentPage,
-                chunkIndex,
+                chunkIndex
               })
               chunkIndex++
             }
@@ -154,7 +342,7 @@ export function splitTextIntoChunks(
     chunks.push({
       content: currentChunk.trim(),
       pageNumber: currentPage,
-      chunkIndex,
+      chunkIndex
     })
   }
 
@@ -168,36 +356,61 @@ export async function indexDocumentContent(
   documentId: string,
   rawContent: string
 ): Promise<{ success: boolean; chunkCount: number }> {
+  const logPrefix = `[RAG_INDEXER] [${new Date().toISOString()}]`
+  console.log(
+    `${logPrefix} ✂️ [Paso 3/3] Segmentando texto en chunks semánticos (chunkSize: 650, overlap: 90)...`
+  )
+
   const chunks = splitTextIntoChunks(rawContent, 650, 90)
+  console.log(
+    `${logPrefix} 🧩 Chunks generados: ${chunks.length} fragmentos semánticos.`
+  )
 
   if (chunks.length === 0) {
-    throw new Error('El contenido del documento está vacío o no contiene texto legible.')
+    console.error(
+      `${logPrefix} ❌ El contenido resultante no produjo ningún chunk legible.`
+    )
+    throw new Error(
+      'El contenido del documento está vacío o no contiene texto legible.'
+    )
   }
 
   // 1. Eliminar fragmentos previos del documento para re-indexación limpia
+  console.log(
+    `${logPrefix} 🧹 Limpiando fragmentos antiguos de doc ID "${documentId}" en base de datos...`
+  )
   await prisma.documentChunk.deleteMany({
-    where: { documentId },
+    where: { documentId }
   })
 
   // 2. Insertar los nuevos fragmentos en Prisma
+  console.log(
+    `${logPrefix} 💾 Guardando ${chunks.length} chunks en Prisma PostgreSQL...`
+  )
   await prisma.documentChunk.createMany({
     data: chunks.map((c) => ({
       documentId,
       chunkIndex: c.chunkIndex,
       content: c.content,
-      pageNumber: c.pageNumber,
-    })),
+      pageNumber: c.pageNumber
+    }))
   })
 
   // 3. Actualizar estado del documento a INDEXED y su conteo de chunks
+  console.log(
+    `${logPrefix} 🏷️ Marcando documento ID "${documentId}" como INDEXED (chunkCount: ${chunks.length})...`
+  )
   await prisma.document.update({
     where: { id: documentId },
     data: {
       status: 'INDEXED',
       chunkCount: chunks.length,
-      updatedAt: new Date(),
-    },
+      updatedAt: new Date()
+    }
   })
 
+  console.log(
+    `${logPrefix} 🏁 ✅ ¡Indexación RAG completada con éxito para el documento ID "${documentId}"!`
+  )
   return { success: true, chunkCount: chunks.length }
 }

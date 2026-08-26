@@ -221,7 +221,10 @@ export function SessionsManager({
                         ? `${s.city} • IP: ${s.ipAddress}`
                         : `IP: ${s.ipAddress}`}
                     </span>
-                    <span className='flex items-center gap-1'>
+                    <span
+                      suppressHydrationWarning
+                      className='flex items-center gap-1'
+                    >
                       <Clock className='w-3 h-3 text-muted-foreground' />
                       Última actividad: {formatDateTime(s.updatedAt)}
                     </span>

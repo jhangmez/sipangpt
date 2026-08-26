@@ -15,7 +15,9 @@ export interface InstitutionalAffiliation {
   statusDescription: string
 }
 
-export function getInstitutionalAffiliation(email: string): InstitutionalAffiliation {
+export function getInstitutionalAffiliation(
+  email: string
+): InstitutionalAffiliation {
   const isUss = isUssStudentEmail(email)
 
   if (isUss) {
@@ -23,7 +25,8 @@ export function getInstitutionalAffiliation(email: string): InstitutionalAffilia
       isUssStudent: true,
       badgeLabel: 'Estudiante / Comunidad USS',
       statusTitle: 'Identidad Universitaria Verificada',
-      statusDescription: 'Tu cuenta está asociada a la Universidad Señor de Sipán con acceso preferente a normativas y reglamentos académicos.',
+      statusDescription:
+        'Tu cuenta está asociada a la Universidad Señor de Sipán con acceso preferente a normativas y reglamentos académicos.'
     }
   }
 
@@ -31,6 +34,6 @@ export function getInstitutionalAffiliation(email: string): InstitutionalAffilia
     isUssStudent: false,
     badgeLabel: 'Usuario Externo / Personal',
     statusTitle: 'Cuenta Personal Externa',
-    statusDescription: 'Acceso como usuario externo. Puedes consultar las normativas públicas de la universidad.',
+    statusDescription: 'Acceso como usuario externo.'
   }
 }

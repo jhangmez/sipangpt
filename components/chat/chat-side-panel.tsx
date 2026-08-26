@@ -220,7 +220,10 @@ export function ChatSidePanel({
                         Oficial
                       </Badge>
                     )}
-                    <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
+                    <span
+                      suppressHydrationWarning
+                      className='text-[10px] text-muted-foreground flex items-center gap-1'
+                    >
                       <Calendar className='w-3 h-3' />
                       {new Date(
                         post.publishedAt || post.createdAt

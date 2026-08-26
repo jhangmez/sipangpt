@@ -273,12 +273,17 @@ model Message {
   retrievalLatencyMs  Int?             @map("retrieval_latency_ms")
   generationLatencyMs Int?             @map("generation_latency_ms")
   isVoiceInput        Boolean          @default(false) @map("is_voice_input")
+  isRegeneration      Boolean          @default(false) @map("is_regeneration")
+  regeneratedFromId   String?          @map("regenerated_from_id")
+  parentId            String?          @map("parent_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
   conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   category       TopicCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   subcategory    TopicSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  parent         Message?          @relation("MessageTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Message[]         @relation("MessageTree")
   feedbacks      Feedback[]
   citations      MessageCitation[]
 

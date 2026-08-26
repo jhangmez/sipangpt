@@ -58,6 +58,9 @@ export default async function ChatIdPage({ params }: ChatIdPageProps) {
     latencyMs: m.latencyMs || undefined,
     retrievalLatencyMs: m.retrievalLatencyMs || undefined,
     generationLatencyMs: m.generationLatencyMs || undefined,
+    parentId: m.parentId || null,
+    isRegeneration: m.isRegeneration,
+    regeneratedFromId: m.regeneratedFromId || null,
     sources: m.citations.map((c) => ({
       chunkId: c.chunkId,
       documentId: c.documentId,

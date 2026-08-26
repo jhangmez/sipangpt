@@ -4,6 +4,8 @@ import {
   Bot,
   BrainCircuit,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   ExternalLink,
   FileText,
@@ -66,13 +68,14 @@ interface ChatMessageItemProps {
   userImage?: string
   selectedModel: ModelDefinition
   onCopy: (content: string) => void
-  onRegenerate: () => void
+  onRegenerate: (messageId: string) => void
   onOpenFeedback: (
     message: ChatMessage,
     type: 'Adecuada' | 'Inadecuada' | null,
     rating?: number
   ) => void
   onShowSources?: (sources: MessageSource[]) => void
+  onSwitchVersion?: (messageId: string, versionIndex: number) => void
 }
 
 export function ChatMessageItem({
@@ -83,7 +86,8 @@ export function ChatMessageItem({
   onCopy,
   onRegenerate,
   onOpenFeedback,
-  onShowSources
+  onShowSources,
+  onSwitchVersion
 }: ChatMessageItemProps) {
   const isUser = message.role === 'user'
   const dateObj = new Date(message.createdAt)
@@ -143,6 +147,7 @@ export function ChatMessageItem({
                     </Badge>
                   </div>
                   <span
+                    suppressHydrationWarning
                     className='text-[10px] text-muted-foreground font-mono cursor-default'
                     title={`${formattedDate} - ${formattedTime}`}
                   >
@@ -216,7 +221,54 @@ export function ChatMessageItem({
                 {/* Footer del Mensaje del Asistente: Feedback, Copiar, Regenerar y Diálogo de Información */}
                 {message.content && (
                   <MessageFooter className='flex items-center justify-between gap-1 pt-2 border-t border-border/30 flex-wrap'>
-                    <div className='flex items-center gap-1'>
+                    <div className='flex items-center gap-1.5'>
+                      {/* Control de Versiones / Ramas de Respuesta (< 1/2 >) */}
+                      {message.versions && message.versions.length > 1 && (
+                        <div className='flex items-center gap-0.5 rounded-xl bg-muted/60 px-1 py-0.5 border border-border/50 text-[11px] font-mono select-none mr-1'>
+                          <Button
+                            variant='ghost'
+                            size='icon-xs'
+                            disabled={(message.currentVersionIndex ?? 0) <= 0}
+                            onClick={() =>
+                              onSwitchVersion?.(
+                                message.id,
+                                (message.currentVersionIndex ?? 0) - 1
+                              )
+                            }
+                            className='h-5 w-5 rounded-md p-0 hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
+                            aria-label='Versión anterior'
+                            title='Versión anterior'
+                          >
+                            <ChevronLeft className='h-3.5 w-3.5' />
+                          </Button>
+
+                          <span className='px-1 text-[11px] font-semibold text-foreground/80 cursor-default'>
+                            {(message.currentVersionIndex ?? 0) + 1} /{' '}
+                            {message.versions.length}
+                          </span>
+
+                          <Button
+                            variant='ghost'
+                            size='icon-xs'
+                            disabled={
+                              (message.currentVersionIndex ?? 0) >=
+                              message.versions.length - 1
+                            }
+                            onClick={() =>
+                              onSwitchVersion?.(
+                                message.id,
+                                (message.currentVersionIndex ?? 0) + 1
+                              )
+                            }
+                            className='h-5 w-5 rounded-md p-0 hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
+                            aria-label='Siguiente versión'
+                            title='Siguiente versión'
+                          >
+                            <ChevronRight className='h-3.5 w-3.5' />
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Botón Respuesta Adecuada */}
                       <Button
                         variant='ghost'
@@ -257,9 +309,9 @@ export function ChatMessageItem({
                       <Button
                         variant='ghost'
                         size='icon-xs'
-                        onClick={onRegenerate}
+                        onClick={() => onRegenerate(message.id)}
                         aria-label='Regenerar respuesta'
-                        className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                        className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer'
                         title='Regenerar respuesta'
                       >
                         <RefreshCw className='h-3.5 w-3.5' />
@@ -273,7 +325,7 @@ export function ChatMessageItem({
                             variant='outline'
                             size='xs'
                             onClick={() => onShowSources(message.sources!)}
-                            className='gap-1 text-[10px] font-semibold rounded-xl text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 h-7'
+                            className='gap-1 text-[10px] font-semibold rounded-xl text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 h-7 cursor-pointer'
                             title='Ver fragmentos y reglamentos en el panel lateral derecho'
                           >
                             <BookOpen className='w-3 h-3' />
@@ -290,7 +342,7 @@ export function ChatMessageItem({
                             variant='ghost'
                             size='icon-xs'
                             aria-label='Ver información del mensaje'
-                            className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                            className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer'
                             title='Metadatos e información'
                           >
                             <Info className='h-3.5 w-3.5' />
@@ -310,6 +362,20 @@ export function ChatMessageItem({
 
                         <div className='space-y-3 pt-3 text-xs'>
                           <div className='rounded-2xl border border-border/70 p-3.5 space-y-2 bg-card/60'>
+                            {message.isRegeneration && (
+                              <div className='flex justify-between items-center pb-2 border-b border-border/40'>
+                                <span className='text-muted-foreground'>
+                                  Tipo de Generación:
+                                </span>
+                                <Badge
+                                  variant='secondary'
+                                  className='text-[10px] bg-primary/10 text-primary border-primary/20 gap-1'
+                                >
+                                  <RefreshCw className='w-3 h-3' /> Respuesta
+                                  Regenerada
+                                </Badge>
+                              </div>
+                            )}
                             <div className='flex justify-between items-center'>
                               <span className='text-muted-foreground'>
                                 Modelo de Generación:
@@ -366,7 +432,10 @@ export function ChatMessageItem({
                               <span className='text-muted-foreground'>
                                 Emitido:
                               </span>
-                              <span className='font-mono font-medium'>
+                              <span
+                                suppressHydrationWarning
+                                className='font-mono font-medium'
+                              >
                                 {formatTimeAgo(message.createdAt)} (
                                 {formattedDate} {formattedTime})
                               </span>
@@ -451,7 +520,10 @@ export function ChatMessageItem({
                 <span>Puntuar respuesta</span>
               </ContextMenuItem>
 
-              <ContextMenuItem onSelect={onRegenerate} className='gap-2'>
+              <ContextMenuItem
+                onSelect={() => onRegenerate(message.id)}
+                className='gap-2'
+              >
                 <RefreshCw className='w-4 h-4 text-primary' />
                 <span>Regenerar respuesta</span>
               </ContextMenuItem>

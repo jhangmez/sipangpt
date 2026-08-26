@@ -41,9 +41,17 @@ export async function performSafeLogout(redirectTo: string = '/login') {
   broadcastAuthLogout()
 
   try {
-    await signOut({ redirect: false })
+    // 1. Intentar Server Action para limpiar la BD y cookies de servidor
+    const { logoutAction } = await import('@/lib/actions/auth')
+    await logoutAction()
+    return
   } catch {
-    // Si la sesión ya expiró en el servidor o devuelve redirección directa, proceder al login
+    // 2. Fallback de cliente si la llamada de servidor falla
+    try {
+      await signOut({ redirect: false })
+    } catch {
+      // Ignorar
+    }
   } finally {
     window.location.href = redirectTo
   }

@@ -22,13 +22,12 @@ import { ChatSidePanel } from './chat-side-panel'
 import {
   SYSTEM_MODELS,
   DEFAULT_MODEL_CODE,
-  type ModelDefinition
-} from '@/constants/models'
-import { getErrorMessage } from '@/lib/utils'
-import {
+  type ModelDefinition,
   INITIAL_QUESTIONS,
-  type SuggestedQuestionDefinition
-} from '@/constants/questions'
+  type SuggestedQuestionDefinition,
+  MAX_QUESTIONS_PER_CONVERSATION
+} from '@/constants'
+import { getErrorMessage } from '@/lib/utils'
 import type {
   ChatMessage,
   AttachedFile,
@@ -272,11 +271,17 @@ export function ChatInterface({
       type: att.type
     }))
 
+    const lastVisibleAssistant = [...visibleMessages]
+      .reverse()
+      .find((m) => m.role === 'assistant')
+    const parentId = lastVisibleAssistant?.id || undefined
+
     const newUserMessage: ChatMessage = {
       id: userMessageId,
       role: 'user',
       content: textToSend,
       createdAt: nowIso,
+      parentId: parentId || null,
       attachments: attachmentsForUi.length > 0 ? attachmentsForUi : undefined
     }
 
@@ -314,6 +319,7 @@ export function ChatInterface({
           conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
           provider: selectedModel.provider,
+          parentId,
           attachments: attachmentsPayload
         })
       })
@@ -421,6 +427,7 @@ export function ChatInterface({
                     role: 'assistant',
                     content: accumulatedText,
                     createdAt: new Date().toISOString(),
+                    parentId: userMessageId,
                     modelName: selectedModel.name,
                     modelProvider: selectedModel.provider,
                     latencyMs: selectedModel.latencyMs || 140
@@ -538,6 +545,375 @@ export function ChatInterface({
     }
   }
 
+  // Mapa de versiones seleccionadas por ID de mensaje de usuario: { [userMessageId]: versionIndex }
+  const [selectedVersionMap, setSelectedVersionMap] = React.useState<
+    Record<string, number>
+  >({})
+
+  // Estructura de Turnos de Conversación
+  interface ConversationTurn {
+    userMessage: ChatMessage
+    assistantVersions: ChatMessage[]
+  }
+
+  // Agrupación de la conversación completa en Turnos y Versiones de Asistente
+  const turns = React.useMemo<ConversationTurn[]>(() => {
+    const result: ConversationTurn[] = []
+    let currentTurn: ConversationTurn | null = null
+
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        currentTurn = {
+          userMessage: msg,
+          assistantVersions: []
+        }
+        result.push(currentTurn)
+      } else if (msg.role === 'assistant') {
+        if (msg.parentId) {
+          // Si tiene parentId explícito, vincular con el turno de usuario correspondiente
+          const targetTurn = result.find(
+            (t) => t.userMessage.id === msg.parentId
+          )
+          if (targetTurn) {
+            if (!targetTurn.assistantVersions.some((v) => v.id === msg.id)) {
+              targetTurn.assistantVersions.push(msg)
+            }
+            continue
+          }
+        }
+
+        // Si no tiene parentId o no se encontró, asociar al turno activo
+        if (currentTurn) {
+          if (!currentTurn.assistantVersions.some((v) => v.id === msg.id)) {
+            currentTurn.assistantVersions.push(msg)
+          }
+        } else {
+          // Mensaje inicial sin usuario previo
+          result.push({
+            userMessage: {
+              id: `synthetic-${msg.id}`,
+              role: 'user',
+              content: '',
+              createdAt: msg.createdAt
+            },
+            assistantVersions: [msg]
+          })
+        }
+      }
+    }
+
+    return result
+  }, [messages])
+
+  // Construcción de la lista de mensajes visibles según las versiones seleccionadas
+  const visibleMessages = React.useMemo<ChatMessage[]>(() => {
+    const list: ChatMessage[] = []
+
+    for (const turn of turns) {
+      if (!turn.userMessage.id.startsWith('synthetic-')) {
+        list.push(turn.userMessage)
+      }
+
+      if (turn.assistantVersions.length > 0) {
+        const totalVersions = turn.assistantVersions.length
+        const userMsgId = turn.userMessage.id
+        let activeIdx =
+          selectedVersionMap[userMsgId] !== undefined
+            ? selectedVersionMap[userMsgId]
+            : totalVersions - 1
+
+        if (activeIdx < 0) activeIdx = 0
+        if (activeIdx >= totalVersions) activeIdx = totalVersions - 1
+
+        const activeAssistant = turn.assistantVersions[activeIdx]
+        list.push({
+          ...activeAssistant,
+          versions: turn.assistantVersions,
+          currentVersionIndex: activeIdx
+        })
+      }
+    }
+
+    return list
+  }, [turns, selectedVersionMap])
+
+  // Cambiar entre versiones de respuestas (< 1/2 >)
+  const handleSwitchVersion = (messageId: string, newIndex: number) => {
+    for (const turn of turns) {
+      const hasMsg = turn.assistantVersions.some((v) => v.id === messageId)
+      if (hasMsg) {
+        if (newIndex >= 0 && newIndex < turn.assistantVersions.length) {
+          const newActive = turn.assistantVersions[newIndex]
+          setSelectedVersionMap((prev) => ({
+            ...prev,
+            [turn.userMessage.id]: newIndex
+          }))
+          if (newActive.sources && newActive.sources.length > 0) {
+            setActiveSources(newActive.sources)
+          }
+        }
+        break
+      }
+    }
+  }
+
+  // Contabilizar preguntas realizadas por el usuario y verificar límite
+  const userQuestionsCount = React.useMemo(() => {
+    return visibleMessages.filter((m) => m.role === 'user').length
+  }, [visibleMessages])
+
+  const isConversationLimitReached =
+    userQuestionsCount >= MAX_QUESTIONS_PER_CONVERSATION
+
+  // Función para Regenerar una Respuesta con branching y streaming en nueva versión
+  const handleRegenerate = async (assistantMessageId: string) => {
+    if (isLoading) return
+
+    // Buscar el turno que contiene el mensaje del asistente
+    let targetTurn: ConversationTurn | null = null
+    for (const turn of turns) {
+      if (turn.assistantVersions.some((v) => v.id === assistantMessageId)) {
+        targetTurn = turn
+        break
+      }
+    }
+
+    if (!targetTurn) {
+      toast.error('No se encontró la consulta original para regenerar.')
+      return
+    }
+
+    const userMessage = targetTurn.userMessage
+    const turnIndex = turns.indexOf(targetTurn)
+    const priorTurns = turns.slice(0, turnIndex)
+
+    // Construir historial contextual de las versiones activas previas
+    const historyPayload: {
+      id: string
+      role: 'user' | 'assistant'
+      parts: { type: 'text'; text: string }[]
+    }[] = []
+
+    for (const pTurn of priorTurns) {
+      if (!pTurn.userMessage.id.startsWith('synthetic-')) {
+        historyPayload.push({
+          id: pTurn.userMessage.id,
+          role: 'user',
+          parts: [{ type: 'text', text: pTurn.userMessage.content }]
+        })
+      }
+      if (pTurn.assistantVersions.length > 0) {
+        const pIdx =
+          selectedVersionMap[pTurn.userMessage.id] ??
+          pTurn.assistantVersions.length - 1
+        const pActive =
+          pTurn.assistantVersions[pIdx] || pTurn.assistantVersions[0]
+        historyPayload.push({
+          id: pActive.id,
+          role: 'assistant',
+          parts: [{ type: 'text', text: pActive.content }]
+        })
+      }
+    }
+
+    // Agregar la consulta del turno actual
+    historyPayload.push({
+      id: userMessage.id,
+      role: 'user',
+      parts: [{ type: 'text', text: userMessage.content }]
+    })
+
+    // Crear la nueva versión temporal del asistente
+    const newAssistantTempId = crypto.randomUUID()
+    const newVersionIndex = targetTurn.assistantVersions.length
+
+    const newAssistantVersion: ChatMessage = {
+      id: newAssistantTempId,
+      role: 'assistant',
+      content: '',
+      createdAt: new Date().toISOString(),
+      parentId: userMessage.id,
+      isRegeneration: true,
+      regeneratedFromId: assistantMessageId,
+      modelName: selectedModel.name,
+      modelProvider: selectedModel.provider
+    }
+
+    // Añadir la nueva versión y seleccionarla automáticamente (ej. 2/2)
+    setMessages((prev) => [...prev, newAssistantVersion])
+    setSelectedVersionMap((prev) => ({
+      ...prev,
+      [userMessage.id]: newVersionIndex
+    }))
+
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: historyPayload,
+          conversationId: currentConversationId,
+          modelCode: selectedModel.modelCode,
+          provider: selectedModel.provider,
+          isRegeneration: true,
+          regeneratedFromId: assistantMessageId,
+          parentId: userMessage.id
+        })
+      })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(
+          errData?.error || 'Error al regenerar respuesta con el asistente'
+        )
+      }
+
+      // Procesar flujo de respuesta en tiempo real (SSE)
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('No se pudo inicializar el flujo de datos del modelo.')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let accumulatedText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        let currentEvent = ''
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+
+          if (trimmed.startsWith('event: ')) {
+            currentEvent = trimmed.slice(7).trim()
+            continue
+          }
+
+          if (trimmed.startsWith('data: ') || trimmed.startsWith('data:')) {
+            const dataStr = trimmed.replace(/^data:\s*/, '')
+            if (dataStr === '[DONE]') continue
+
+            try {
+              const packet = JSON.parse(dataStr)
+
+              // Metadatos iniciales y fuentes RAG
+              if (packet.type === 'start' && packet.messageMetadata) {
+                const meta = packet.messageMetadata
+                if (meta.sources && meta.sources.length > 0) {
+                  setActiveSources(meta.sources)
+                  setSidePanelTab('sources')
+                  setSidePanelOpen(true)
+                }
+              }
+
+              // Chunks de texto
+              const textDelta =
+                packet.delta !== undefined
+                  ? packet.delta
+                  : packet.textDelta !== undefined
+                    ? packet.textDelta
+                    : packet.text !== undefined
+                      ? packet.text
+                      : currentEvent === 'delta'
+                        ? packet.text
+                        : null
+
+              if (textDelta) {
+                accumulatedText += textDelta
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === newAssistantTempId
+                      ? { ...msg, content: accumulatedText }
+                      : msg
+                  )
+                )
+              }
+
+              // Razonamiento
+              if (packet.type === 'reasoning-delta') {
+                const rDelta = packet.delta ?? packet.textDelta
+                if (rDelta) {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === newAssistantTempId
+                        ? { ...msg, reasoning: (msg.reasoning || '') + rDelta }
+                        : msg
+                    )
+                  )
+                }
+              }
+
+              // Fuentes complementarias
+              if (packet.type === 'source' && packet.source) {
+                setActiveSources((prev) => [...prev, packet.source])
+                setSidePanelTab('sources')
+                setSidePanelOpen(true)
+              }
+
+              if (currentEvent === 'meta' || packet.type === 'metadata') {
+                const metaSources =
+                  packet.sources || packet.messageMetadata?.sources
+                if (metaSources && metaSources.length > 0) {
+                  setActiveSources(metaSources)
+                  setSidePanelTab('sources')
+                  setSidePanelOpen(true)
+                }
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === newAssistantTempId
+                      ? {
+                          ...msg,
+                          sources: metaSources || msg.sources,
+                          latencyMs: packet.latencyMs || msg.latencyMs,
+                          retrievalLatencyMs:
+                            packet.retrievalLatencyMs || msg.retrievalLatencyMs,
+                          generationLatencyMs:
+                            packet.generationLatencyMs ||
+                            msg.generationLatencyMs,
+                          embeddingModel:
+                            packet.embeddingModel ||
+                            msg.embeddingModel ||
+                            'gemini-embedding-2',
+                          modelName: packet.modelName || selectedModel.name
+                        }
+                      : msg
+                  )
+                )
+              }
+
+              if (packet.type === 'error' || currentEvent === 'error') {
+                throw new Error(
+                  packet.error || 'Error reportado por el modelo de IA.'
+                )
+              }
+            } catch (parseErr: unknown) {
+              if (trimmed.includes('"error"')) {
+                throw parseErr
+              }
+            }
+          }
+        }
+      }
+
+      router.refresh()
+    } catch (err: unknown) {
+      console.error('[CHAT_REGENERATE_ERROR]', err)
+      setError(getErrorMessage(err) || 'Error al regenerar respuesta.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const userDisplayName =
     user?.firstName || user?.name || userName || 'Estudiante USS'
   const userImage = user?.image || undefined
@@ -560,14 +936,14 @@ export function ChatInterface({
             <MessageScroller className='flex-1 overflow-hidden'>
               <MessageScrollerViewport className='p-4'>
                 <MessageScrollerContent>
-                  {messages.length === 0 ? (
+                  {visibleMessages.length === 0 ? (
                     <ChatEmptyState
                       userDisplayName={userDisplayName}
                       questions={mappedQuestions}
                       onSelectQuestion={handleSendMessage}
                     />
                   ) : (
-                    messages.map((message) => (
+                    visibleMessages.map((message) => (
                       <ChatMessageItem
                         key={message.id}
                         message={message}
@@ -575,7 +951,8 @@ export function ChatInterface({
                         userImage={userImage}
                         selectedModel={selectedModel}
                         onCopy={copyToClipboard}
-                        onRegenerate={() => handleSendMessage()}
+                        onRegenerate={handleRegenerate}
+                        onSwitchVersion={handleSwitchVersion}
                         onOpenFeedback={handleOpenFeedback}
                         onShowSources={(srcs) => {
                           setActiveSources(srcs)
@@ -588,9 +965,8 @@ export function ChatInterface({
 
                   {/* Indicador de Carga mientras se espera la primera respuesta */}
                   {isLoading &&
-                    messages[messages.length - 1]?.role === 'user' && (
-                      <ChatLoadingItem />
-                    )}
+                    visibleMessages[visibleMessages.length - 1]?.role ===
+                      'user' && <ChatLoadingItem />}
 
                   {/* Alerta de Error */}
                   {error && (
@@ -611,15 +987,20 @@ export function ChatInterface({
             onRemove={removeAttachment}
           />
 
-          {/* Formulario de Consulta con InputGroup auto-expandible */}
+          {/* Formulario de Consulta con InputGroup auto-expandible y control de límites */}
           <ChatInputForm
             input={input}
             setInput={setInput}
             isLoading={isLoading}
             hasAttachments={attachedFiles.length > 0}
+            isLimitReached={isConversationLimitReached}
+            questionsCount={userQuestionsCount}
+            maxQuestions={MAX_QUESTIONS_PER_CONVERSATION}
             onSubmit={() => handleSendMessage()}
             onFileUpload={handleFileUpload}
+            onNewChat={() => router.push('/chat')}
           />
+
 
           {/* Modal de Feedback Oficial USS */}
           {feedbackData && (

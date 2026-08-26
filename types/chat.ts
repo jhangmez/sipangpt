@@ -57,7 +57,13 @@ export interface ChatMessage {
   latencyMs?: number
   retrievalLatencyMs?: number
   generationLatencyMs?: number
+  parentId?: string | null
+  isRegeneration?: boolean
+  regeneratedFromId?: string | null
   sources?: MessageSource[]
+  // Soporte de Ramificación y Versionado de Respuestas
+  versions?: ChatMessage[]
+  currentVersionIndex?: number
 }
 
 export interface AttachedFile {

@@ -31,10 +31,12 @@ export async function GET(request: Request) {
     headers: reqHeaders,
   })
 
-  const isAdmin = session.user.role === Role.ADMIN
+  const url = new URL(request.url)
+  const isGlobalAdminRequest =
+    url.searchParams.get('admin') === 'true' && session.user.role === Role.ADMIN
 
   const rawSessions = await prisma.session.findMany({
-    where: isAdmin
+    where: isGlobalAdminRequest
       ? { expires: { gt: new Date() } }
       : { userId: session.user.id, expires: { gt: new Date() } },
     orderBy: { updatedAt: 'desc' },

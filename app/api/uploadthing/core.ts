@@ -1,4 +1,4 @@
-﻿import { createUploadthing, type FileRouter } from 'uploadthing/next'
+import { createUploadthing, type FileRouter } from 'uploadthing/next'
 import { UploadThingError } from 'uploadthing/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
@@ -42,6 +42,10 @@ export const ourFileRouter = {
       maxFileSize: '4MB',
       maxFileCount: 5,
     },
+    blob: {
+      maxFileSize: '4MB',
+      maxFileCount: 5,
+    },
   })
     .middleware(async () => {
       const session = await auth()
@@ -51,7 +55,7 @@ export const ourFileRouter = {
       return { userId: session.user.id }
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // Guardar el documento en la base de datos Prisma
+      // 1. Registrar el documento en la base de datos Prisma
       const doc = await prisma.document.create({
         data: {
           title: file.name,
@@ -64,7 +68,27 @@ export const ourFileRouter = {
           status: 'PROCESSING',
         },
       })
-      console.log('Documento registrado en la base de datos con ID:', doc.id)
+      console.log(`[UPLOADTHING] 📄 Documento registrado en BD con ID: ${doc.id}`)
+
+      // 2. Transcribir e indexar automáticamente de una sola vez con Gemini 3.1 Flash-Lite
+      try {
+        const { extractAndStructureToMarkdown, indexDocumentContent } = await import(
+          '@/lib/ai/document-processor'
+        )
+        const markdownContent = await extractAndStructureToMarkdown(
+          file.ufsUrl,
+          file.type || 'application/pdf'
+        )
+        const result = await indexDocumentContent(doc.id, markdownContent)
+        console.log(`[UPLOADTHING] ✅ Auto-indexación completada para "${file.name}" (${result.chunkCount} chunks)`)
+      } catch (autoErr) {
+        console.error(`[UPLOADTHING] ❌ Error en auto-indexación para doc ID ${doc.id}:`, autoErr)
+        await prisma.document.update({
+          where: { id: doc.id },
+          data: { status: 'ERROR' },
+        })
+      }
+
       return { documentId: doc.id, uploadedBy: metadata.userId, url: file.ufsUrl }
     }),
 } satisfies FileRouter

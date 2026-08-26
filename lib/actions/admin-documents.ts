@@ -299,6 +299,9 @@ export async function markDocumentAsIndexed(documentId: string) {
  * lo fragmenta en chunks semánticos y lo indexa automáticamente.
  */
 export async function processAndIndexDocumentAction(documentId: string) {
+  const logPrefix = `[ACTION_PROCESS_INDEX] [${new Date().toISOString()}]`
+  console.log(`${logPrefix} 📥 Invocando Server Action para Document ID: "${documentId}"`)
+
   await requireRole(Role.ADMIN)
 
   const doc = await prisma.document.findUnique({
@@ -306,13 +309,17 @@ export async function processAndIndexDocumentAction(documentId: string) {
   })
 
   if (!doc) {
+    console.error(`${logPrefix} ❌ Documento con ID "${documentId}" no encontrado en base de datos.`)
     throw new Error('Documento no encontrado.')
   }
 
   const fileUrl = doc.fileUrl || doc.publicUrl
   if (!fileUrl) {
+    console.error(`${logPrefix} ❌ El documento no dispone de una URL válida (fileUrl/publicUrl vacíos).`)
     throw new Error('El documento no dispone de una URL válida para procesar.')
   }
+
+  console.log(`${logPrefix} 📄 Documento: "${doc.title || doc.fileName}", Tamaño: ${doc.sizeBytes} bytes, Mime: ${doc.mimeType}`)
 
   // 1. Marcar temporalmente como PROCESSING
   await prisma.document.update({
@@ -322,24 +329,27 @@ export async function processAndIndexDocumentAction(documentId: string) {
 
   try {
     // 2. Extraer y transcribir a Markdown enriquecido mediante Gemini Multimodal
+    console.log(`${logPrefix} ⏳ Llamando a extractAndStructureToMarkdown...`)
     const markdownContent = await extractAndStructureToMarkdown(
       fileUrl,
       doc.mimeType || 'application/pdf'
     )
 
     // 3. Segmentar semánticamente en chunks con solapamiento e indexar en Neon
+    console.log(`${logPrefix} ⏳ Llamando a indexDocumentContent con ${markdownContent.length} caracteres...`)
     const result = await indexDocumentContent(documentId, markdownContent)
 
     revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
     revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
 
+    console.log(`${logPrefix} 🎉 Server Action completado con éxito: ${result.chunkCount} chunks creados.`)
     return {
       success: true,
       chunkCount: result.chunkCount,
       markdownPreview: markdownContent.substring(0, 500),
     }
   } catch (err: unknown) {
-    console.error('[PROCESS_AND_INDEX_ACTION_ERROR]', err)
+    console.error(`${logPrefix} 💥 Error fatal en Server Action:`, err)
     // Marcar como ERROR si falla
     await prisma.document.update({
       where: { id: documentId },
