@@ -57,6 +57,7 @@ import {
   Power,
   Link as LinkIcon,
   FileCode,
+  Eye,
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { DocumentStatus } from '@/lib/prisma'
@@ -103,6 +104,9 @@ export function DocumentsManager({
   const [editDocPublicUrl, setEditDocPublicUrl] = React.useState('')
   const [editDocCategoryId, setEditDocCategoryId] = React.useState('none')
   const [isSavingDocDetails, setIsSavingDocDetails] = React.useState(false)
+
+  // Estado para Visualizar Documento / PDF
+  const [previewDoc, setPreviewDoc] = React.useState<DocumentItem | null>(null)
 
   // Estado para Gestión de Fragmentos (Chunks)
   const [selectedDocForChunks, setSelectedDocForChunks] = React.useState<DocumentItem | null>(
@@ -645,7 +649,18 @@ export function DocumentsManager({
                           <BookOpen className='w-3.5 h-3.5' /> Fragmentos RAG
                         </Button>
 
-                        {/* 2. Botón Editar Enlace y Metadatos */}
+                        {/* 2. Botón Visualizar Documento / PDF */}
+                        <Button
+                          size='xs'
+                          variant='outline'
+                          onClick={() => setPreviewDoc(doc)}
+                          className='gap-1 text-[11px] rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
+                          title='Visualizar documento y PDF oficial'
+                        >
+                          <Eye className='w-3.5 h-3.5' /> Visualizar
+                        </Button>
+
+                        {/* 3. Botón Editar Enlace y Metadatos */}
                         <Button
                           size='xs'
                           variant='outline'
@@ -656,7 +671,7 @@ export function DocumentsManager({
                           <LinkIcon className='w-3.5 h-3.5' /> Editar Enlace
                         </Button>
 
-                        {/* 3. Botón Ver PDF en nueva ventana */}
+                        {/* 4. Botón Ver PDF en nueva ventana */}
                         {(doc.fileUrl || doc.publicUrl) && (
                           <Button
                             size='xs'
@@ -1248,6 +1263,51 @@ export function DocumentsManager({
         isLoading={isAlertLoading}
         onConfirm={handleConfirmAlert}
       />
+
+      {/* ========================================================================= */}
+      {/* MODAL: VISUALIZADOR DE DOCUMENTO Y PDF INTEGRADO */}
+      {/* ========================================================================= */}
+      <Dialog open={Boolean(previewDoc)} onOpenChange={(open) => !open && setPreviewDoc(null)}>
+        <DialogContent className='max-w-4xl max-h-[90vh] flex flex-col font-exo rounded-3xl p-6'>
+          <DialogHeader className='shrink-0'>
+            <DialogTitle className='font-frances text-lg font-bold flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <Eye className='w-5 h-5 text-primary' />
+                <span className='truncate max-w-lg'>{previewDoc?.title || previewDoc?.fileName}</span>
+              </div>
+              {previewDoc?.publicUrl && (
+                <a
+                  href={previewDoc.publicUrl}
+                  target='_blank'
+                  rel='noreferrer'
+                  className='text-xs text-primary hover:underline flex items-center gap-1 font-normal mr-6'
+                >
+                  <ExternalLink className='size-3' /> Abrir en pestaña nueva
+                </a>
+              )}
+            </DialogTitle>
+            <DialogDescription className='text-xs text-muted-foreground'>
+              Visualización previa del documento institucional oficial y sus metadatos de indexación RAG.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='flex-1 overflow-hidden rounded-2xl border border-border/80 bg-muted/20 min-h-[450px]'>
+            {previewDoc?.publicUrl || previewDoc?.fileUrl ? (
+              <iframe
+                src={previewDoc.publicUrl || previewDoc.fileUrl || ''}
+                className='w-full h-full min-h-[450px] rounded-2xl'
+                title={previewDoc.title}
+              />
+            ) : (
+              <div className='flex flex-col items-center justify-center h-full p-8 text-center text-xs text-muted-foreground space-y-2'>
+                <FileText className='size-8 text-muted-foreground/60' />
+                <p className='font-semibold text-foreground'>Sin archivo PDF cargado</p>
+                <p>Este documento fue registrado mediante inserción directa de texto en la base RAG.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
