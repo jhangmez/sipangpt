@@ -177,45 +177,26 @@ export async function updateAIModelPricingAction(
       ? Math.min(2.0, Math.max(0.0, Number(data.temperature)))
       : undefined
 
-  let updated: any
-  try {
-    updated = await prisma.aIModelConfig.update({
-      where: { id: modelId },
-      data: {
-        inputPricePerMillion: inputPrice,
-        outputPricePerMillion: outputPrice,
-        maxTokens: maxTokens,
-        temperature: temperature,
-        description: data.description !== undefined ? data.description.trim() : undefined,
-      },
-    })
-  } catch (err) {
-    // Si la instancia en caliente de Prisma Client aún no refrescó la firma de campos
-    await prisma.$executeRaw`
-      UPDATE "ai_model_configs"
-      SET 
-        "input_price_per_million" = ${inputPrice},
-        "output_price_per_million" = ${outputPrice},
-        "max_tokens" = COALESCE(${maxTokens ?? null}, "max_tokens"),
-        "temperature" = COALESCE(${temperature ?? null}, "temperature"),
-        "description" = COALESCE(${data.description !== undefined ? data.description.trim() : null}, "description"),
-        "updated_at" = NOW()
-      WHERE "id" = ${modelId}
-    `
-    updated = await prisma.aIModelConfig.findUnique({ where: { id: modelId } })
-  }
+  const updated = await prisma.aIModelConfig.update({
+    where: { id: modelId },
+    data: {
+      inputPricePerMillion: inputPrice,
+      outputPricePerMillion: outputPrice,
+      maxTokens: maxTokens,
+      temperature: temperature,
+      description: data.description !== undefined ? data.description.trim() : undefined,
+    },
+  })
 
   revalidatePath('/admin/models')
+  revalidatePath('/chat')
+
   return {
     success: true,
     model: {
-      ...(updated || {}),
-      id: modelId,
+      ...updated,
       inputPricePerMillion: inputPrice,
       outputPricePerMillion: outputPrice,
-      maxTokens: maxTokens ?? updated?.maxTokens ?? 2048,
-      temperature: temperature ?? updated?.temperature ?? 0.3,
-      description: data.description !== undefined ? data.description.trim() : updated?.description,
     },
   }
 }
@@ -248,10 +229,7 @@ export async function getTokenUsageStatsAction() {
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
-          select: {
-            name: true,
-            email: true,
-          },
+          select: { name: true, email: true },
         },
       },
     }),
@@ -268,6 +246,7 @@ export async function getTokenUsageStatsAction() {
         inputPricePerMillion: true,
         outputPricePerMillion: true,
       },
+      orderBy: { totalInferences: 'desc' },
     }),
   ])
 
@@ -276,19 +255,24 @@ export async function getTokenUsageStatsAction() {
   const totalCostUsd = logs.reduce((acc, l) => acc + l.estimatedCostUsd, 0)
 
   // Desglose por Concepto
-  const byConcept: Record<TokenUsageConcept, { tokens: number; cost: number; count: number }> = {
-    [TokenUsageConcept.CHAT_COMPLETION]: { tokens: 0, cost: 0, count: 0 },
-    [TokenUsageConcept.RAG_EMBEDDING]: { tokens: 0, cost: 0, count: 0 },
-    [TokenUsageConcept.DOCUMENT_OCR_TRANSCRIPTION]: { tokens: 0, cost: 0, count: 0 },
-    [TokenUsageConcept.QUERY_ANALYSIS]: { tokens: 0, cost: 0, count: 0 },
-    [TokenUsageConcept.OTHER]: { tokens: 0, cost: 0, count: 0 },
+  const byConcept: Record<string, { tokens: number; cost: number; count: number }> = {
+    CHAT_COMPLETION: { tokens: 0, cost: 0, count: 0 },
+    RAG_EMBEDDING: { tokens: 0, cost: 0, count: 0 },
+    DOCUMENT_OCR_TRANSCRIPTION: { tokens: 0, cost: 0, count: 0 },
+    QUERY_ANALYSIS: { tokens: 0, cost: 0, count: 0 },
+    OTHER: { tokens: 0, cost: 0, count: 0 },
   }
 
   for (const log of logs) {
-    if (byConcept[log.concept]) {
-      byConcept[log.concept].tokens += log.totalTokens
-      byConcept[log.concept].cost += log.estimatedCostUsd
-      byConcept[log.concept].count += 1
+    const key = log.concept as string
+    if (byConcept[key]) {
+      byConcept[key].tokens += log.totalTokens
+      byConcept[key].cost += log.estimatedCostUsd
+      byConcept[key].count += 1
+    } else {
+      byConcept['OTHER'].tokens += log.totalTokens
+      byConcept['OTHER'].cost += log.estimatedCostUsd
+      byConcept['OTHER'].count += 1
     }
   }
 

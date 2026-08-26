@@ -4,6 +4,9 @@ import { requireRole } from '@/lib/session'
 import { Role } from '@/lib/prisma'
 import { ModelsManager } from '@/components/admin/models-manager'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: 'Modelos de IA & Consumo de Tokens • Panel Administrador',
   description:
