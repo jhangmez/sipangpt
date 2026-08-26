@@ -12,6 +12,7 @@ import {
   updateDocumentChunkAction,
   deleteDocumentChunkAction,
   addDocumentChunkAction,
+  processAndIndexDocumentAction,
 } from '@/lib/actions/admin-documents'
 import { UploadDropzone } from '@/lib/uploadthing'
 import { Badge } from '@/components/ui/badge'
@@ -139,6 +140,8 @@ export function DocumentsManager({
     title: '',
   })
   const [isAlertLoading, setIsAlertLoading] = React.useState(false)
+  const [processingDocId, setProcessingDocId] = React.useState<string | null>(null)
+  const [showPipelineInfo, setShowPipelineInfo] = React.useState(false)
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
@@ -303,6 +306,34 @@ export function DocumentsManager({
     }
   }
 
+  // Procesar y Transcribir a Markdown con Gemini OCR
+  const handleProcessAndIndex = async (doc: DocumentItem) => {
+    setProcessingDocId(doc.id)
+    const toastId = toast.loading(`Extrayendo texto y transcribiendo "${doc.title || doc.fileName}" a Markdown con Gemini...`)
+    try {
+      const res = await processAndIndexDocumentAction(doc.id)
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === doc.id
+            ? { ...d, status: 'INDEXED' as DocumentStatus, chunkCount: res.chunkCount }
+            : d
+        )
+      )
+      if (selectedDocForChunks?.id === doc.id) {
+        setSelectedDocForChunks((prev) =>
+          prev ? { ...prev, status: 'INDEXED' as DocumentStatus, chunkCount: res.chunkCount } : null
+        )
+        loadChunks(doc.id)
+      }
+      setStats((prev) => ({ ...prev, indexed: prev.indexed + 1 }))
+      toast.success(`¡Documento transcrito e indexado en ${res.chunkCount} fragmentos RAG!`, { id: toastId })
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al procesar el documento con IA.', { id: toastId })
+    } finally {
+      setProcessingDocId(null)
+    }
+  }
+
   // Crear Documento Directo e Indexar
   const handleCreateDocument = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -423,6 +454,14 @@ export function DocumentsManager({
         </div>
 
         <div className='flex items-center gap-2 flex-wrap'>
+          <Button
+            variant='outline'
+            onClick={() => setShowPipelineInfo(true)}
+            className='gap-1.5 rounded-2xl cursor-pointer text-xs font-semibold border-primary/30 text-primary bg-primary/5 hover:bg-primary/10'
+          >
+            <Sparkles className='w-3.5 h-3.5' /> ¿Cómo funciona el Pipeline RAG?
+          </Button>
+
           <Button
             onClick={() => setIsCreateOpen(true)}
             className='gap-2 rounded-2xl cursor-pointer text-xs font-semibold'
@@ -690,7 +729,21 @@ export function DocumentsManager({
                           </Button>
                         )}
 
-                        {/* 4. Botón Indexar / Desindexar con estado visual claro */}
+                        {/* 5. Botón Transcribir e Indexar a Markdown con Gemini (si no tiene chunks o está en proceso) */}
+                        {((doc.chunkCount || 0) === 0 || doc.status === 'PROCESSING' || doc.status === 'ERROR') && (
+                          <Button
+                            size='xs'
+                            onClick={() => handleProcessAndIndex(doc)}
+                            disabled={processingDocId === doc.id}
+                            className='gap-1 text-[11px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold shadow-xs cursor-pointer'
+                            title='Transcribir PDF a Markdown con Gemini OCR y generar fragmentos RAG'
+                          >
+                            <Sparkles className={`w-3.5 h-3.5 ${processingDocId === doc.id ? 'animate-spin' : ''}`} />
+                            {processingDocId === doc.id ? 'Transcribiendo...' : 'Procesar con IA a Markdown'}
+                          </Button>
+                        )}
+
+                        {/* 6. Botón Indexar / Desindexar con estado visual claro */}
                         <Button
                           size='xs'
                           variant={isIndexed ? 'outline' : 'default'}
@@ -1305,6 +1358,89 @@ export function DocumentsManager({
                 <p>Este documento fue registrado mediante inserción directa de texto en la base RAG.</p>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL: EXPLICACIÓN DEL PIPELINE DE INDEXACIÓN RAG */}
+      {/* ========================================================================= */}
+      <Dialog open={showPipelineInfo} onOpenChange={setShowPipelineInfo}>
+        <DialogContent className='max-w-2xl font-exo rounded-3xl p-6'>
+          <DialogHeader>
+            <DialogTitle className='font-frances text-lg font-bold flex items-center gap-2'>
+              <Sparkles className='w-5 h-5 text-primary' /> Arquitectura e Indexación RAG: ¿Qué ocurre por detrás?
+            </DialogTitle>
+            <DialogDescription className='text-xs text-muted-foreground'>
+              Conoce el flujo paso a paso que transforma reglamentos y normativas de la USS en respuestas oficiales con citas verificables.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-3.5 pt-2 text-xs'>
+            {/* Paso 1 */}
+            <div className='flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold shrink-0 text-xs'>
+                1
+              </div>
+              <div className='space-y-0.5'>
+                <p className='font-bold text-foreground'>Ingesta y Almacenamiento en CDN (UploadThing)</p>
+                <p className='text-muted-foreground leading-relaxed text-[11px]'>
+                  El archivo PDF institucional se carga de forma segura a los servidores CDN y se registra en la base de datos con estado <strong>PROCESSING</strong>.
+                </p>
+              </div>
+            </div>
+
+            {/* Paso 2 */}
+            <div className='flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold shrink-0 text-xs'>
+                2
+              </div>
+              <div className='space-y-0.5'>
+                <p className='font-bold text-foreground'>Transcripción y Estructuración a Markdown (Gemini Multimodal OCR)</p>
+                <p className='text-muted-foreground leading-relaxed text-[11px]'>
+                  Gemini 2.5 Flash lee el documento binario página por página y lo convierte a formato Markdown estructurado con títulos (#), viñetas, tablas y delimitadores (<code className='font-mono'>--- Página X ---</code>).
+                </p>
+              </div>
+            </div>
+
+            {/* Paso 3 */}
+            <div className='flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shrink-0 text-xs'>
+                3
+              </div>
+              <div className='space-y-0.5'>
+                <p className='font-bold text-foreground'>Fragmentación Semántica con Solapamiento (Chunking & Overlap)</p>
+                <p className='text-muted-foreground leading-relaxed text-[11px]'>
+                  El texto se segmenta en bloques de ~650 caracteres con 90 caracteres de solapamiento (overlap) para garantizar que las frases no se corten abruptamente.
+                </p>
+              </div>
+            </div>
+
+            {/* Paso 4 */}
+            <div className='flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold shrink-0 text-xs'>
+                4
+              </div>
+              <div className='space-y-0.5'>
+                <p className='font-bold text-foreground'>Generación de Embeddings Vectoriales (gemini-embedding-2)</p>
+                <p className='text-muted-foreground leading-relaxed text-[11px]'>
+                  Cada fragmento se convierte en un vector denso multidimensional que captura el significado semántico profundo de la normativa.
+                </p>
+              </div>
+            </div>
+
+            {/* Paso 5 */}
+            <div className='flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5'>
+              <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold shrink-0 text-xs'>
+                5
+              </div>
+              <div className='space-y-0.5'>
+                <p className='font-bold text-foreground'>Indexación Activa en PostgreSQL Neon & Citación en Chat</p>
+                <p className='text-muted-foreground leading-relaxed text-[11px]'>
+                  El documento pasa a estado <strong>INDEXED</strong>. Cuando un estudiante pregunta algo, SipánGPT compara el coseno de similitud, inyecta los mejores fragmentos en el prompt y genera citas oficiales con enlace al PDF.
+                </p>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

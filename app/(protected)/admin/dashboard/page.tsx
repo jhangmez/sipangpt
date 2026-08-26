@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   ExternalLink,
   FolderTree,
-  Newspaper,
+  Newspaper
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,19 +25,26 @@ import type { ActiveSessionItem } from '@/types/session'
 
 export const metadata: Metadata = {
   title: 'Dashboard y Métricas • Panel Administrador',
-  description: 'Métricas institucionales, inferencias de IA, sesiones activas y estadísticas de SipánGPT.',
+  description:
+    'Métricas institucionales, inferencias de IA, sesiones activas y estadísticas de SipánGPT.'
 }
 
 export default async function AdminDashboardPage() {
-  const [totalUsers, totalConversations, totalMessages, documents, activeSessions, totalAdmins] =
-    await Promise.all([
-      prisma.user.count(),
-      prisma.conversation.count(),
-      prisma.message.count(),
-      getAdminDocuments(),
-      getAllSessions(),
-      prisma.user.count({ where: { role: 'ADMIN' } }),
-    ])
+  const [
+    totalUsers,
+    totalConversations,
+    totalMessages,
+    documents,
+    activeSessions,
+    totalAdmins
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.conversation.count(),
+    prisma.message.count(),
+    getAdminDocuments(),
+    getAllSessions(),
+    prisma.user.count({ where: { role: 'ADMIN' } })
+  ])
 
   const formattedSessions: ActiveSessionItem[] = activeSessions.map((s) => ({
     sessionToken: s.sessionToken,
@@ -56,7 +63,7 @@ export default async function AdminDashboardPage() {
     city: s.location || null,
     expires: s.expires.toISOString(),
     createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString()
   }))
 
   const formatFileSize = (bytes: number) => {
@@ -75,7 +82,8 @@ export default async function AdminDashboardPage() {
             Métricas y Estado del Sistema
           </h1>
           <p className='text-sm text-muted-foreground'>
-            Resumen de actividad, ingesta de base de conocimiento y sesiones activas en tiempo real.
+            Resumen de actividad, ingesta de base de conocimiento y sesiones
+            activas en tiempo real.
           </p>
         </div>
 
@@ -97,7 +105,9 @@ export default async function AdminDashboardPage() {
             </span>
             <Users className='w-4 h-4 text-primary' />
           </div>
-          <p className='font-frances text-3xl font-bold text-foreground'>{totalUsers}</p>
+          <p className='font-frances text-3xl font-bold text-foreground'>
+            {totalUsers}
+          </p>
           <p className='text-[11px] text-muted-foreground'>
             {totalAdmins} con privilegios de administrador
           </p>
@@ -212,7 +222,8 @@ export default async function AdminDashboardPage() {
               Preguntas Frecuentes
             </h3>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Configura iconos, orden y vista previa en vivo de las preguntas sugeridas.
+              Configura iconos, orden y vista previa en vivo de las preguntas
+              sugeridas.
             </p>
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
@@ -235,7 +246,8 @@ export default async function AdminDashboardPage() {
               Administradores
             </h3>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Genera invitaciones tokenizadas y gestiona el equipo institucional.
+              Genera invitaciones tokenizadas y gestiona el equipo
+              institucional.
             </p>
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
@@ -258,18 +270,14 @@ export default async function AdminDashboardPage() {
               Publicaciones y Posts
             </h3>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Redacta y publica comunicados oficiales y novedades para los estudiantes.
+              Redacta y publica comunicados oficiales y novedades para los
+              estudiantes.
             </p>
           </div>
           <span className='text-[11px] font-semibold text-primary inline-flex items-center gap-1'>
             Gestionar publicaciones →
           </span>
         </Link>
-      </div>
-
-      {/* Monitor de Sesiones Activas en Tiempo Real */}
-      <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs'>
-        <SessionsManager initialSessions={formattedSessions} isAdminView />
       </div>
 
       {/* Vista Rápida de Documentos de Conocimiento (RAG) */}
@@ -290,7 +298,8 @@ export default async function AdminDashboardPage() {
             size='sm'
             className='gap-1.5 rounded-xl text-xs font-semibold'
           >
-            Ver todos ({documents.length}) <ArrowRight className='w-3.5 h-3.5' />
+            Ver todos ({documents.length}){' '}
+            <ArrowRight className='w-3.5 h-3.5' />
           </Button>
         </div>
 
@@ -313,7 +322,10 @@ export default async function AdminDashboardPage() {
               </thead>
               <tbody className='divide-y divide-border/30'>
                 {documents.slice(0, 5).map((doc) => (
-                  <tr key={doc.id} className='hover:bg-muted/30 transition-colors'>
+                  <tr
+                    key={doc.id}
+                    className='hover:bg-muted/30 transition-colors'
+                  >
                     <td className='py-3 font-semibold text-foreground max-w-xs truncate'>
                       {doc.title || doc.fileName}
                     </td>
@@ -336,7 +348,9 @@ export default async function AdminDashboardPage() {
                       {doc.chunkCount}
                     </td>
                     <td className='py-3 text-muted-foreground truncate'>
-                      {doc.uploadedBy?.name || doc.uploadedBy?.email || 'Sistema'}
+                      {doc.uploadedBy?.name ||
+                        doc.uploadedBy?.email ||
+                        'Sistema'}
                     </td>
                     <td className='py-3 text-right'>
                       {(doc.publicUrl || doc.fileUrl) && (
@@ -356,6 +370,10 @@ export default async function AdminDashboardPage() {
             </table>
           </div>
         )}
+      </div>
+      {/* Monitor de Sesiones Activas en Tiempo Real */}
+      <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs'>
+        <SessionsManager initialSessions={formattedSessions} isAdminView />
       </div>
     </div>
   )

@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { generateText } from 'ai'
+import { google } from '@/lib/ai/providers'
 
 export interface TextChunk {
   content: string
@@ -7,13 +9,76 @@ export interface TextChunk {
 }
 
 /**
- * Divide texto extenso en fragmentos semánticos (chunks) con solapamiento (overlap)
+ * Transcribe y estructura cualquier documento (PDF, TXT o Markdown) a formato Markdown enriquecido
+ * utilizando el modelo multimodal Gemini 2.5 Flash de Google
+ */
+export async function extractAndStructureToMarkdown(
+  fileUrl: string,
+  mimeType: string = 'application/pdf'
+): Promise<string> {
+  const cleanUrl = fileUrl.trim()
+  if (!cleanUrl) {
+    throw new Error('La URL del documento no es válida.')
+  }
+
+  // 1. Descargar el binario del documento desde UploadThing u origen
+  const response = await fetch(cleanUrl)
+  if (!response.ok) {
+    throw new Error(`Error al descargar el archivo: ${response.statusText}`)
+  }
+
+  const arrayBuffer = await response.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  // Si es un archivo de texto plano o markdown simple
+  if (mimeType.includes('text/plain') || mimeType.includes('markdown') || cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md')) {
+    return buffer.toString('utf-8')
+  }
+
+  // 2. Si es un PDF, transcribir y estructurar a Markdown mediante Gemini Multimodal
+  try {
+    const result = await generateText({
+      model: google('gemini-2.5-flash'),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Eres el transcriptor y estructurador oficial de normativas de la Universidad Señor de Sipán (USS).
+Tu misión es transcribir este documento de manera completa, fiel y estructurada en formato Markdown (.md).
+
+Reglas de Estructuración:
+1. Por cada página identificada, inserta un encabezado claro con el formato: "--- Página X ---".
+2. Emplea sintaxis Markdown estándar: encabezados (#, ##, ###), viñetas (-), listas numeradas y tablas GFM si existen cuadros.
+3. No resumas, no omitas artículos, directivas, cronogramas, aulas ni resoluciones. Transcribe todo el texto íntegro.
+4. Mantén la terminología y formalidad institucional de la USS.`,
+            },
+            {
+              type: 'file',
+              data: buffer,
+              mediaType: 'application/pdf',
+            },
+          ],
+        },
+      ],
+    })
+
+    return result.text.trim()
+  } catch (err: any) {
+    console.error('[PDF_GEMINI_OCR_ERROR]', err)
+    throw new Error(`Fallo al transcribir el PDF con Gemini: ${err?.message || 'Error desconocido'}`)
+  }
+}
+
+/**
+ * Divide texto o markdown extenso en fragmentos semánticos (chunks) con solapamiento (overlap)
  * y detección heurística de páginas o artículos
  */
 export function splitTextIntoChunks(
   text: string,
-  chunkSize: number = 600,
-  overlap: number = 80
+  chunkSize: number = 650,
+  overlap: number = 90
 ): TextChunk[] {
   const clean = text.trim()
   if (!clean) return []
@@ -31,8 +96,8 @@ export function splitTextIntoChunks(
   let chunkIndex = 0
 
   for (const para of paragraphs) {
-    // Detección de patrones de página (ej. "Página 5", "Pag. 5", "--- Página 5 ---")
-    const pageMatch = para.match(/(?:página|pag\.|pág\.)\s*(\d+)/i)
+    // Detección de patrones de página (ej. "--- Página 5 ---", "Página 5", "Pag. 5")
+    const pageMatch = para.match(/(?:---\s*página|página|pag\.|pág\.)\s*(\d+)/i)
     if (pageMatch) {
       currentPage = parseInt(pageMatch[1], 10)
     }

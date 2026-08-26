@@ -3,7 +3,10 @@
 import { prisma, Role, type DocumentStatus } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
-import { indexDocumentContent } from '@/lib/ai/document-processor'
+import {
+  indexDocumentContent,
+  extractAndStructureToMarkdown,
+} from '@/lib/ai/document-processor'
 
 export async function getAdminDocuments() {
   await requireRole(Role.ADMIN)
@@ -289,4 +292,60 @@ export async function markDocumentAsIndexed(documentId: string) {
   revalidatePath('/admin/documents')
   return { success: true, document: updated }
 }
+
+/**
+ * Procesa un documento subido (PDF/TXT), lo transcribe a Markdown con Gemini OCR,
+ * lo fragmenta en chunks semánticos y lo indexa automáticamente.
+ */
+export async function processAndIndexDocumentAction(documentId: string) {
+  await requireRole(Role.ADMIN)
+
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+  })
+
+  if (!doc) {
+    throw new Error('Documento no encontrado.')
+  }
+
+  const fileUrl = doc.fileUrl || doc.publicUrl
+  if (!fileUrl) {
+    throw new Error('El documento no dispone de una URL válida para procesar.')
+  }
+
+  // 1. Marcar temporalmente como PROCESSING
+  await prisma.document.update({
+    where: { id: documentId },
+    data: { status: 'PROCESSING' },
+  })
+
+  try {
+    // 2. Extraer y transcribir a Markdown enriquecido mediante Gemini Multimodal
+    const markdownContent = await extractAndStructureToMarkdown(
+      fileUrl,
+      doc.mimeType || 'application/pdf'
+    )
+
+    // 3. Segmentar semánticamente en chunks con solapamiento e indexar en Neon
+    const result = await indexDocumentContent(documentId, markdownContent)
+
+    revalidatePath('/admin/documents')
+    revalidatePath('/admin/dashboard')
+
+    return {
+      success: true,
+      chunkCount: result.chunkCount,
+      markdownPreview: markdownContent.substring(0, 500),
+    }
+  } catch (err: any) {
+    console.error('[PROCESS_AND_INDEX_ACTION_ERROR]', err)
+    // Marcar como ERROR si falla
+    await prisma.document.update({
+      where: { id: documentId },
+      data: { status: 'ERROR' },
+    })
+    throw new Error(err?.message || 'Error durante el procesamiento e indexación del documento.')
+  }
+}
+
 
