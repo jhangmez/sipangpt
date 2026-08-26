@@ -272,7 +272,19 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       })
 
       setModels((prev) =>
-        prev.map((m) => (m.id === editingModel.id ? { ...m, ...res.model } : m))
+        prev.map((m) =>
+          m.id === editingModel.id
+            ? {
+                ...m,
+                ...(res.model || {}),
+                inputPricePerMillion: inputPrice,
+                outputPricePerMillion: outputPrice,
+                maxTokens,
+                temperature,
+                description: editDescription,
+              }
+            : m
+        )
       )
       setEditingModel(null)
       toast.success('Precios y parámetros actualizados correctamente.')
@@ -587,8 +599,8 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                     <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
                       <Tag className='size-3' /> Tarifas / 1M Tokens
                     </span>
-                    <p className='font-semibold text-foreground text-[11px]'>
-                      In: ${model.inputPricePerMillion} • Out: ${model.outputPricePerMillion}
+                    <p className='font-semibold text-foreground text-[11px] font-mono'>
+                      In: ${Number(model.inputPricePerMillion ?? 0).toFixed(2)} • Out: ${Number(model.outputPricePerMillion ?? 0).toFixed(2)}
                     </p>
                   </div>
                 </div>

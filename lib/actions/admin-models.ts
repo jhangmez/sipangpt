@@ -134,7 +134,24 @@ export async function createAIModelAction(data: {
 
   revalidatePath('/admin/models')
   revalidatePath('/chat')
-  return { success: true, model }
+  return {
+    success: true,
+    model: {
+      ...(model || {}),
+      name: data.name.trim(),
+      modelCode: data.modelCode.trim(),
+      provider: data.provider,
+      description: data.description?.trim() || null,
+      endpointUrl: data.endpointUrl?.trim() || null,
+      inputPricePerMillion: inputPrice,
+      outputPricePerMillion: outputPrice,
+      maxTokens,
+      temperature,
+      isDefault: Boolean(data.isDefault),
+      status: ModelStatus.ONLINE,
+      isActive: true,
+    },
+  }
 }
 
 /**
@@ -189,7 +206,18 @@ export async function updateAIModelPricingAction(
   }
 
   revalidatePath('/admin/models')
-  return { success: true, model: updated }
+  return {
+    success: true,
+    model: {
+      ...(updated || {}),
+      id: modelId,
+      inputPricePerMillion: inputPrice,
+      outputPricePerMillion: outputPrice,
+      maxTokens: maxTokens ?? updated?.maxTokens ?? 2048,
+      temperature: temperature ?? updated?.temperature ?? 0.3,
+      description: data.description !== undefined ? data.description.trim() : updated?.description,
+    },
+  }
 }
 
 /**

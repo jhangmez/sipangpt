@@ -1,21 +1,26 @@
 import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 
-// Tarifas de referencia en USD por 1 millón de tokens (1M)
+// Tarifas oficiales de referencia en USD por 1 millón de tokens (1M)
 export const MODEL_PRICING_RATES: Record<
   string,
   { inputPerMillion: number; outputPerMillion: number }
 > = {
-  'gemini-3.1-flash-lite': { inputPerMillion: 0.075, outputPerMillion: 0.30 },
-  'gemini-2.5-flash': { inputPerMillion: 0.10, outputPerMillion: 0.40 },
-  'gemini-2.5-pro': { inputPerMillion: 1.25, outputPerMillion: 5.00 },
-  'gemini-flash-thinking': { inputPerMillion: 0.10, outputPerMillion: 0.40 },
+  'gemini-3.1-flash-lite': { inputPerMillion: 0.25, outputPerMillion: 1.50 },
+  'gemini-3.6-flash': { inputPerMillion: 1.50, outputPerMillion: 7.50 },
+  'gemini-3.5-flash': { inputPerMillion: 1.50, outputPerMillion: 9.00 },
+  'gemini-3.5-flash-lite': { inputPerMillion: 0.30, outputPerMillion: 2.50 },
+  'gemini-3.1-pro': { inputPerMillion: 2.00, outputPerMillion: 12.00 },
+  'gemini-2.5-pro': { inputPerMillion: 1.25, outputPerMillion: 10.00 },
+  'gemini-2.5-flash': { inputPerMillion: 0.30, outputPerMillion: 2.50 },
+  'gemini-2.5-flash-lite': { inputPerMillion: 0.10, outputPerMillion: 0.40 },
+  'gemini-embedding-2': { inputPerMillion: 0.20, outputPerMillion: 0.0 },
+  'gemini-embedding-001': { inputPerMillion: 0.15, outputPerMillion: 0.0 },
   'gpt-4o-mini': { inputPerMillion: 0.15, outputPerMillion: 0.60 },
   'gpt-4o': { inputPerMillion: 2.50, outputPerMillion: 10.00 },
   'o3-mini': { inputPerMillion: 1.10, outputPerMillion: 4.40 },
   'claude-3-5-sonnet-latest': { inputPerMillion: 3.00, outputPerMillion: 15.00 },
   'llama-3.3-70b-versatile': { inputPerMillion: 0.59, outputPerMillion: 0.79 },
-  'gemini-embedding-2': { inputPerMillion: 0.02, outputPerMillion: 0.0 },
-  'text-embedding-004': { inputPerMillion: 0.02, outputPerMillion: 0.0 },
+  'llama3.2:latest': { inputPerMillion: 0.00, outputPerMillion: 0.00 },
 }
 
 /**
