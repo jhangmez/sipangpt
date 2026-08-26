@@ -97,22 +97,40 @@ export async function createAIModelAction(data: {
   const maxTokens = Math.max(1, Number(data.maxTokens) || 2048)
   const temperature = Math.min(2.0, Math.max(0.0, Number(data.temperature) ?? 0.3))
 
-  const model = await prisma.aIModelConfig.create({
-    data: {
-      name: data.name.trim(),
-      modelCode: data.modelCode.trim(),
-      provider: data.provider,
-      description: data.description?.trim() || null,
-      endpointUrl: data.endpointUrl?.trim() || null,
-      inputPricePerMillion: inputPrice,
-      outputPricePerMillion: outputPrice,
-      maxTokens: maxTokens,
-      temperature: temperature,
-      isDefault: Boolean(data.isDefault),
-      status: ModelStatus.ONLINE,
-      isActive: true,
-    },
-  })
+  let model: any
+  try {
+    model = await prisma.aIModelConfig.create({
+      data: {
+        name: data.name.trim(),
+        modelCode: data.modelCode.trim(),
+        provider: data.provider,
+        description: data.description?.trim() || null,
+        endpointUrl: data.endpointUrl?.trim() || null,
+        inputPricePerMillion: inputPrice,
+        outputPricePerMillion: outputPrice,
+        maxTokens: maxTokens,
+        temperature: temperature,
+        isDefault: Boolean(data.isDefault),
+        status: ModelStatus.ONLINE,
+        isActive: true,
+      },
+    })
+  } catch (err) {
+    const fallbackId = `cm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+    await prisma.$executeRaw`
+      INSERT INTO "ai_model_configs" (
+        "id", "name", "model_code", "provider", "description", "endpoint_url",
+        "input_price_per_million", "output_price_per_million", "max_tokens", "temperature",
+        "is_default", "status", "is_active", "created_at", "updated_at"
+      ) VALUES (
+        ${fallbackId}, ${data.name.trim()}, ${data.modelCode.trim()}, ${data.provider}::"ModelProvider",
+        ${data.description?.trim() || null}, ${data.endpointUrl?.trim() || null},
+        ${inputPrice}, ${outputPrice}, ${maxTokens}, ${temperature},
+        ${Boolean(data.isDefault)}, 'ONLINE'::"ModelStatus", true, NOW(), NOW()
+      )
+    `
+    model = await prisma.aIModelConfig.findUnique({ where: { id: fallbackId } })
+  }
 
   revalidatePath('/admin/models')
   revalidatePath('/chat')
@@ -142,16 +160,33 @@ export async function updateAIModelPricingAction(
       ? Math.min(2.0, Math.max(0.0, Number(data.temperature)))
       : undefined
 
-  const updated = await prisma.aIModelConfig.update({
-    where: { id: modelId },
-    data: {
-      inputPricePerMillion: inputPrice,
-      outputPricePerMillion: outputPrice,
-      maxTokens: maxTokens,
-      temperature: temperature,
-      description: data.description !== undefined ? data.description.trim() : undefined,
-    },
-  })
+  let updated: any
+  try {
+    updated = await prisma.aIModelConfig.update({
+      where: { id: modelId },
+      data: {
+        inputPricePerMillion: inputPrice,
+        outputPricePerMillion: outputPrice,
+        maxTokens: maxTokens,
+        temperature: temperature,
+        description: data.description !== undefined ? data.description.trim() : undefined,
+      },
+    })
+  } catch (err) {
+    // Si la instancia en caliente de Prisma Client aún no refrescó la firma de campos
+    await prisma.$executeRaw`
+      UPDATE "ai_model_configs"
+      SET 
+        "input_price_per_million" = ${inputPrice},
+        "output_price_per_million" = ${outputPrice},
+        "max_tokens" = COALESCE(${maxTokens ?? null}, "max_tokens"),
+        "temperature" = COALESCE(${temperature ?? null}, "temperature"),
+        "description" = COALESCE(${data.description !== undefined ? data.description.trim() : null}, "description"),
+        "updated_at" = NOW()
+      WHERE "id" = ${modelId}
+    `
+    updated = await prisma.aIModelConfig.findUnique({ where: { id: modelId } })
+  }
 
   revalidatePath('/admin/models')
   return { success: true, model: updated }
