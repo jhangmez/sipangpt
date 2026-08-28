@@ -419,25 +419,25 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
   }
 
   return (
-    <div className='space-y-6 font-exo'>
+    <div className='space-y-5 font-exo w-full'>
       {/* Cabecera Principal */}
-      <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
+      <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4'>
         <div className='space-y-1'>
           <h1 className='font-frances text-xl font-bold text-foreground flex items-center gap-2'>
             <Cpu className='w-5 h-5 text-primary' />
             Modelos de IA, Precios y Consumo de Tokens
           </h1>
-          <p className='text-xs text-muted-foreground max-w-2xl leading-relaxed'>
+          <p className='text-xs text-muted-foreground max-w-3xl leading-relaxed'>
             Supervisa el catálogo de modelos, define tarifas referenciales por
             millón de tokens, analiza el costo estimado por concepto y audita el
             historial de consumo en tiempo real.
           </p>
         </div>
 
-        <div className='flex items-center gap-2 flex-wrap'>
+        <div className='flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end'>
           <Button
             onClick={() => setIsCreateOpen(true)}
-            className='gap-2 rounded-2xl cursor-pointer text-xs font-semibold'
+            className='gap-2 rounded-2xl cursor-pointer text-xs font-semibold h-10 px-4 w-full sm:w-auto'
           >
             <Plus className='w-4 h-4' /> Registrar Nuevo Modelo
           </Button>
@@ -445,11 +445,11 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       </div>
 
       {/* Pestañas: Catálogo vs Logs de Tokens */}
-      <div className='flex items-center gap-2 border-b border-border/40 pb-2'>
+      <div className='flex items-center gap-2 border-b border-border/40 pb-2 flex-wrap overflow-x-auto'>
         <button
           type='button'
           onClick={() => setActiveTab('models')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'models'
               ? 'bg-primary text-primary-foreground shadow-xs'
               : 'bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70'
@@ -462,7 +462,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
         <button
           type='button'
           onClick={() => setActiveTab('logs')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'logs'
               ? 'bg-primary text-primary-foreground shadow-xs'
               : 'bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70'
@@ -477,7 +477,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       {/* PESTAÑA 1: CATÁLOGO DE MODELOS */}
       {/* ========================================================================= */}
       {activeTab === 'models' && (
-        <div className='grid grid-cols-1 gap-4'>
+        <div className='grid grid-cols-1 gap-4 w-full'>
           {models.length === 0 ? (
             <Empty className='rounded-3xl border border-dashed border-border/80 bg-card/40 p-8'>
               <EmptyHeader>
@@ -495,11 +495,11 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
             models.map((model) => (
               <div
                 key={model.id}
-                className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4 hover:border-primary/40 transition-colors'
+                className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-4 hover:border-primary/40 transition-colors w-full'
               >
                 {/* Cabecera de la Tarjeta */}
-                <div className='flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-border/40 pb-4'>
-                  <div className='space-y-1.5'>
+                <div className='flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-border/40 pb-4'>
+                  <div className='space-y-1.5 min-w-0 flex-1'>
                     <div className='flex items-center gap-2 flex-wrap'>
                       <h3 className='font-frances font-bold text-base text-foreground'>
                         {model.name}
@@ -524,14 +524,14 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                         </Badge>
                       )}
                     </div>
-                    <p className='text-xs text-muted-foreground'>
+                    <p className='text-xs text-muted-foreground leading-relaxed'>
                       {model.description ||
                         'Modelo de procesamiento de lenguaje natural y razonamiento.'}
                     </p>
                   </div>
 
                   {/* Acciones Rápidas */}
-                  <div className='flex items-center gap-2 shrink-0 flex-wrap'>
+                  <div className='flex items-center gap-2 shrink-0 flex-wrap w-full md:w-auto pt-2 md:pt-0'>
                     <Button
                       size='xs'
                       variant='outline'
@@ -587,45 +587,46 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                 </div>
 
                 {/* Métricas de Uso y Precios Referenciales */}
-                <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/20 rounded-2xl p-3 text-xs'>
-                  <div className='space-y-0.5'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-muted/20 rounded-2xl p-3.5 text-xs w-full'>
+                  <div className='space-y-0.5 min-w-0'>
                     <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
                       <Eye className='size-3' /> Invocaciones / Vistas
                     </span>
-                    <p className='font-bold font-mono text-foreground text-sm'>
+                    <p className='font-bold font-mono text-foreground text-sm truncate'>
                       {(model.totalInferences || 0).toLocaleString()}
                     </p>
                   </div>
 
-                  <div className='space-y-0.5'>
+                  <div className='space-y-0.5 min-w-0'>
                     <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
                       <Coins className='size-3' /> Tokens Totales
                     </span>
-                    <p className='font-bold font-mono text-foreground text-sm'>
+                    <p className='font-bold font-mono text-foreground text-sm truncate'>
                       {(model.totalTokensUsed || 0).toLocaleString()}
                     </p>
                   </div>
 
-                  <div className='space-y-0.5'>
+                  <div className='space-y-0.5 min-w-0'>
                     <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
                       <DollarSign className='size-3' /> Costo Estimado
                     </span>
-                    <p className='font-bold font-mono text-emerald-600 dark:text-emerald-400 text-sm'>
+                    <p className='font-bold font-mono text-emerald-600 dark:text-emerald-400 text-sm truncate'>
                       ${(model.estimatedCostUsd || 0).toFixed(4)} USD
                     </p>
                   </div>
 
-                  <div className='space-y-0.5'>
+                  <div className='space-y-0.5 min-w-0'>
                     <span className='text-[10px] text-muted-foreground flex items-center gap-1'>
                       <Tag className='size-3' /> Tarifas / 1M Tokens
                     </span>
-                    <p className='font-semibold text-foreground text-[11px] font-mono'>
+                    <p className='font-semibold text-foreground text-[11px] font-mono truncate'>
                       In: ${Number(model.inputPricePerMillion ?? 0).toFixed(2)}{' '}
                       • Out: $
                       {Number(model.outputPricePerMillion ?? 0).toFixed(2)}
                     </p>
                   </div>
                 </div>
+
 
                 {/* Estado de Salud y Latencia */}
                 <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-xs'>
@@ -889,7 +890,8 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       {/* MODAL: REGISTRAR NUEVO MODELO */}
       {/* ========================================================================= */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className='max-w-xl font-exo rounded-3xl p-6'>
+        <DialogContent className='max-w-xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full font-exo rounded-3xl p-5 sm:p-6'>
+
           <DialogHeader>
             <DialogTitle className='font-frances text-lg font-bold flex items-center gap-2'>
               <Cpu className='w-5 h-5 text-primary' /> Registrar Nuevo Modelo de
@@ -1110,7 +1112,8 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
         open={Boolean(editingModel)}
         onOpenChange={(open) => !open && setEditingModel(null)}
       >
-        <DialogContent className='max-w-lg font-exo rounded-3xl p-6'>
+        <DialogContent className='max-w-lg max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full font-exo rounded-3xl p-5 sm:p-6'>
+
           <DialogHeader>
             <DialogTitle className='font-frances text-lg font-bold flex items-center gap-2'>
               <DollarSign className='w-5 h-5 text-emerald-500' /> Editar Tarifas

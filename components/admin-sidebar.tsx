@@ -32,7 +32,8 @@ import {
   FileText,
   FolderTree,
   Newspaper,
-  Sliders
+  Sliders,
+  MessageSquare
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
 import type { User as AuthUser } from 'next-auth'
@@ -47,6 +48,12 @@ const ADMIN_NAV_ITEMS = [
     href: '/admin/dashboard',
     icon: LayoutDashboard,
     description: 'Estadísticas e inferencias'
+  },
+  {
+    title: 'Conversaciones RAG',
+    href: '/admin/conversations',
+    icon: MessageSquare,
+    description: 'Inspección de chats y fuentes'
   },
   {
     title: 'Modelos de IA',
@@ -91,6 +98,7 @@ const ADMIN_NAV_ITEMS = [
     description: 'Catálogo temático y analítica'
   }
 ]
+
 
 export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname()
@@ -185,14 +193,15 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
                   <SidebarMenuButton
                     render={<Link href={item.href} />}
                     isActive={isActive}
-                    className='text-xs group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0'
+                    className='text-xs h-9.5 px-3 py-2 rounded-xl group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 transition-all font-semibold'
                   >
                     <Icon className='w-4 h-4 shrink-0 text-primary' />
-                    <span className='truncate group-data-[collapsible=icon]:hidden font-medium'>
+                    <span className='truncate group-data-[collapsible=icon]:hidden'>
                       {item.title}
                     </span>
                   </SidebarMenuButton>
                 )
+
 
                 return (
                   <SidebarMenuItem key={item.href}>

@@ -220,11 +220,11 @@ export function ChatMessageItem({
 
                 {/* Footer del Mensaje del Asistente: Feedback, Copiar, Regenerar y Diálogo de Información */}
                 {message.content && (
-                  <MessageFooter className='flex items-center justify-between gap-1 pt-2 border-t border-border/30 flex-wrap'>
-                    <div className='flex items-center gap-1.5'>
+                  <MessageFooter className='flex items-center justify-between gap-1.5 pt-2 border-t border-border/30 flex-wrap'>
+                    <div className='flex items-center gap-1.5 flex-wrap'>
                       {/* Control de Versiones / Ramas de Respuesta (< 1/2 >) */}
                       {message.versions && message.versions.length > 1 && (
-                        <div className='flex items-center gap-0.5 rounded-xl bg-muted/60 px-1 py-0.5 border border-border/50 text-[11px] font-mono select-none mr-1'>
+                        <div className='flex items-center gap-0.5 rounded-xl bg-muted/60 px-1 py-0.5 border border-border/50 text-[11px] font-mono select-none mr-1 shrink-0'>
                           <Button
                             variant='ghost'
                             size='icon-xs'
@@ -275,7 +275,7 @@ export function ChatMessageItem({
                         size='icon-xs'
                         onClick={() => onOpenFeedback(message, 'Adecuada', 5)}
                         aria-label='Respuesta adecuada'
-                        className='h-7 w-7 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400'
+                        className='h-7 w-7 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 shrink-0'
                         title='Respuesta adecuada'
                       >
                         <ThumbsUp className='h-3.5 w-3.5' />
@@ -287,7 +287,7 @@ export function ChatMessageItem({
                         size='icon-xs'
                         onClick={() => onOpenFeedback(message, 'Inadecuada', 1)}
                         aria-label='Respuesta inadecuada'
-                        className='h-7 w-7 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400'
+                        className='h-7 w-7 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 shrink-0'
                         title='Respuesta inadecuada'
                       >
                         <ThumbsDown className='h-3.5 w-3.5' />
@@ -299,7 +299,7 @@ export function ChatMessageItem({
                         size='icon-xs'
                         onClick={() => onCopy(message.content)}
                         aria-label='Copiar mensaje'
-                        className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground'
+                        className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0'
                         title='Copiar texto'
                       >
                         <Copy className='h-3.5 w-3.5' />
@@ -311,7 +311,7 @@ export function ChatMessageItem({
                         size='icon-xs'
                         onClick={() => onRegenerate(message.id)}
                         aria-label='Regenerar respuesta'
-                        className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer'
+                        className='h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer shrink-0'
                         title='Regenerar respuesta'
                       >
                         <RefreshCw className='h-3.5 w-3.5' />
@@ -325,14 +325,15 @@ export function ChatMessageItem({
                             variant='outline'
                             size='xs'
                             onClick={() => onShowSources(message.sources!)}
-                            className='gap-1 text-[10px] font-semibold rounded-xl text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 h-7 cursor-pointer'
+                            className='gap-1 text-[10px] font-semibold rounded-xl text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 h-7 cursor-pointer shrink-0 whitespace-nowrap px-2.5'
                             title='Ver fragmentos y reglamentos en el panel lateral derecho'
                           >
-                            <BookOpen className='w-3 h-3' />
-                            Ver {message.sources.length} Cita(s) RAG
+                            <BookOpen className='w-3 h-3 shrink-0' />
+                            <span>Ver {message.sources.length} Cita(s) RAG</span>
                           </Button>
                         )}
                     </div>
+
 
                     {/* Diálogo Modal de Información del Mensaje */}
                     <Dialog>

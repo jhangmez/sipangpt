@@ -182,27 +182,31 @@ export function UserSettings({ user }: UserSettingsProps) {
             <Cpu className='w-4 h-4 text-primary' />
             Modelos de Inteligencia Artificial
           </DialogTrigger>
-          <DialogContent className='max-w-lg rounded-3xl p-6'>
-            <DialogHeader className='space-y-1 font-exo'>
-              <DialogTitle className='font-frances text-xl'>
-                Modelos Disponibles
+          <DialogContent className='max-w-lg w-[92vw] sm:w-full max-h-[85vh] flex flex-col font-exo rounded-3xl p-5 sm:p-6 overflow-hidden'>
+            <DialogHeader className='space-y-1 font-exo shrink-0 border-b border-border/40 pb-3'>
+              <DialogTitle className='font-frances text-xl font-bold flex items-center gap-2 text-foreground'>
+                <Cpu className='w-5 h-5 text-primary' />
+                Modelos de Inteligencia Artificial
               </DialogTitle>
+              <p className='text-xs text-muted-foreground'>
+                Modelos habilitados en SipánGPT para respuestas de alta velocidad, síntesis RAG y razonamiento multimodal.
+              </p>
             </DialogHeader>
-            <div className='space-y-3 pt-2 font-exo'>
+            <div className='flex-1 overflow-y-auto space-y-3 pt-3 pr-1 font-exo max-h-[60vh] sm:max-h-[65vh]'>
               {SYSTEM_MODELS.map((m) => (
                 <div
                   key={m.id}
-                  className='rounded-2xl border border-border/70 p-3.5 space-y-1 bg-card/60'
+                  className='rounded-2xl border border-border/70 p-3.5 space-y-1.5 bg-card/60 hover:border-primary/40 transition shadow-xs'
                 >
-                  <div className='flex items-center justify-between gap-2'>
-                    <span className='font-semibold text-xs text-foreground'>
+                  <div className='flex items-center justify-between gap-2 flex-wrap'>
+                    <span className='font-bold text-xs text-foreground'>
                       {m.name}
                     </span>
-                    <span className='rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary'>
+                    <span className='rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold font-mono text-primary border border-primary/20'>
                       {m.provider}
                     </span>
                   </div>
-                  <p className='text-xs text-muted-foreground'>
+                  <p className='text-xs text-muted-foreground leading-relaxed'>
                     {m.description}
                   </p>
                 </div>
@@ -217,26 +221,27 @@ export function UserSettings({ user }: UserSettingsProps) {
             <Info className='w-4 h-4 text-primary' />
             Sobre SipánGPT
           </DialogTrigger>
-          <DialogContent className='max-w-md rounded-3xl p-6'>
-            <DialogHeader className='space-y-2 font-exo'>
+          <DialogContent className='max-w-md w-[92vw] sm:w-full max-h-[85vh] flex flex-col font-exo rounded-3xl p-5 sm:p-6 overflow-hidden'>
+            <DialogHeader className='space-y-2 font-exo border-b border-border/40 pb-3'>
               <DialogTitle className='font-frances text-xl'>
                 Sobre <span className='text-primary'>SipánGPT</span>
               </DialogTitle>
-              <div className='text-xs space-y-3 text-muted-foreground pt-2'>
-                <p>
-                  Asistente inteligente oficial de la Universidad Señor de Sipán
-                  entrenado con base de conocimiento y normativas
-                  institucionales.
-                </p>
-                <p>
-                  Desarrollado con arquitectura moderna RAG (Retrieval-Augmented
-                  Generation) para responder dudas sobre matrícula, planes de
-                  estudio y trámites universitarios.
-                </p>
-              </div>
             </DialogHeader>
+            <div className='text-xs space-y-3 text-muted-foreground pt-3 overflow-y-auto leading-relaxed'>
+              <p>
+                Asistente inteligente oficial de la Universidad Señor de Sipán
+                entrenado con base de conocimiento y normativas
+                institucionales.
+              </p>
+              <p>
+                Desarrollado con arquitectura moderna RAG (Retrieval-Augmented
+                Generation) para responder dudas sobre matrícula, planes de
+                estudio y trámites universitarios.
+              </p>
+            </div>
           </DialogContent>
         </Dialog>
+
 
         {/* Selector de Modo Noche / Modo Claro Totalmente Clickeable */}
         <button

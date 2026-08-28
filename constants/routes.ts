@@ -20,6 +20,8 @@ export const ROUTES = {
     MODELS: '/admin/models',
     QUESTIONS: '/admin/questions',
     ADMINISTRADORES: '/admin/administradores',
+    CONVERSATIONS: '/admin/conversations',
     INVITACION: (token: string) => `/invitacion/${token}`,
   },
 } as const
+

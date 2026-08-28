@@ -74,24 +74,24 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
   }
 
   return (
-    <form onSubmit={handleSave} className='space-y-6 font-exo max-w-4xl'>
+    <form onSubmit={handleSave} className='space-y-5 font-exo w-full'>
       {/* Header con botón de guardado */}
-      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-4'>
-        <div>
-          <h1 className='font-frances text-2xl font-bold text-foreground flex items-center gap-2'>
-            <Sliders className='w-6 h-6 text-primary' />
+      <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
+        <div className='space-y-1'>
+          <h1 className='font-frances text-xl font-bold text-foreground flex items-center gap-2'>
+            <Sliders className='w-5 h-5 text-primary' />
             Políticas de Búsqueda y Capacidades de IA
           </h1>
-          <p className='text-xs text-muted-foreground mt-1'>
+          <p className='text-xs text-muted-foreground leading-relaxed max-w-3xl'>
             Controla qué herramientas de recuperación y grounding tienen
-            permitidas los modelos de IA al responder.
+            permitidas los modelos de IA al responder a consultas institucionales.
           </p>
         </div>
 
         <Button
           type='submit'
           disabled={!hasChanges || isSaving}
-          className='gap-1.5 rounded-xl text-xs font-semibold shadow-xs shrink-0 cursor-pointer'
+          className='gap-1.5 rounded-2xl text-xs font-semibold shadow-xs shrink-0 cursor-pointer h-10 px-4'
         >
           {isSaving ? (
             <RefreshCw className='w-3.5 h-3.5 animate-spin' />
@@ -103,7 +103,7 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
       </div>
 
       {/* 1. Capacidades de Recuperación e Información Externa */}
-      <div className='rounded-3xl border border-border/70 bg-card p-5 sm:p-6 space-y-5 shadow-xs'>
+      <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 space-y-4 shadow-xs'>
         <div className='border-b border-border/40 pb-3'>
           <h2 className='font-frances font-bold text-base text-foreground flex items-center gap-2'>
             <Sparkles className='w-4 h-4 text-primary' />
@@ -115,7 +115,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
           </p>
         </div>
 
-        <div className='grid grid-cols-1 gap-4'>
+        <div className='grid grid-cols-1 xl:grid-cols-2 gap-4'>
+
           {/* Opción 1: RAG en Documentos USS */}
           <div className='flex items-start justify-between gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4 transition hover:border-primary/40'>
             <div className='flex items-start gap-3.5'>
@@ -243,7 +244,7 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
       </div>
 
       {/* 2. Umbral de Precisión y Similitud Coseno RAG */}
-      <div className='rounded-3xl border border-border/70 bg-card p-5 sm:p-6 space-y-4 shadow-xs'>
+      <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 space-y-4 shadow-xs'>
         <div className='border-b border-border/40 pb-3'>
           <div className='flex items-center justify-between'>
             <h2 className='font-frances font-bold text-base text-foreground'>
@@ -287,7 +288,8 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
       </div>
 
       {/* 3. Cuotas de Consumo y Seguridad */}
-      <div className='rounded-3xl border border-border/70 bg-card p-5 sm:p-6 space-y-4 shadow-xs'>
+      <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 space-y-4 shadow-xs'>
+
         <div className='border-b border-border/40 pb-3'>
           <h2 className='font-frances font-bold text-base text-foreground flex items-center gap-2'>
             <ShieldAlert className='w-4 h-4 text-primary' />

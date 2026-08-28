@@ -25,9 +25,9 @@ export default async function AdminLayout({
             {/* Header sin selector de modelos */}
             <AdminHeader />
 
-            {/* Vista activa con scroll independiente */}
-            <main className='flex-1 overflow-y-auto pt-4 px-2 sm:px-6 pb-12 font-exo'>
-              <div className='max-w-5xl mx-auto space-y-6'>{children}</div>
+            {/* Vista activa con scroll e independencia de layout */}
+            <main className='flex-1 overflow-y-auto pt-3 px-3 sm:px-5 pb-6 font-exo min-h-0 flex flex-col'>
+              <div className='w-full flex-1 flex flex-col min-h-0 space-y-5'>{children}</div>
             </main>
           </div>
         </SidebarInset>
@@ -35,3 +35,5 @@ export default async function AdminLayout({
     </SidebarProvider>
   )
 }
+
+
