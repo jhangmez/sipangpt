@@ -502,3 +502,67 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
     })
   }
 }
+
+/**
+ * DELETE /api/chat?id=<chatId>
+ * Realiza el borrado lógico (soft delete / isArchived = true) de una conversación
+ */
+export async function DELETE(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return new Response(JSON.stringify({ error: 'No autorizado. Inicie sesión.' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const chatId = searchParams.get('id')
+
+  if (!chatId) {
+    return new Response(JSON.stringify({ error: 'ID de conversación requerido.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    const result = await prisma.conversation.updateMany({
+      where: {
+        id: chatId,
+        userId: session.user.id,
+      },
+      data: {
+        isArchived: true,
+      },
+    })
+
+    if (result.count === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Conversación no encontrada o no pertenece al usuario.' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, message: 'Conversación ocultada correctamente.' }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  } catch (err) {
+    console.error('[DELETE_CHAT_ERROR]', err)
+    return new Response(
+      JSON.stringify({ error: 'Error interno al ocultar la conversación.' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
+}
+

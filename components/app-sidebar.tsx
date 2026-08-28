@@ -47,6 +47,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { UserSettings } from '@/components/shared/sidebar/user-settings'
+import { toast } from 'sonner'
 import type { SidebarChat } from '@/types/chat'
 import type { PostItem } from '@/types'
 import type { User } from 'next-auth'
@@ -79,16 +80,26 @@ export function AppSidebar({
       if (onDeleteChat) {
         await onDeleteChat(chatId)
       } else {
-        await fetch(`/api/chat?id=${chatId}`, { method: 'DELETE' })
+        const res = await fetch(`/api/chat?id=${chatId}`, { method: 'DELETE' })
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData?.error || 'Error al ocultar la conversación')
+        }
       }
-      router.push('/chat')
+      toast.success('Conversación ocultada correctamente.')
+      if (currentChatId === chatId) {
+        router.push('/chat')
+      }
       router.refresh()
-    } catch (err) {
-      console.error('Error al borrar chat:', err)
+    } catch (err: unknown) {
+      console.error('Error al ocultar chat:', err)
+      const msg = err instanceof Error ? err.message : 'Error al ocultar conversación.'
+      toast.error(msg)
     } finally {
       setDeletingId(null)
     }
   }
+
 
   return (
     <Sidebar
