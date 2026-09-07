@@ -482,12 +482,56 @@ export function MarkdownRenderer({
       hr: (props: React.HTMLAttributes<HTMLHRElement> & { node?: unknown }) => (
         <hr {...props} className='my-3 border-border/60' />
       ),
+      img: (props: React.ImgHTMLAttributes<HTMLImageElement> & { node?: unknown }) => {
+        const { src, alt, ...rest } = props
+        if (!src || typeof src !== 'string' || !src.trim()) {
+          return null
+        }
+
+        // Si es una imagen base64 de gran tamaño (>20KB en caracteres), truncar visualmente para no desbordar
+        if (src.startsWith('data:image/') && src.length > 20_000) {
+          const sizeKb = Math.round(src.length / 1024)
+          return (
+            <div className='my-2 rounded-xl border border-dashed border-border/80 bg-muted/30 px-3.5 py-2 text-xs text-muted-foreground font-mono flex items-center gap-2 max-w-full overflow-hidden'>
+              <span className='size-2 rounded-full bg-amber-500 shrink-0' />
+              <span className='truncate'>
+                [Imagen base64 omitida ({sizeKb} KB) para evitar desbordamiento y optimizar memoria]
+              </span>
+            </div>
+          )
+        }
+
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={alt || 'Imagen del documento'}
+            loading='lazy'
+            className='my-3 max-h-96 max-w-full rounded-xl border border-border/60 object-contain shadow-xs'
+            {...rest}
+          />
+        )
+      },
+      iframe: (props: React.IframeHTMLAttributes<HTMLIFrameElement> & { node?: unknown }) => {
+        const { src, title, ...rest } = props
+        if (!src || typeof src !== 'string' || !src.trim()) {
+          return null
+        }
+        return (
+          <iframe
+            src={src}
+            title={title || 'Contenido embebido'}
+            className='my-3 w-full rounded-xl border border-border/60 shadow-xs min-h-[300px]'
+            {...rest}
+          />
+        )
+      },
     }),
     [codeTheme, showLineNumbers, linkTarget, onLinkClick, onDownloadClick]
   )
 
   return (
-    <div style={{ maxWidth }} className={cn('markdown-body font-exo text-sm text-foreground select-text', className)}>
+    <div style={{ maxWidth }} className={cn('markdown-body font-exo text-sm text-foreground select-text max-w-full overflow-hidden break-words', className)}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}

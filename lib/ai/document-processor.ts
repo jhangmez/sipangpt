@@ -2,6 +2,7 @@ import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import { DOCUMENT_TRANSCRIPTION_MODEL_CODE, DEFAULT_EMBEDDING_MODEL } from '@/constants'
 import { generateEmbeddingsWithUsage } from '@/lib/ai/embeddings'
+import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
 
 export interface TextChunk {
   content: string
@@ -71,9 +72,11 @@ export async function extractAndStructureToMarkdown(
     cleanUrl.endsWith('.md')
   ) {
     console.log(
-      `${logPrefix} 📄 Archivo de texto plano detectado. Omitiendo OCR y retornando texto directo.`
+      `${logPrefix} 📄 Archivo de texto plano detectado. Omitiendo OCR, sanitizando codificación y eliminando imágenes base64.`
     )
-    return buffer.toString('utf-8')
+    const rawText = buffer.toString('utf-8')
+    const sanitized = sanitizeMojibake(rawText)
+    return stripBase64Images(sanitized)
   }
 
   // 2. Si es un PDF, transcribir y estructurar a Markdown mediante Gemini Multimodal (DOCUMENT_TRANSCRIPTION_MODEL_CODE)
@@ -445,7 +448,10 @@ export async function indexDocumentContent(
   const docTitle = doc?.title || 'Reglamento Institucional USS'
   const categoryCode = doc?.category?.code || 'GENERAL'
 
-  const chunks = splitTextIntoChunks(rawContent, 650, 90, docTitle, categoryCode)
+  // Limpiar cualquier imagen base64 y normalizar codificación antes de crear chunks
+  const cleanedContent = stripBase64Images(sanitizeMojibake(rawContent))
+
+  const chunks = splitTextIntoChunks(cleanedContent, 650, 90, docTitle, categoryCode)
   console.log(
     `${logPrefix} 🧩 Chunks contextuales generados: ${chunks.length} fragmentos con Header Prepending.`
   )

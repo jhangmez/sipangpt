@@ -9,6 +9,7 @@ import {
   extractAndStructureToMarkdown,
 } from '@/lib/ai/document-processor'
 import { generateEmbedding } from '@/lib/ai/embeddings'
+import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
 
 export async function getAdminDocuments() {
   await requireRole(Role.ADMIN)
@@ -79,6 +80,8 @@ export async function createDocumentDirectAction(data: {
     throw new Error('Debe proporcionar el contenido del documento o reglamento.')
   }
 
+  const cleanContent = stripBase64Images(sanitizeMojibake(data.content.trim()))
+
   const doc = await prisma.document.create({
     data: {
       title: data.title.trim(),
@@ -86,7 +89,7 @@ export async function createDocumentDirectAction(data: {
       publicUrl: data.publicUrl?.trim() || null,
       fileUrl: data.publicUrl?.trim() || null,
       mimeType: 'text/plain',
-      sizeBytes: Buffer.byteLength(data.content, 'utf8'),
+      sizeBytes: Buffer.byteLength(cleanContent, 'utf8'),
       categoryId: data.categoryId || null,
       uploadedById: user.id,
       status: 'PROCESSING',
@@ -94,7 +97,7 @@ export async function createDocumentDirectAction(data: {
   })
 
   // Indexar chunks inmediatamente
-  const result = await indexDocumentContent(doc.id, data.content)
+  const result = await indexDocumentContent(doc.id, cleanContent)
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: doc, chunkCount: result.chunkCount }
@@ -402,4 +405,141 @@ export async function processAndIndexDocumentAction(documentId: string) {
   }
 }
 
+/**
+ * Obtiene el contenido estructurado en Markdown y metadatos del documento para visualización avanzada
+ */
+export async function getDocumentPreviewDataAction(documentId: string) {
+  const logPrefix = `[ACTION_PREVIEW_DOC] [${new Date().toISOString()}]`
+  console.log(`${logPrefix} 🔍 Solicitando vista previa de documento: "${documentId}"`)
 
+  await requireRole(Role.ADMIN)
+
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+        },
+      },
+      uploadedBy: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      chunks: {
+        orderBy: { chunkIndex: 'asc' },
+        select: {
+          id: true,
+          chunkIndex: true,
+          content: true,
+          pageNumber: true,
+          metadata: true,
+        },
+      },
+    },
+  })
+
+  if (!doc) {
+    console.error(`${logPrefix} ❌ Documento "${documentId}" no encontrado.`)
+    throw new Error('Documento no encontrado en el sistema.')
+  }
+
+  const isPdf =
+    Boolean(doc.mimeType?.toLowerCase().includes('pdf')) ||
+    doc.fileName.toLowerCase().endsWith('.pdf')
+
+  let markdownContent = ''
+  let sourceOrigin: 'file_download' | 'reconstructed_chunks' = 'reconstructed_chunks'
+
+  // 1. Si no es PDF y posee URL pública o de archivo, intentar descargar el contenido original
+  const directUrl = doc.fileUrl || doc.publicUrl
+  if (!isPdf && directUrl) {
+    try {
+      console.log(`${logPrefix} 🌐 Descargando contenido directo desde URL: ${directUrl}`)
+      const res = await fetch(directUrl, {
+        signal: AbortSignal.timeout(12_000),
+      })
+      if (res.ok) {
+        const arrayBuf = await res.arrayBuffer()
+        const buf = Buffer.from(arrayBuf)
+        markdownContent = buf.toString('utf-8')
+        sourceOrigin = 'file_download'
+        console.log(
+          `${logPrefix} ✅ Descarga exitosa (${buf.byteLength} bytes) decodificado como UTF-8.`
+        )
+      }
+    } catch (fetchErr) {
+      console.warn(
+        `${logPrefix} ⚠️ No se pudo descargar directamente desde URL, recurriendo a fragmentos RAG:`,
+        fetchErr
+      )
+    }
+  }
+
+  // 2. Si es PDF o si la descarga directa falló, reconstruir el documento desde los fragmentos de la BD
+  if (!markdownContent && doc.chunks.length > 0) {
+    console.log(
+      `${logPrefix} 🧩 Reconstruyendo contenido Markdown a partir de ${doc.chunks.length} fragmentos RAG...`
+    )
+    markdownContent = doc.chunks.map((c) => c.content).join('\n\n')
+    sourceOrigin = 'reconstructed_chunks'
+  }
+
+  // 3. Sanitizar Mojibake y eliminar imágenes base64 extensas que generen ruido
+  markdownContent = stripBase64Images(sanitizeMojibake(markdownContent))
+
+  // 4. Formatear y sanitizar chunks para visualización contextual
+  const formattedChunks = doc.chunks.map((c) => {
+    const meta = c.metadata as Record<string, unknown> | null
+    const hasEmbedding = Boolean(
+      meta && Array.isArray(meta.embedding) && meta.embedding.length > 0
+    )
+    return {
+      id: c.id,
+      chunkIndex: c.chunkIndex,
+      content: stripBase64Images(sanitizeMojibake(c.content)),
+      pageNumber: c.pageNumber,
+      hasEmbedding,
+    }
+  })
+
+  // Estadísticas básicas
+  const wordCount = markdownContent
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length
+  const charCount = markdownContent.length
+  const estimatedReadTimeMinutes = Math.max(1, Math.ceil(wordCount / 200))
+
+  return {
+    success: true,
+    document: {
+      id: doc.id,
+      title: doc.title || doc.fileName,
+      fileName: doc.fileName,
+      fileUrl: doc.fileUrl,
+      publicUrl: doc.publicUrl,
+      mimeType: doc.mimeType,
+      sizeBytes: doc.sizeBytes,
+      status: doc.status,
+      chunkCount: doc.chunkCount,
+      category: doc.category,
+      uploadedBy: doc.uploadedBy,
+      createdAt: doc.createdAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString(),
+    },
+    isPdf,
+    markdownContent,
+    sourceOrigin,
+    stats: {
+      wordCount,
+      charCount,
+      estimatedReadTimeMinutes,
+    },
+    chunks: formattedChunks,
+  }
+}

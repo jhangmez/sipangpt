@@ -16,6 +16,7 @@ import {
   getAdminDocuments
 } from '@/lib/actions/admin-documents'
 import { DocumentUploadZone } from '@/components/admin/document-upload-zone'
+import { DocumentPreviewSheet } from '@/components/admin/document-preview-sheet'
 import { DEFAULT_EMBEDDING_MODEL } from '@/constants'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -743,9 +744,14 @@ export function DocumentsManager({
                         </div>
                         <div className='min-w-0 flex-1 space-y-1.5'>
                           <div className='flex items-center gap-2 flex-wrap'>
-                            <p className='font-bold text-xs text-foreground'>
+                            <button
+                              type='button'
+                              onClick={() => setPreviewDoc(doc)}
+                              className='font-bold text-xs text-foreground hover:text-primary transition-colors text-left truncate cursor-pointer'
+                              title='Hacer clic para visualizar en formato Markdown y PDF'
+                            >
                               {doc.title || doc.fileName}
-                            </p>
+                            </button>
 
                             {/* Badge de Estado */}
                             {isIndexed && (
@@ -1671,60 +1677,19 @@ export function DocumentsManager({
       />
 
       {/* ========================================================================= */}
-      {/* MODAL: VISUALIZADOR DE DOCUMENTO Y PDF INTEGRADO */}
+      {/* VISUALIZADOR AVANZADO DE DOCUMENTOS EN SHEET LATERAL DESLIZANTE */}
       {/* ========================================================================= */}
-      <Dialog
+      <DocumentPreviewSheet
         open={Boolean(previewDoc)}
-        onOpenChange={(open) => !open && setPreviewDoc(null)}
-      >
-        <DialogContent className='max-w-4xl max-h-[90vh] flex flex-col font-exo rounded-3xl p-6'>
-          <DialogHeader className='shrink-0'>
-            <DialogTitle className='font-frances text-lg font-bold flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <Eye className='w-5 h-5 text-primary' />
-                <span className='truncate max-w-lg'>
-                  {previewDoc?.title || previewDoc?.fileName}
-                </span>
-              </div>
-              {previewDoc?.publicUrl && (
-                <a
-                  href={previewDoc.publicUrl}
-                  target='_blank'
-                  rel='noreferrer'
-                  className='text-xs text-primary hover:underline flex items-center gap-1 font-normal mr-6'
-                >
-                  <ExternalLink className='size-3' /> Abrir en pestaña nueva
-                </a>
-              )}
-            </DialogTitle>
-            <DialogDescription className='text-xs text-muted-foreground'>
-              Visualización previa del documento institucional oficial y sus
-              metadatos de indexación RAG.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='flex-1 overflow-hidden rounded-2xl border border-border/80 bg-muted/20 min-h-[450px]'>
-            {previewDoc?.publicUrl || previewDoc?.fileUrl ? (
-              <iframe
-                src={previewDoc.publicUrl || previewDoc.fileUrl || ''}
-                className='w-full h-full min-h-[450px] rounded-2xl'
-                title={previewDoc.title}
-              />
-            ) : (
-              <div className='flex flex-col items-center justify-center h-full p-8 text-center text-xs text-muted-foreground space-y-2'>
-                <FileText className='size-8 text-muted-foreground/60' />
-                <p className='font-semibold text-foreground'>
-                  Sin archivo PDF cargado
-                </p>
-                <p>
-                  Este documento fue registrado mediante inserción directa de
-                  texto en la base RAG.
-                </p>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+        documentId={previewDoc?.id || null}
+        initialDoc={previewDoc}
+        onOpenChange={(open) => {
+          if (!open) setPreviewDoc(null)
+        }}
+        onNavigateToChunks={(doc) => {
+          handleNavigateToChunks(doc)
+        }}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL: EXPLICACIÓN DEL PIPELINE DE INDEXACIÓN RAG */}
