@@ -1,7 +1,7 @@
 import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
-import { DOCUMENT_TRANSCRIPTION_MODEL_CODE } from '@/constants'
-import { generateEmbeddings } from '@/lib/ai/embeddings'
+import { DOCUMENT_TRANSCRIPTION_MODEL_CODE, DEFAULT_EMBEDDING_MODEL } from '@/constants'
+import { generateEmbeddingsWithUsage } from '@/lib/ai/embeddings'
 
 export interface TextChunk {
   content: string
@@ -466,10 +466,28 @@ export async function indexDocumentContent(
   let chunkEmbeddings: number[][] = []
   try {
     const chunkTexts = chunks.map((c) => c.content)
-    chunkEmbeddings = await generateEmbeddings(chunkTexts)
+    const embStart = Date.now()
+    const { embeddings, tokens: embTokens } = await generateEmbeddingsWithUsage(chunkTexts)
+    chunkEmbeddings = embeddings
+    const embDuration = Date.now() - embStart
     console.log(
-      `${logPrefix} ✅ Embeddings generados exitosamente (${chunkEmbeddings.length} vectores persistidos).`
+      `${logPrefix} ✅ Embeddings generados exitosamente (${chunkEmbeddings.length} vectores persistidos, ${embTokens} tokens).`
     )
+
+    // Registrar consumo de tokens de embeddings durante la ingesta documental
+    await recordTokenUsageLog({
+      modelCode: DEFAULT_EMBEDDING_MODEL,
+      provider: ModelProvider.GEMINI,
+      concept: TokenUsageConcept.RAG_EMBEDDING,
+      promptTokens: embTokens,
+      completionTokens: 0,
+      latencyMs: embDuration,
+      metadata: {
+        documentId,
+        totalChunks: chunks.length,
+        action: 'DOCUMENT_INGESTION_EMBEDDINGS',
+      },
+    })
   } catch (embErr) {
     console.warn(
       `${logPrefix} ⚠️ Error generando embeddings en lote durante ingesta, se guardarán sin vector inicial:`,

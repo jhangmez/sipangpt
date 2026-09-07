@@ -1,10 +1,11 @@
-import { prisma } from '@/lib/prisma'
+import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import {
-  generateEmbedding,
-  generateEmbeddings,
+  generateEmbeddingWithUsage,
+  generateEmbeddingsWithUsage,
   computeCosineSimilarity,
   DEFAULT_EMBEDDING_MODEL,
 } from '@/lib/ai/embeddings'
+import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 
 export interface RetrievedSource {
   chunkId?: string | null
@@ -19,6 +20,11 @@ export interface RetrievedSource {
   anioVigencia?: number | null
 }
 
+export interface SearchKnowledgeBaseContext {
+  userId?: string | null
+  conversationId?: string | null
+}
+
 /**
  * Búsqueda semántica y contextual en la base de conocimiento universitaria (RAG).
  * Implementa una arquitectura híbrida en 2 capas:
@@ -30,7 +36,8 @@ export async function searchKnowledgeBase(
   query: string,
   topK: number = 3,
   minScore: number = 0.50,
-  categoryFilter?: string | null
+  categoryFilter?: string | null,
+  context?: SearchKnowledgeBaseContext
 ): Promise<RetrievedSource[]> {
   try {
     const cleanQuery = query.trim()
@@ -126,7 +133,10 @@ export async function searchKnowledgeBase(
 
     // 3. Capa 2: Similitud Coseno de Embeddings Vectoriales (Estrategia 2 y 4)
     try {
-      const queryEmbedding = await generateEmbedding(cleanQuery)
+      const embStartTime = Date.now()
+      const { embedding: queryEmbedding, tokens: queryTokens } =
+        await generateEmbeddingWithUsage(cleanQuery)
+      let totalRagTokens = queryTokens
 
       // Separar chunks con embeddings ya persistidos de aquellos históricos que requieran cálculo
       const missingEmbeddingIndices: number[] = []
@@ -142,11 +152,31 @@ export async function searchKnowledgeBase(
       // Si hay chunks históricos sin vector en metadata, generarlos en lote bajo demanda
       if (missingEmbeddingIndices.length > 0) {
         const missingTexts = missingEmbeddingIndices.map((i) => candidateChunks[i].content)
-        const generated = await generateEmbeddings(missingTexts)
+        const { embeddings: generated, tokens: batchTokens } =
+          await generateEmbeddingsWithUsage(missingTexts)
+        totalRagTokens += batchTokens
         missingEmbeddingIndices.forEach((chunkIdx, listIdx) => {
           resolvedEmbeddings[chunkIdx] = generated[listIdx] || null
         })
       }
+      const embDurationMs = Date.now() - embStartTime
+
+      // Registrar consumo de tokens para RAG_EMBEDDING
+      recordTokenUsageLog({
+        userId: context?.userId || null,
+        conversationId: context?.conversationId || null,
+        modelCode: DEFAULT_EMBEDDING_MODEL,
+        provider: ModelProvider.GEMINI,
+        concept: TokenUsageConcept.RAG_EMBEDDING,
+        promptTokens: totalRagTokens,
+        completionTokens: 0,
+        latencyMs: embDurationMs,
+        metadata: {
+          queryLength: cleanQuery.length,
+          candidatesEvaluated: candidateChunks.length,
+          missingEmbeddingsCalculated: missingEmbeddingIndices.length,
+        },
+      }).catch((err) => console.warn('[RAG_EMBEDDING_TOKEN_LOG_WARN]', err))
 
       // Calcular similitud coseno sobre cada fragmento e inyectar metadatos de negocio
       const scoredResults: RetrievedSource[] = candidateChunks.map((chunk, idx) => {

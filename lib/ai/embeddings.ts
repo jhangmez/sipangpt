@@ -20,6 +20,35 @@ export function getEmbeddingModel(
   return google.textEmbeddingModel(modelCode || DEFAULT_EMBEDDING_MODEL)
 }
 
+export interface EmbeddingResultWithUsage {
+  embedding: number[]
+  tokens: number
+}
+
+export interface EmbeddingsBatchResultWithUsage {
+  embeddings: number[][]
+  tokens: number
+}
+
+/**
+ * Genera el embedding vectorial y los tokens consumidos para un texto o consulta individual
+ */
+export async function generateEmbeddingWithUsage(
+  text: string,
+  modelCode: string = DEFAULT_EMBEDDING_MODEL
+): Promise<EmbeddingResultWithUsage> {
+  const model = getEmbeddingModel('GEMINI', modelCode)
+  const clean = text.trim()
+  const res = await embed({
+    model,
+    value: clean,
+  })
+  return {
+    embedding: res.embedding,
+    tokens: res.usage?.tokens ?? Math.max(1, Math.ceil(clean.length / 4)),
+  }
+}
+
 /**
  * Genera el embedding vectorial para un texto o consulta individual
  */
@@ -27,12 +56,30 @@ export async function generateEmbedding(
   text: string,
   modelCode: string = DEFAULT_EMBEDDING_MODEL
 ): Promise<number[]> {
+  const res = await generateEmbeddingWithUsage(text, modelCode)
+  return res.embedding
+}
+
+/**
+ * Genera embeddings vectoriales y tokens por lotes (batch) para múltiples fragmentos de texto
+ */
+export async function generateEmbeddingsWithUsage(
+  texts: string[],
+  modelCode: string = DEFAULT_EMBEDDING_MODEL
+): Promise<EmbeddingsBatchResultWithUsage> {
+  if (texts.length === 0) return { embeddings: [], tokens: 0 }
+
   const model = getEmbeddingModel('GEMINI', modelCode)
-  const { embedding } = await embed({
+  const cleanedTexts = texts.map((t) => t.trim())
+  const res = await embedMany({
     model,
-    value: text.trim(),
+    values: cleanedTexts,
   })
-  return embedding
+  const totalChars = cleanedTexts.reduce((acc, t) => acc + t.length, 0)
+  return {
+    embeddings: res.embeddings,
+    tokens: res.usage?.tokens ?? Math.max(1, Math.ceil(totalChars / 4)),
+  }
 }
 
 /**
@@ -42,14 +89,8 @@ export async function generateEmbeddings(
   texts: string[],
   modelCode: string = DEFAULT_EMBEDDING_MODEL
 ): Promise<number[][]> {
-  if (texts.length === 0) return []
-
-  const model = getEmbeddingModel('GEMINI', modelCode)
-  const { embeddings } = await embedMany({
-    model,
-    values: texts.map((t) => t.trim()),
-  })
-  return embeddings
+  const res = await generateEmbeddingsWithUsage(texts, modelCode)
+  return res.embeddings
 }
 
 /**

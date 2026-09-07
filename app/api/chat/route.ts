@@ -278,8 +278,14 @@ export async function POST(req: Request) {
 
     // 4. Pre-RAG NLU: Normalización, expansión de consulta y detección de intención institucional (Estrategias 2 y 3)
     const retrievalStartTime = Date.now()
+    const ragContext = {
+      userId: session.user.id,
+      conversationId: conversationId || undefined,
+    }
     const rewrittenQuery =
-      isRAGEnabled && userText ? await rewriteAndExpandQuery(userText) : null
+      isRAGEnabled && userText
+        ? await rewriteAndExpandQuery(userText, ragContext)
+        : null
     const queryForSearch = rewrittenQuery?.expandedQuery || userText
     const sources =
       isRAGEnabled && queryForSearch
@@ -287,7 +293,8 @@ export async function POST(req: Request) {
             queryForSearch,
             3,
             minSimScore,
-            rewrittenQuery?.inferredCategory
+            rewrittenQuery?.inferredCategory,
+            ragContext
           )
         : []
     const retrievalLatencyMs = Date.now() - retrievalStartTime

@@ -1,13 +1,19 @@
 import { generateText } from 'ai'
 import { getLanguageModel } from '@/lib/ai/providers'
-import { ModelProvider } from '@/lib/prisma'
+import { ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import { DOCUMENT_TRANSCRIPTION_MODEL_CODE } from '@/constants/models'
+import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 
 export interface RewrittenQuery {
   originalQuery: string
   expandedQuery: string
   inferredCategory?: string
   detectedIntent?: string
+}
+
+export interface QueryRewriterContext {
+  userId?: string | null
+  conversationId?: string | null
 }
 
 // Diccionario heurístico de expresiones estudiantiles frecuentes (0 latencia / 0 tokens)
@@ -78,7 +84,10 @@ const HEURISTIC_PATTERNS: Array<{
  * 1. Primero evalúa reglas heurísticas instantáneas (0ms).
  * 2. Si no coincide y la consulta es compleja, invoca un prompt ultra-rápido con Gemini Flash Lite.
  */
-export async function rewriteAndExpandQuery(rawQuery: string): Promise<RewrittenQuery> {
+export async function rewriteAndExpandQuery(
+  rawQuery: string,
+  context?: QueryRewriterContext
+): Promise<RewrittenQuery> {
   const clean = rawQuery.trim()
   if (!clean) {
     return { originalQuery: '', expandedQuery: '' }
@@ -107,8 +116,9 @@ export async function rewriteAndExpandQuery(rawQuery: string): Promise<Rewritten
   // 2. Normalización NLU asistida por IA para consultas ambiguas o coloquiales
   try {
     const model = getLanguageModel(ModelProvider.GEMINI, DOCUMENT_TRANSCRIPTION_MODEL_CODE)
-    
-    const { text } = await generateText({
+    const rewriteStart = Date.now()
+
+    const { text, usage } = await generateText({
       model,
       system: `Eres un normalizador de consultas institucionales para la Universidad Señor de Sipán (USS).
 Tu tarea es convertir la pregunta coloquial o informal de un estudiante en una consulta de búsqueda formal y técnica para un motor de reglamentos universitarios.
@@ -122,10 +132,43 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
       maxOutputTokens: 120,
       abortSignal: AbortSignal.timeout(2500),
     })
+    const latencyMs = Date.now() - rewriteStart
+
+    const promptTokens =
+      (usage as { promptTokens?: number; inputTokens?: number })?.promptTokens ??
+      (usage as { promptTokens?: number; inputTokens?: number })?.inputTokens ??
+      Math.max(1, Math.ceil(clean.length / 4))
+    const completionTokens =
+      (usage as { completionTokens?: number; outputTokens?: number })?.completionTokens ??
+      (usage as { completionTokens?: number; outputTokens?: number })?.outputTokens ??
+      Math.max(1, Math.ceil(text.length / 4))
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
+    let parsed: { expandedQuery?: string; inferredCategory?: string; detectedIntent?: string } | null = null
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
+      try {
+        parsed = JSON.parse(jsonMatch[0])
+      } catch {}
+    }
+
+    // Registrar consumo de tokens para QUERY_ANALYSIS
+    recordTokenUsageLog({
+      userId: context?.userId || null,
+      conversationId: context?.conversationId || null,
+      modelCode: DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+      provider: ModelProvider.GEMINI,
+      concept: TokenUsageConcept.QUERY_ANALYSIS,
+      promptTokens,
+      completionTokens,
+      latencyMs,
+      metadata: {
+        rawQuery: clean,
+        inferredCategory: parsed?.inferredCategory,
+        detectedIntent: parsed?.detectedIntent,
+      },
+    }).catch((err) => console.warn('[QUERY_ANALYSIS_TOKEN_LOG_WARN]', err))
+
+    if (parsed) {
       return {
         originalQuery: clean,
         expandedQuery: parsed.expandedQuery ? `${clean} ${parsed.expandedQuery}` : clean,
