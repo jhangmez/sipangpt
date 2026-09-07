@@ -13,7 +13,7 @@ import { searchKnowledgeBase } from '@/lib/ai/rag'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
 import { rewriteAndExpandQuery } from '@/lib/ai/query-rewriter'
 import { detectResolutionStatus } from '@/lib/ai/resolution-detector'
-import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept, type Message } from '@/lib/prisma'
+import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept, Role, type Message } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import {
   buildSystemPromptWithSources,
@@ -82,6 +82,31 @@ export async function POST(req: Request) {
   const regeneratedFromId: string | undefined = body.regeneratedFromId
   const parentId: string | undefined = body.parentId
 
+  // 1.2 Obtener configuración del sistema global definida por el Administrador
+  const systemConfig = await prisma.systemSetting
+    .findUnique({
+      where: { id: 'global_config' },
+    })
+    .catch(() => null)
+
+  const isMaintenanceMode = systemConfig?.maintenanceMode ?? false
+  const isAdmin = session.user.role === Role.ADMIN
+
+  // 1.3 Validación de Modo Mantenimiento (los administradores pueden acceder para supervisión y pruebas)
+  if (isMaintenanceMode && !isAdmin) {
+    return new Response(
+      JSON.stringify({
+        error:
+          'El servicio de chat de SipánGPT se encuentra temporalmente en modo de mantenimiento por actualizaciones programadas. Por favor, intenta nuevamente más tarde.',
+        code: 'MAINTENANCE_MODE_ACTIVE',
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
   // 1.5 Validar límite de consultas por conversación (máximo 20 preguntas por chat)
   if (conversationId && !isRegeneration) {
     try {
@@ -125,7 +150,7 @@ export async function POST(req: Request) {
     ]
   }
 
-  // 3. Extraer el texto de la última consulta del usuario para búsqueda RAG
+  // 3. Extraer el texto de la última consulta del usuario para validaciones y búsqueda RAG
   const lastUserMsg = [...rawMessages].reverse().find((m) => m.role === 'user')
   const userText =
     lastUserMsg?.parts
@@ -146,14 +171,106 @@ export async function POST(req: Request) {
     )
   }
 
-  try {
-    // 3.5 Obtener configuración del sistema y políticas de búsqueda definidas por el Administrador
-    const systemConfig = await prisma.systemSetting
-      .findUnique({
-        where: { id: 'global_config' },
-      })
-      .catch(() => null)
+  // 3.1 Validar longitud máxima de caracteres del prompt (Política maxPromptChars)
+  const maxPromptChars = systemConfig?.maxPromptChars ?? 2000
+  if (userText.length > maxPromptChars) {
+    return new Response(
+      JSON.stringify({
+        error: `Tu consulta excede el límite máximo permitido de ${maxPromptChars.toLocaleString()} caracteres (${userText.length.toLocaleString()} caracteres enviados). Por favor, resume o divide tu consulta.`,
+        code: 'MAX_PROMPT_CHARS_EXCEEDED',
+        maxPromptChars,
+        receivedChars: userText.length,
+      }),
+      {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
 
+  // 3.2 Validar políticas de voz y análisis de imágenes
+  const enableVoiceInput = systemConfig?.enableVoiceInput ?? true
+  if (isVoiceInput && !enableVoiceInput) {
+    return new Response(
+      JSON.stringify({
+        error:
+          'La entrada por voz se encuentra temporalmente deshabilitada por el administrador.',
+        code: 'VOICE_INPUT_DISABLED',
+      }),
+      {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  const enableImageAnalysis = systemConfig?.enableImageAnalysis ?? true
+  const hasImages = attachments.some(
+    (att) => att.type?.startsWith('image/') || att.mediaType?.startsWith('image/')
+  )
+  if (hasImages && !enableImageAnalysis) {
+    return new Response(
+      JSON.stringify({
+        error:
+          'El análisis de imágenes se encuentra temporalmente deshabilitado por el administrador.',
+        code: 'IMAGE_ANALYSIS_DISABLED',
+      }),
+      {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
+  }
+
+  // 3.3 Validar cuota de consumo diario de tokens (Política maxDailyTokensPerUser)
+  const maxDailyTokens = systemConfig?.maxDailyTokensPerUser ?? 50000
+  if (!isAdmin && maxDailyTokens > 0) {
+    try {
+      const userUsage = await prisma.userUsage.findUnique({
+        where: { userId: session.user.id },
+      })
+
+      if (userUsage) {
+        const now = new Date()
+        const resetAt = new Date(userUsage.resetAt)
+        const isPast24h = now.getTime() - resetAt.getTime() >= 24 * 60 * 60 * 1000
+        const isCalendarDayDiff =
+          now.getUTCFullYear() !== resetAt.getUTCFullYear() ||
+          now.getUTCMonth() !== resetAt.getUTCMonth() ||
+          now.getUTCDate() !== resetAt.getUTCDate()
+
+        if (isPast24h || isCalendarDayDiff) {
+          // El ciclo diario concluyó: reiniciar contador para hoy
+          await prisma.userUsage.update({
+            where: { userId: session.user.id },
+            data: {
+              dailyTokens: 0,
+              resetAt: now,
+            },
+          })
+        } else if (userUsage.dailyTokens >= maxDailyTokens) {
+          return new Response(
+            JSON.stringify({
+              error: `Has alcanzado tu límite diario de consumo de IA (${maxDailyTokens.toLocaleString()} tokens). Tu cuota se reiniciará automáticamente al inicio del próximo ciclo diario.`,
+              code: 'DAILY_TOKEN_LIMIT_EXCEEDED',
+              dailyTokens: userUsage.dailyTokens,
+              maxDailyTokens,
+              resetAt: userUsage.resetAt,
+            }),
+            {
+              status: 429,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          )
+        }
+      }
+    } catch (quotaErr) {
+      console.warn('[DAILY_TOKEN_CHECK_WARN]', quotaErr)
+    }
+  }
+
+  try {
+    // 3.5 Políticas de búsqueda y recuperación RAG
     const isRAGEnabled = systemConfig ? systemConfig.enableRAG : true
     const isWebSearchEnabled = systemConfig ? systemConfig.enableWebSearch : false
     const isMapsSearchEnabled = systemConfig ? systemConfig.enableMapsSearch : false
@@ -390,22 +507,53 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
           // Actualizar consumo de tokens del usuario (suma tanto consultas nuevas como regeneraciones)
           const tokensToAdd = usage?.totalTokens || 0
           if (tokensToAdd > 0) {
-            await prisma.userUsage
-              .upsert({
+            const now = new Date()
+            const existingUsage = await prisma.userUsage
+              .findUnique({
                 where: { userId: session.user.id },
-                create: {
-                  userId: session.user.id,
-                  dailyTokens: tokensToAdd,
-                  totalTokens: tokensToAdd,
-                  lastRequestAt: new Date(),
-                },
-                update: {
-                  dailyTokens: { increment: tokensToAdd },
-                  totalTokens: { increment: tokensToAdd },
-                  lastRequestAt: new Date(),
-                },
               })
-              .catch((err) => console.error('[USER_USAGE_PERSIST_ERROR]', err))
+              .catch(() => null)
+
+            const isPast24h = existingUsage
+              ? now.getTime() - new Date(existingUsage.resetAt).getTime() >= 24 * 60 * 60 * 1000
+              : false
+            const isCalendarDayDiff = existingUsage
+              ? now.getUTCFullYear() !== new Date(existingUsage.resetAt).getUTCFullYear() ||
+                now.getUTCMonth() !== new Date(existingUsage.resetAt).getUTCMonth() ||
+                now.getUTCDate() !== new Date(existingUsage.resetAt).getUTCDate()
+              : false
+
+            if (existingUsage && (isPast24h || isCalendarDayDiff)) {
+              await prisma.userUsage
+                .update({
+                  where: { userId: session.user.id },
+                  data: {
+                    dailyTokens: tokensToAdd,
+                    totalTokens: { increment: tokensToAdd },
+                    lastRequestAt: now,
+                    resetAt: now,
+                  },
+                })
+                .catch((err) => console.error('[USER_USAGE_RESET_UPDATE_ERROR]', err))
+            } else {
+              await prisma.userUsage
+                .upsert({
+                  where: { userId: session.user.id },
+                  create: {
+                    userId: session.user.id,
+                    dailyTokens: tokensToAdd,
+                    totalTokens: tokensToAdd,
+                    lastRequestAt: now,
+                    resetAt: now,
+                  },
+                  update: {
+                    dailyTokens: { increment: tokensToAdd },
+                    totalTokens: { increment: tokensToAdd },
+                    lastRequestAt: now,
+                  },
+                })
+                .catch((err) => console.error('[USER_USAGE_PERSIST_ERROR]', err))
+            }
           }
 
           // Registrar log de consumo de tokens y costos referenciales por concepto

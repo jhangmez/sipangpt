@@ -24,9 +24,9 @@ export default async function ConsumoSettingsPage() {
   const authUser = await getAuthenticatedUser()
   if (!authUser) redirect('/login')
 
-  const { usage, messageCount, totalConversations } =
+  const { usage, messageCount, totalConversations, dailyLimit: dynamicLimit } =
     await getUserSettingsData()
-  const dailyLimit = 50000
+  const dailyLimit = dynamicLimit || (usage as { dailyLimit?: number }).dailyLimit || 50000
   const dailyTokens = usage.dailyTokens || 0
   const totalTokens = usage.totalTokens || 0
   const usagePercentage = Math.min(

@@ -537,9 +537,9 @@ export function ChatInterface({
     } catch (err: unknown) {
       console.error('[CHAT_ERROR]', err)
       const rawErrMsg = getErrorMessage(err)
-      const friendlyMsg = rawErrMsg?.includes('API key')
-        ? rawErrMsg
-        : 'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
+      const friendlyMsg =
+        rawErrMsg ||
+        'Estamos experimentando problemas, por favor intenta nuevamente en unos instantes.'
       setError(friendlyMsg)
     } finally {
       setIsLoading(false)

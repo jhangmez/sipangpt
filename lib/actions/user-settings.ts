@@ -15,7 +15,8 @@ export async function getUserSettingsData() {
   const user = await getAuthenticatedUser()
   if (!user?.id) throw new Error('No autenticado')
 
-  const [dbUser, usage, messageCount, totalConversations] = await Promise.all([
+  const [dbUser, usage, messageCount, totalConversations, systemSetting] =
+    await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: {
@@ -44,7 +45,29 @@ export async function getUserSettingsData() {
     prisma.conversation.count({
       where: { userId: user.id },
     }),
+    prisma.systemSetting
+      .findUnique({
+        where: { id: 'global_config' },
+      })
+      .catch(() => null),
   ])
+
+  const now = new Date()
+  let currentDailyTokens = usage?.dailyTokens || 0
+  if (usage?.resetAt) {
+    const resetAt = new Date(usage.resetAt)
+    const isPast24h = now.getTime() - resetAt.getTime() >= 24 * 60 * 60 * 1000
+    const isCalendarDayDiff =
+      now.getUTCFullYear() !== resetAt.getUTCFullYear() ||
+      now.getUTCMonth() !== resetAt.getUTCMonth() ||
+      now.getUTCDate() !== resetAt.getUTCDate()
+
+    if (isPast24h || isCalendarDayDiff) {
+      currentDailyTokens = 0
+    }
+  }
+
+  const dailyLimit = systemSetting?.maxDailyTokensPerUser ?? 50000
 
   return {
     user: dbUser
@@ -61,11 +84,22 @@ export async function getUserSettingsData() {
           createdAt: dbUser.createdAt,
         }
       : null,
-    usage: usage || {
-      dailyTokens: 0,
-      totalTokens: 0,
-      resetAt: new Date(),
-    },
+    usage: usage
+      ? {
+          ...usage,
+          dailyTokens: currentDailyTokens,
+          dailyLimit,
+        }
+      : {
+          id: 'temp',
+          userId: user.id,
+          dailyTokens: 0,
+          totalTokens: 0,
+          lastRequestAt: null,
+          resetAt: now,
+          dailyLimit,
+        },
+    dailyLimit,
     messageCount,
     totalConversations,
   }
