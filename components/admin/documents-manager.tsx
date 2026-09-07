@@ -16,7 +16,7 @@ import {
   getAdminDocuments
 } from '@/lib/actions/admin-documents'
 import { DocumentUploadZone } from '@/components/admin/document-upload-zone'
-import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
+import { DEFAULT_EMBEDDING_MODEL } from '@/constants'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {

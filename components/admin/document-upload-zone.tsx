@@ -23,6 +23,7 @@ import {
   Loader2,
   Files,
   Plus,
+  Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -207,6 +208,15 @@ export function DocumentUploadZone({ onUploadSuccess }: DocumentUploadZoneProps)
           <span className='inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-medium'>
             Markdown / MD (hasta 4 MB)
           </span>
+        </div>
+      </div>
+
+      {/* Recomendación de optimización para compendios extensos */}
+      <div className='flex items-start gap-2.5 rounded-2xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground'>
+        <Info className='w-4 h-4 text-primary shrink-0 mt-0.5' />
+        <div className='space-y-0.5 leading-relaxed'>
+          <span className='font-semibold text-foreground'>Recomendación para documentos extensos:</span>{' '}
+          Para reglamentos o compendios que superen las 50 páginas (ej. Estatuto Universitario), es recomendable subirlos segmentados por títulos o capítulos (ej. <em>&quot;Reglamento de Matrícula - Cap. I-III&quot;</em>). Esto garantiza una transcripción OCR completa y maximiza la precisión semántica de SipánGPT.
         </div>
       </div>
 

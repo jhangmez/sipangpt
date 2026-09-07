@@ -36,7 +36,10 @@ import {
   InputGroupTextarea
 } from '@/components/ui/input-group'
 import { toast } from 'sonner'
-import { getAdminConversationAction } from '@/lib/actions/admin-conversations'
+import {
+  getAdminConversationAction,
+  getRecentAdminConversationsAction,
+} from '@/lib/actions/admin-conversations'
 import type { ChatMessage, MessageSource } from '@/types/chat'
 import { SYSTEM_MODELS } from '@/constants/models'
 
@@ -54,6 +57,9 @@ interface RecentConversationItem {
   _count: {
     messages: number
   }
+  minRating?: number | null
+  feedbacksCount?: number
+  latestFeedbackReasons?: string[]
 }
 
 interface ConversationsInspectorProps {
@@ -68,10 +74,32 @@ export function ConversationsInspector({
   const [searchId, setSearchId] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [selectedConversation, setSelectedConversation] = React.useState<any | null>(null)
+  const [recentConversations, setRecentConversations] =
+    React.useState<RecentConversationItem[]>(initialRecentConversations)
+  const [feedbackFilter, setFeedbackFilter] = React.useState<
+    'all' | 'low_rating' | 'with_feedback'
+  >('all')
+  const [listLoading, setListLoading] = React.useState(false)
   
   // Estado para el panel lateral de fuentes RAG
   const [sidePanelOpen, setSidePanelOpen] = React.useState(false)
   const [activeSources, setActiveSources] = React.useState<MessageSource[]>([])
+
+  // Cambiar filtro de calibración por feedback
+  const handleFilterChange = async (
+    newFilter: 'all' | 'low_rating' | 'with_feedback'
+  ) => {
+    setFeedbackFilter(newFilter)
+    setListLoading(true)
+    try {
+      const res = await getRecentAdminConversationsAction(newFilter)
+      setRecentConversations(res as RecentConversationItem[])
+    } catch {
+      toast.error('Error al filtrar conversaciones.')
+    } finally {
+      setListLoading(false)
+    }
+  }
 
   // Buscar conversación por ID
   const handleSearch = async (idToSearch?: string) => {
@@ -199,25 +227,77 @@ export function ConversationsInspector({
 
       {/* 2. Layout Principal: Conversaciones Recientes (Izq) + Visualizador de Chat (Centro) + Panel de Fuentes RAG (Der) */}
       <div className='flex-1 min-h-0 flex gap-3 overflow-hidden'>
-        {/* Panel Izquierdo: Conversaciones Recientes */}
+        {/* Panel Izquierdo: Conversaciones Recientes & Calibración Feedback */}
         <div className='w-full lg:w-72 xl:w-80 bg-card border border-border/60 rounded-3xl p-3 flex flex-col shrink-0 overflow-hidden shadow-xs'>
-          <div className='pb-2 border-b border-border/40 flex items-center justify-between px-1'>
-            <span className='text-xs font-semibold font-frances text-foreground flex items-center gap-1.5'>
-              <Clock className='size-3.5 text-primary' /> Recientes en Base de Datos
-            </span>
-            <Badge variant='outline' className='text-[10px] font-mono'>
-              {initialRecentConversations.length}
-            </Badge>
+          <div className='pb-2.5 border-b border-border/40 space-y-2 px-1'>
+            <div className='flex items-center justify-between'>
+              <span className='text-xs font-semibold font-frances text-foreground flex items-center gap-1.5'>
+                <Clock className='size-3.5 text-primary' /> Recientes & Feedback
+              </span>
+              <Badge variant='outline' className='text-[10px] font-mono'>
+                {recentConversations.length}
+              </Badge>
+            </div>
+
+            {/* Pestañas de Filtro de Calibración RAG (Estrategia 5) */}
+            <div className='grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-2xl text-[10px]'>
+              <button
+                type='button'
+                onClick={() => handleFilterChange('all')}
+                className={`py-1 px-1.5 rounded-xl font-medium transition-all text-center cursor-pointer ${
+                  feedbackFilter === 'all'
+                    ? 'bg-background text-foreground shadow-xs font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Todas
+              </button>
+              <button
+                type='button'
+                onClick={() => handleFilterChange('low_rating')}
+                className={`py-1 px-1.5 rounded-xl font-medium transition-all text-center cursor-pointer ${
+                  feedbackFilter === 'low_rating'
+                    ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 shadow-xs font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                ⭐ 1-2 (Bajas)
+              </button>
+              <button
+                type='button'
+                onClick={() => handleFilterChange('with_feedback')}
+                className={`py-1 px-1.5 rounded-xl font-medium transition-all text-center cursor-pointer ${
+                  feedbackFilter === 'with_feedback'
+                    ? 'bg-primary/15 text-primary shadow-xs font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Feedback
+              </button>
+            </div>
           </div>
 
           <div className='flex-1 overflow-y-auto space-y-1.5 pt-2 pr-1'>
-            {initialRecentConversations.length === 0 ? (
+            {listLoading ? (
+              <div className='p-6 text-center text-xs text-muted-foreground animate-pulse'>
+                Filtrando conversaciones...
+              </div>
+            ) : recentConversations.length === 0 ? (
               <div className='p-6 text-center text-xs text-muted-foreground'>
-                No hay conversaciones registradas aún.
+                {feedbackFilter === 'low_rating'
+                  ? 'No hay conversaciones con baja calificación (⭐ 1-2).'
+                  : feedbackFilter === 'with_feedback'
+                  ? 'No hay conversaciones con feedback registrado.'
+                  : 'No hay conversaciones registradas aún.'}
               </div>
             ) : (
-              initialRecentConversations.map((item) => {
+              recentConversations.map((item) => {
                 const isSelected = selectedConversation?.id === item.id
+                const isLowRating =
+                  item.minRating !== null &&
+                  item.minRating !== undefined &&
+                  item.minRating <= 2
+
                 return (
                   <button
                     key={item.id}
@@ -225,6 +305,8 @@ export function ConversationsInspector({
                     className={`w-full text-left p-2.5 rounded-2xl border transition-all flex flex-col gap-1.5 cursor-pointer ${
                       isSelected
                         ? 'bg-primary/10 border-primary/40 shadow-xs'
+                        : isLowRating
+                        ? 'bg-rose-500/5 border-rose-500/30 hover:bg-rose-500/10'
                         : 'bg-muted/30 border-border/40 hover:bg-muted/60'
                     }`}
                   >
@@ -232,12 +314,38 @@ export function ConversationsInspector({
                       <span className='text-xs font-semibold text-foreground truncate flex-1'>
                         {item.title || 'Nueva Consulta'}
                       </span>
+                      {item.minRating !== null && item.minRating !== undefined && (
+                        <Badge
+                          variant='outline'
+                          className={`text-[9px] py-0 px-1 font-bold ${
+                            item.minRating <= 2
+                              ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40'
+                              : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                          }`}
+                        >
+                          ⭐ {item.minRating}
+                        </Badge>
+                      )}
                       {item.isArchived && (
                         <Badge variant='secondary' className='text-[9px] py-0 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'>
                           Oculta
                         </Badge>
                       )}
                     </div>
+
+                    {/* Etiquetas de motivos de insatisfacción para calibración */}
+                    {item.latestFeedbackReasons && item.latestFeedbackReasons.length > 0 && (
+                      <div className='flex items-center gap-1 flex-wrap'>
+                        {item.latestFeedbackReasons.slice(0, 2).map((r) => (
+                          <span
+                            key={r}
+                            className='text-[8px] font-mono px-1.5 py-0.2 rounded-md bg-muted text-muted-foreground border border-border/40'
+                          >
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className='flex items-center justify-between text-[10px] text-muted-foreground font-mono'>
                       <div className='flex items-center gap-1 truncate max-w-[170px]'>
@@ -304,6 +412,26 @@ export function ConversationsInspector({
 
                 </div>
               </div>
+
+              {/* Alerta de Calibración RAG si la conversación tiene feedback con 1 o 2 estrellas (Estrategia 5) */}
+              {selectedConversation.messages?.some(
+                (m: any) => m.feedbacks?.some((f: any) => f.rating <= 2)
+              ) && (
+                <div className='p-3 bg-rose-500/10 border-b border-rose-500/30 text-xs flex items-start gap-2.5 shrink-0'>
+                  <div className='text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5'>
+                    ⚠️ Calibración RAG:
+                  </div>
+                  <div className='space-y-1 text-muted-foreground leading-relaxed'>
+                    <p>
+                      Esta consulta recibió calificación insatisfactoria (⭐ 1-2). Revisa las citas RAG y su score:
+                    </p>
+                    <ul className='list-disc list-inside text-[11px] space-y-0.5 text-foreground/80'>
+                      <li>Si recuperó citas erróneas: afina los metadatos o el tamaño del chunk (*chunk size*).</li>
+                      <li>Si no hubo citas o la similitud fue baja (&lt; 0.50): existe un <strong>gap de conocimiento</strong>. Sube el reglamento oficial del trámite.</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
 
               {/* Lista de Mensajes del Chat con MessageScroller */}
               <MessageScrollerProvider>

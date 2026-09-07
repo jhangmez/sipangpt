@@ -8,6 +8,7 @@ import {
   indexDocumentContent,
   extractAndStructureToMarkdown,
 } from '@/lib/ai/document-processor'
+import { generateEmbedding } from '@/lib/ai/embeddings'
 
 export async function getAdminDocuments() {
   await requireRole(Role.ADMIN)
@@ -131,11 +132,28 @@ export async function updateDocumentChunkAction(
     throw new Error('El contenido del fragmento no puede estar vacío.')
   }
 
+  let embedding: number[] | null = null
+  try {
+    embedding = await generateEmbedding(content.trim())
+  } catch {}
+
+  const existingChunk = await prisma.documentChunk.findUnique({
+    where: { id: chunkId },
+    select: { metadata: true },
+  })
+  const prevMeta = (existingChunk?.metadata as Record<string, unknown>) || {}
+
   const updated = await prisma.documentChunk.update({
     where: { id: chunkId },
     data: {
       content: content.trim(),
       pageNumber: pageNumber !== undefined ? pageNumber : undefined,
+      metadata: {
+        ...prevMeta,
+        embedding: embedding || prevMeta.embedding || null,
+        estado: 'ACTIVO',
+        updatedAt: new Date().toISOString(),
+      },
     },
   })
 
@@ -154,13 +172,29 @@ export async function addDocumentChunkAction(
     throw new Error('El contenido del fragmento no puede estar vacío.')
   }
 
-  const lastChunk = await prisma.documentChunk.findFirst({
-    where: { documentId },
-    orderBy: { chunkIndex: 'desc' },
-    select: { chunkIndex: true },
-  })
+  const [doc, lastChunk, sampleChunk] = await Promise.all([
+    prisma.document.findUnique({
+      where: { id: documentId },
+      include: { category: true },
+    }),
+    prisma.documentChunk.findFirst({
+      where: { documentId },
+      orderBy: { chunkIndex: 'desc' },
+      select: { chunkIndex: true },
+    }),
+    prisma.documentChunk.findFirst({
+      where: { documentId },
+      select: { metadata: true },
+    }),
+  ])
 
   const newIndex = (lastChunk?.chunkIndex ?? -1) + 1
+  const sampleMeta = (sampleChunk?.metadata as Record<string, unknown>) || {}
+
+  let embedding: number[] | null = null
+  try {
+    embedding = await generateEmbedding(content.trim())
+  } catch {}
 
   const newChunk = await prisma.documentChunk.create({
     data: {
@@ -168,6 +202,14 @@ export async function addDocumentChunkAction(
       chunkIndex: newIndex,
       content: content.trim(),
       pageNumber: pageNumber || null,
+      metadata: {
+        documentTitle: doc?.title || 'Documento Institucional USS',
+        categoria: doc?.category?.code || sampleMeta.categoria || 'GENERAL',
+        anio_vigencia: sampleMeta.anio_vigencia || 2026,
+        embedding,
+        estado: 'ACTIVO',
+        createdAt: new Date().toISOString(),
+      },
     },
   })
 

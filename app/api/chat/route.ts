@@ -11,6 +11,7 @@ import { auth } from '@/auth'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { searchKnowledgeBase } from '@/lib/ai/rag'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
+import { rewriteAndExpandQuery } from '@/lib/ai/query-rewriter'
 import { detectResolutionStatus } from '@/lib/ai/resolution-detector'
 import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept, type Message } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
@@ -158,11 +159,19 @@ export async function POST(req: Request) {
     const isMapsSearchEnabled = systemConfig ? systemConfig.enableMapsSearch : false
     const minSimScore = systemConfig?.minSimilarityScore ?? 0.50
 
-    // 4. Búsqueda semántica RAG con embeddings de Gemini (gemini-embedding-2) respetando políticas
+    // 4. Pre-RAG NLU: Normalización, expansión de consulta y detección de intención institucional (Estrategias 2 y 3)
     const retrievalStartTime = Date.now()
+    const rewrittenQuery =
+      isRAGEnabled && userText ? await rewriteAndExpandQuery(userText) : null
+    const queryForSearch = rewrittenQuery?.expandedQuery || userText
     const sources =
-      isRAGEnabled && userText
-        ? await searchKnowledgeBase(userText, 3, minSimScore)
+      isRAGEnabled && queryForSearch
+        ? await searchKnowledgeBase(
+            queryForSearch,
+            3,
+            minSimScore,
+            rewrittenQuery?.inferredCategory
+          )
         : []
     const retrievalLatencyMs = Date.now() - retrievalStartTime
 
@@ -324,6 +333,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                 generationLatencyMs,
                 resolutionStatus,
                 categoryId: docCategoryId,
+                detectedIntent: rewrittenQuery?.detectedIntent || null,
                 isRegeneration,
                 regeneratedFromId: regeneratedFromId || null,
                 parentId: assistantParentId,

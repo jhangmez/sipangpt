@@ -12,20 +12,31 @@ Directrices de Respuesta:
 5. No inventes reglamentos, fechas ni costos que no figuren en los documentos oficiales.`
 
 /**
- * Helper para construir el System Prompt enriquecido con fragmentos RAG
+ * Helper para construir el System Prompt enriquecido con fragmentos RAG y metadatos de negocio
  */
 export function buildSystemPromptWithSources(
-  sources: Array<{ title: string; pageNumber?: number | null; snippetText: string }>
+  sources: Array<{
+    title: string
+    pageNumber?: number | null
+    snippetText: string
+    categoria?: string | null
+    anioVigencia?: number | null
+  }>
 ): string {
   if (sources.length === 0) {
     return SIPANGPT_SYSTEM_PROMPT
   }
 
   const formattedSources = sources
-    .map(
-      (s, idx) =>
-        `[Fuente ${idx + 1}: ${s.title}${s.pageNumber ? ` - Pág. ${s.pageNumber}` : ''}]\n${s.snippetText}`
-    )
+    .map((s, idx) => {
+      const metaParts: string[] = []
+      if (s.categoria) metaParts.push(`Categoría: ${s.categoria}`)
+      if (s.anioVigencia) metaParts.push(`Vigencia: ${s.anioVigencia}`)
+      if (s.pageNumber) metaParts.push(`Pág. ${s.pageNumber}`)
+      const metaSuffix = metaParts.length > 0 ? ` | ${metaParts.join(' | ')}` : ''
+
+      return `[Fuente ${idx + 1}: ${s.title}${metaSuffix}]\n${s.snippetText}`
+    })
     .join('\n\n')
 
   return `${SIPANGPT_SYSTEM_PROMPT}
@@ -33,5 +44,5 @@ export function buildSystemPromptWithSources(
 --- INFORMACIÓN OFICIAL VERIFICADA DE LA UNIVERSIDAD SEÑOR DE SIPÁN (RAG) ---
 ${formattedSources}
 
-Instrucción estricta: Utiliza prioritariamente la información oficial anterior para formular tu respuesta y cita el nombre del documento cuando corresponda.`
+Instrucción estricta: Utiliza prioritariamente la información oficial anterior para formular tu respuesta. Cuando existan reglamentos de diferentes años, prioriza siempre el de mayor vigencia temporal (ej. 2026 sobre años anteriores) y cita el nombre del documento oficial correspondiente.`
 }

@@ -1,17 +1,18 @@
 import { embed, embedMany, cosineSimilarity, type EmbeddingModel } from 'ai'
 import { google, openai } from '@/lib/ai/providers'
-import { ModelProvider } from '@/lib/prisma'
+import type { ModelProvider } from '@/lib/prisma'
+import { DEFAULT_EMBEDDING_MODEL } from '@/constants'
 
-export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-2'
+export { DEFAULT_EMBEDDING_MODEL }
 
 /**
  * Obtiene la instancia del modelo de embeddings según el proveedor
  */
 export function getEmbeddingModel(
-  provider: ModelProvider | string = ModelProvider.GEMINI,
+  provider: ModelProvider | string = 'GEMINI',
   modelCode: string = DEFAULT_EMBEDDING_MODEL
 ): EmbeddingModel {
-  if (provider === ModelProvider.OPENAI) {
+  if (provider === 'OPENAI') {
     return openai.textEmbeddingModel(modelCode || 'text-embedding-3-small')
   }
 
@@ -26,7 +27,7 @@ export async function generateEmbedding(
   text: string,
   modelCode: string = DEFAULT_EMBEDDING_MODEL
 ): Promise<number[]> {
-  const model = getEmbeddingModel(ModelProvider.GEMINI, modelCode)
+  const model = getEmbeddingModel('GEMINI', modelCode)
   const { embedding } = await embed({
     model,
     value: text.trim(),
@@ -43,7 +44,7 @@ export async function generateEmbeddings(
 ): Promise<number[][]> {
   if (texts.length === 0) return []
 
-  const model = getEmbeddingModel(ModelProvider.GEMINI, modelCode)
+  const model = getEmbeddingModel('GEMINI', modelCode)
   const { embeddings } = await embedMany({
     model,
     values: texts.map((t) => t.trim()),

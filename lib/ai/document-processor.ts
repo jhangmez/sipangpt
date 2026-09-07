@@ -1,11 +1,13 @@
 import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import { DOCUMENT_TRANSCRIPTION_MODEL_CODE } from '@/constants'
+import { generateEmbeddings } from '@/lib/ai/embeddings'
 
 export interface TextChunk {
   content: string
   pageNumber?: number | null
   chunkIndex: number
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -178,7 +180,11 @@ Reglas de Estructuración en Markdown (.md):
         role: 'user',
         parts
       }
-    ]
+    ],
+    generationConfig: {
+      maxOutputTokens: 8192,
+      temperature: 0.1
+    }
   }
 
   try {
@@ -207,11 +213,19 @@ Reglas de Estructuración en Markdown (.md):
       )
     }
 
+    const candidate = data.candidates?.[0]
+    const finishReason = candidate?.finishReason
+
+    if (finishReason === 'MAX_TOKENS') {
+      console.warn(
+        `${logPrefix} ⚠️ [ALERTA] Gemini alcanzó el límite máximo de tokens de salida (MAX_TOKENS). El documento supera la longitud recomendada (> 50 páginas o muy denso) y su transcripción pudo haber quedado truncada. Se recomienda dividir el documento por capítulos o secciones.`
+      )
+    }
+
     const transcribedText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+      candidate?.content?.parts?.[0]?.text?.trim() || ''
 
     if (!transcribedText || transcribedText.length < 20) {
-      const finishReason = data.candidates?.[0]?.finishReason
       console.error(
         `${logPrefix} ❌ [Paso 2/3] Gemini devolvió respuesta vacía o insuficiente (finishReason=${finishReason}):`,
         data
@@ -269,13 +283,31 @@ Reglas de Estructuración en Markdown (.md):
 }
 
 /**
- * Divide texto o markdown extenso en fragmentos semánticos (chunks) con solapamiento (overlap)
- * y detección heurística de páginas o artículos
+ * Extrae títulos jerárquicos institucionales (Capítulo, Artículo, Título) desde un párrafo
+ */
+function extractHierarchyHeaders(text: string): {
+  capitulo?: string
+  articulo?: string
+} {
+  const capMatch = text.match(/(?:^|\n)(?:#+\s*)?(?:(cap[íi]tulo|t[íi]tulo)\s+[IVXLCDM\d]+[^\n.:]*)/i)
+  const artMatch = text.match(/(?:^|\n)(?:#+\s*)?(?:(art[íi]culo|art\.)\s*\d+[^\n.:]*)/i)
+
+  return {
+    capitulo: capMatch ? capMatch[0].replace(/^#+\s*/, '').trim() : undefined,
+    articulo: artMatch ? artMatch[0].replace(/^#+\s*/, '').trim() : undefined,
+  }
+}
+
+/**
+ * Divide texto o markdown extenso en fragmentos semánticos enriquecidos (chunks) con solapamiento (overlap),
+ * inyección de encabezados contextuales (Header Prepending) y extracción de metadatos estructurados.
  */
 export function splitTextIntoChunks(
   text: string,
   chunkSize: number = 650,
-  overlap: number = 90
+  overlap: number = 90,
+  documentTitle: string = 'Documento Institucional USS',
+  categoryCode: string = 'GENERAL'
 ): TextChunk[] {
   const clean = text.trim()
   if (!clean) return []
@@ -290,7 +322,38 @@ export function splitTextIntoChunks(
 
   let currentChunk = ''
   let currentPage: number | null = 1
+  let currentCapitulo: string | null = null
+  let currentArticulo: string | null = null
   let chunkIndex = 0
+
+  // Detectar año de vigencia (ej: 2026, 2025)
+  const yearMatch = text.match(/\b(202[4-9]|203[0-5])\b/)
+  const anioVigencia = yearMatch ? parseInt(yearMatch[1], 10) : 2026
+
+  const buildPrefixedChunk = (content: string): { content: string; metadata: Record<string, unknown> } => {
+    const headerPrefixLines: string[] = [`[DOCUMENTO: ${documentTitle}]`]
+    if (currentCapitulo) headerPrefixLines.push(`[CAPÍTULO: ${currentCapitulo}]`)
+    if (currentArticulo) headerPrefixLines.push(`[ARTÍCULO: ${currentArticulo}]`)
+
+    const headerBlock = headerPrefixLines.join('\n')
+    // Evitar duplicar encabezado si ya está presente
+    const finalContent = content.startsWith('[DOCUMENTO:')
+      ? content
+      : `${headerBlock}\n\n${content}`
+
+    return {
+      content: finalContent.trim(),
+      metadata: {
+        documentTitle,
+        categoria: categoryCode,
+        capitulo: currentCapitulo,
+        articulo: currentArticulo,
+        anio_vigencia: anioVigencia,
+        estado: 'ACTIVO',
+        pageNumber: currentPage,
+      },
+    }
+  }
 
   for (const para of paragraphs) {
     // Detección de patrones de página (ej. "--- Página 5 ---", "Página 5", "Pag. 5")
@@ -299,14 +362,21 @@ export function splitTextIntoChunks(
       currentPage = parseInt(pageMatch[1], 10)
     }
 
+    // Rastrear jerarquía de capítulos y artículos
+    const hierarchy = extractHierarchyHeaders(para)
+    if (hierarchy.capitulo) currentCapitulo = hierarchy.capitulo
+    if (hierarchy.articulo) currentArticulo = hierarchy.articulo
+
     if ((currentChunk + '\n\n' + para).length <= chunkSize) {
       currentChunk = currentChunk ? `${currentChunk}\n\n${para}` : para
     } else {
       if (currentChunk.length > 0) {
+        const enriched = buildPrefixedChunk(currentChunk)
         chunks.push({
-          content: currentChunk.trim(),
+          content: enriched.content,
           pageNumber: currentPage,
-          chunkIndex
+          chunkIndex,
+          metadata: enriched.metadata,
         })
         chunkIndex++
 
@@ -324,10 +394,12 @@ export function splitTextIntoChunks(
             currentChunk = currentChunk ? `${currentChunk} ${sent}` : sent
           } else {
             if (currentChunk) {
+              const enriched = buildPrefixedChunk(currentChunk)
               chunks.push({
-                content: currentChunk.trim(),
+                content: enriched.content,
                 pageNumber: currentPage,
-                chunkIndex
+                chunkIndex,
+                metadata: enriched.metadata,
               })
               chunkIndex++
             }
@@ -339,10 +411,12 @@ export function splitTextIntoChunks(
   }
 
   if (currentChunk.trim().length > 0) {
+    const enriched = buildPrefixedChunk(currentChunk)
     chunks.push({
-      content: currentChunk.trim(),
+      content: enriched.content,
       pageNumber: currentPage,
-      chunkIndex
+      chunkIndex,
+      metadata: enriched.metadata,
     })
   }
 
@@ -350,7 +424,8 @@ export function splitTextIntoChunks(
 }
 
 /**
- * Indexa el contenido textual completo de un documento en la tabla DocumentChunk de Prisma
+ * Indexa el contenido textual completo de un documento en la tabla DocumentChunk de Prisma,
+ * estructurando metadatos y persistiendo vector embeddings pre-calculados (Estrategia 1 y 4).
  */
 export async function indexDocumentContent(
   documentId: string,
@@ -358,12 +433,21 @@ export async function indexDocumentContent(
 ): Promise<{ success: boolean; chunkCount: number }> {
   const logPrefix = `[RAG_INDEXER] [${new Date().toISOString()}]`
   console.log(
-    `${logPrefix} ✂️ [Paso 3/3] Segmentando texto en chunks semánticos (chunkSize: 650, overlap: 90)...`
+    `${logPrefix} ✂️ [Paso 3/3] Segmentando texto en chunks semánticos contextuales...`
   )
 
-  const chunks = splitTextIntoChunks(rawContent, 650, 90)
+  // Consultar metadatos del documento desde la BD
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: { category: true },
+  })
+
+  const docTitle = doc?.title || 'Reglamento Institucional USS'
+  const categoryCode = doc?.category?.code || 'GENERAL'
+
+  const chunks = splitTextIntoChunks(rawContent, 650, 90, docTitle, categoryCode)
   console.log(
-    `${logPrefix} 🧩 Chunks generados: ${chunks.length} fragmentos semánticos.`
+    `${logPrefix} 🧩 Chunks contextuales generados: ${chunks.length} fragmentos con Header Prepending.`
   )
 
   if (chunks.length === 0) {
@@ -375,7 +459,25 @@ export async function indexDocumentContent(
     )
   }
 
-  // 1. Eliminar fragmentos previos del documento para re-indexación limpia
+  // 1. Pre-calcular vector embeddings para todos los chunks de una sola vez
+  console.log(
+    `${logPrefix} 📐 Calculando embeddings vectoriales persistentes (${chunks.length} fragmentos)...`
+  )
+  let chunkEmbeddings: number[][] = []
+  try {
+    const chunkTexts = chunks.map((c) => c.content)
+    chunkEmbeddings = await generateEmbeddings(chunkTexts)
+    console.log(
+      `${logPrefix} ✅ Embeddings generados exitosamente (${chunkEmbeddings.length} vectores persistidos).`
+    )
+  } catch (embErr) {
+    console.warn(
+      `${logPrefix} ⚠️ Error generando embeddings en lote durante ingesta, se guardarán sin vector inicial:`,
+      embErr
+    )
+  }
+
+  // 2. Eliminar fragmentos previos del documento para re-indexación limpia
   console.log(
     `${logPrefix} 🧹 Limpiando fragmentos antiguos de doc ID "${documentId}" en base de datos...`
   )
@@ -383,20 +485,25 @@ export async function indexDocumentContent(
     where: { documentId }
   })
 
-  // 2. Insertar los nuevos fragmentos en Prisma
+  // 3. Insertar los nuevos fragmentos en Prisma con metadatos y vector embedding persistido
   console.log(
-    `${logPrefix} 💾 Guardando ${chunks.length} chunks en Prisma PostgreSQL...`
+    `${logPrefix} 💾 Guardando ${chunks.length} chunks con metadatos y embeddings en PostgreSQL...`
   )
   await prisma.documentChunk.createMany({
-    data: chunks.map((c) => ({
+    data: chunks.map((c, idx) => ({
       documentId,
       chunkIndex: c.chunkIndex,
       content: c.content,
-      pageNumber: c.pageNumber
+      pageNumber: c.pageNumber,
+      metadata: {
+        ...(c.metadata || {}),
+        categoria: categoryCode,
+        embedding: chunkEmbeddings[idx] || null,
+      },
     }))
   })
 
-  // 3. Actualizar estado del documento a INDEXED y su conteo de chunks
+  // 4. Actualizar estado del documento a INDEXED y su conteo de chunks
   console.log(
     `${logPrefix} 🏷️ Marcando documento ID "${documentId}" como INDEXED (chunkCount: ${chunks.length})...`
   )
@@ -410,7 +517,7 @@ export async function indexDocumentContent(
   })
 
   console.log(
-    `${logPrefix} 🏁 ✅ ¡Indexación RAG completada con éxito para el documento ID "${documentId}"!`
+    `${logPrefix} 🏁 ✅ ¡Indexación RAG contextual y vectorial completada para "${docTitle}"!`
   )
   return { success: true, chunkCount: chunks.length }
 }

@@ -28,7 +28,7 @@ import { Bubble, BubbleContent, BubbleReactions } from '@/components/ui/bubble'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
+import { DEFAULT_EMBEDDING_MODEL } from '@/constants'
 import {
   Collapsible,
   CollapsibleContent,

@@ -25,9 +25,9 @@ import {
   type ModelDefinition,
   INITIAL_QUESTIONS,
   type SuggestedQuestionDefinition,
-  MAX_QUESTIONS_PER_CONVERSATION
+  MAX_QUESTIONS_PER_CONVERSATION,
+  DEFAULT_EMBEDDING_MODEL,
 } from '@/constants'
-import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
 import { getErrorMessage } from '@/lib/utils'
 import type {
   ChatMessage,
