@@ -10,6 +10,7 @@ import {
 import { auth } from '@/auth'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { searchKnowledgeBase } from '@/lib/ai/rag'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
 import { detectResolutionStatus } from '@/lib/ai/resolution-detector'
 import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept, type Message } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
@@ -315,7 +316,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                 role: 'ASSISTANT',
                 content: text,
                 modelUsed: modelCode,
-                embeddingModel: 'gemini-embedding-2',
+                embeddingModel: DEFAULT_EMBEDDING_MODEL,
                 promptTokens: usage?.inputTokens || 0,
                 totalTokens: usage?.totalTokens || 0,
                 latencyMs: totalDurationMs,
@@ -358,7 +359,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                   pageNumber: s.pageNumber,
                   snippetText: s.snippetText,
                   relevance: s.relevance,
-                  embeddingModel: s.embeddingModel || 'gemini-embedding-2',
+                  embeddingModel: s.embeddingModel || DEFAULT_EMBEDDING_MODEL,
                 })),
               })
             } catch {
@@ -443,7 +444,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
             conversationId: activeConvId,
             modelName: modelCode,
             modelProvider: provider,
-            embeddingModel: 'gemini-embedding-2',
+            embeddingModel: DEFAULT_EMBEDDING_MODEL,
             retrievalLatencyMs,
             latencyMs: Date.now() - startTime,
             sources: sources.map((s) => ({
@@ -453,7 +454,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
               url: s.sourceUrl,
               snippet: s.snippetText,
               relevance: s.relevance,
-              embeddingModel: s.embeddingModel || 'gemini-embedding-2',
+              embeddingModel: s.embeddingModel || DEFAULT_EMBEDDING_MODEL,
             })),
           }
         }

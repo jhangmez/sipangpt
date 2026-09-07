@@ -27,6 +27,7 @@ import {
   type SuggestedQuestionDefinition,
   MAX_QUESTIONS_PER_CONVERSATION
 } from '@/constants'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
 import { getErrorMessage } from '@/lib/utils'
 import type {
   ChatMessage,
@@ -489,7 +490,7 @@ export function ChatInterface({
                           embeddingModel:
                             packet.embeddingModel ||
                             msg.embeddingModel ||
-                            'gemini-embedding-2',
+                            DEFAULT_EMBEDDING_MODEL,
                           modelName: packet.modelName || selectedModel.name
                         }
                       : msg
@@ -883,7 +884,7 @@ export function ChatInterface({
                           embeddingModel:
                             packet.embeddingModel ||
                             msg.embeddingModel ||
-                            'gemini-embedding-2',
+                            DEFAULT_EMBEDDING_MODEL,
                           modelName: packet.modelName || selectedModel.name
                         }
                       : msg

@@ -11,7 +11,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Protocolo y Guía de Base de Datos (Prisma 7 + PostgreSQL / Neon)
 
 ## ⚠️ Regla de Oro: Prevención de Pérdida de Datos
-**NUNCA** ejecutar `npx prisma db push --force-reset` ni `npx prisma migrate reset` en bases de datos que contengan datos importantes. 
+
+**NUNCA** ejecutar `npx prisma db push --force-reset` ni `npx prisma migrate reset` en bases de datos que contengan datos importantes.
 Para mantener la integridad de la base de datos y evitar tener que borrar tablas, siempre se debe usar el flujo de **Prisma Migrate**.
 
 ---
@@ -19,18 +20,24 @@ Para mantener la integridad de la base de datos y evitar tener que borrar tablas
 ## 🛠️ Flujo Estándar para Modificar la Base de Datos
 
 ### Paso 1: Modificar el esquema
+
 Edita únicamente los modelos o campos necesarios en `prisma/schema.prisma`.
 
 ### Paso 2: Crear y aplicar la migración en desarrollo
+
 Ejecuta en la terminal:
+
 ```bash
 npx prisma migrate dev --name <nombre_descriptivo_del_cambio>
 ```
-*Ejemplos:*
+
+_Ejemplos:_
+
 - `npx prisma migrate dev --name add_user_role`
 - `npx prisma migrate dev --name create_conversations_table`
 
 **¿Qué hace este comando?**
+
 1. Compara tu esquema actual con la base de datos.
 2. Genera un archivo SQL versionado dentro de `prisma/migrations/<timestamp>_<nombre>/migration.sql`.
 3. Aplica los cambios a la base de datos de desarrollo.
@@ -59,9 +66,11 @@ Si necesitas hacer cambios destructivos (renombrar una columna, cambiar un tipo 
 ## 🚀 Despliegue en Producción / Staging (Vercel / CI-CD)
 
 En entornos de producción nunca se usa `migrate dev`. Se utiliza:
+
 ```bash
 npx prisma migrate deploy
 ```
+
 Este comando únicamente ejecuta los scripts `.sql` pendientes sin alterar la estructura existente ni hacer preguntas interactivas.
 
 ---
@@ -87,25 +96,27 @@ Este comando únicamente ejecuta los scripts `.sql` pendientes sin alterar la es
 
 El proyecto utiliza dos fuentes locales variables configuradas en `app/fonts.ts` e inyectadas globalmente en `app/layout.tsx` y `app/globals.css`:
 
-| Propósito | Fuente | Variable CSS | Clases Tailwind disponibles |
-| :--- | :--- | :--- | :--- |
-| **Texto general / Letras normales** | **Exo 2** (`Exo2-*.ttf`) | `--font-exo` | `font-sans`, `font-exo` *(por defecto en todo el body)* |
-| **Títulos / Encabezados** | **Fraunces** (`Fraunces-*.ttf`) | `--font-frances` | `font-frances`, `font-fraunces`, `font-heading` |
+| Propósito                           | Fuente                          | Variable CSS     | Clases Tailwind disponibles                             |
+| :---------------------------------- | :------------------------------ | :--------------- | :------------------------------------------------------ |
+| **Texto general / Letras normales** | **Exo 2** (`Exo2-*.ttf`)        | `--font-exo`     | `font-sans`, `font-exo` _(por defecto en todo el body)_ |
+| **Títulos / Encabezados**           | **Fraunces** (`Fraunces-*.ttf`) | `--font-frances` | `font-frances`, `font-fraunces`, `font-heading`         |
 
 ### 📌 Reglas de Uso en Componentes y Páginas:
 
 1. **Textos y Párrafos:**
    - La fuente por defecto de todo el documento es **Exo 2** (`font-sans`), por lo que no es estrictamente obligatorio añadir una clase para textos base, pero puedes usar `font-exo` o `font-sans` para ser explícito.
+
    ```tsx
-   <p className="text-muted-foreground text-sm font-exo">
+   <p className='text-muted-foreground text-sm font-exo'>
      Texto del párrafo usando Exo 2
    </p>
    ```
 
 2. **Títulos y Encabezados:**
    - Siempre que se creen encabezados (`h1`, `h2`, `h3`, badges destacados, etc.), utilizar la clase `font-frances` o `font-heading`:
+
    ```tsx
-   <h1 className="font-frances text-3xl font-bold tracking-tight text-foreground">
+   <h1 className='font-frances text-3xl font-bold tracking-tight text-foreground'>
      Título Destacado con Fraunces
    </h1>
    ```
@@ -129,15 +140,24 @@ El proyecto utiliza dos fuentes locales variables configuradas en `app/fonts.ts`
 Para evitar sobrecargar el bundle con el runtime de `@prisma/client` y mantener una única fuente de verdad:
 
 ### 📌 Reglas de Importación:
+
 1. **NUNCA** importar `@prisma/client` directamente en archivos de rutas, componentes o módulos de la aplicación.
 2. Todo acceso a la base de datos y a los tipos/enums de Prisma debe realizarse a través de `@/lib/prisma`:
+
    ```typescript
    // Para operaciones de base de datos
    import { prisma } from '@/lib/prisma'
 
    // Para tipos y enums (SIEMPRE usar 'import type' cuando no se requiera el valor en runtime)
-   import type { Role, ModelProvider, User, Conversation, Message } from '@/lib/prisma'
+   import type {
+     Role,
+     ModelProvider,
+     User,
+     Conversation,
+     Message
+   } from '@/lib/prisma'
    ```
+
 3. El archivo `lib/prisma.ts` es el único encargado de instanciar el cliente `PrismaClient` con el adapter correspondiente (`@prisma/adapter-pg`) y de re-exportar los tipos necesarios.
 
 ---
@@ -147,6 +167,7 @@ Para evitar sobrecargar el bundle con el runtime de `@prisma/client` y mantener 
 Cualquier valor constante, configuración estática o texto institucional **NUNCA** debe estar hardcodeado dentro de páginas, componentes o API routes. Debe residir obligatoriamente en la carpeta `constants/`.
 
 ### 📌 Estructura y Módulos de Constantes:
+
 - **`constants/prompts.ts`**: Prompts de sistema (`SIPANGPT_SYSTEM_PROMPT`), instrucciones institucionales de la USS y constructores de contexto RAG (`buildSystemPromptWithSources`).
 - **`constants/models.ts`**: Lista de modelos disponibles (`SYSTEM_MODELS`), modelo por defecto (`DEFAULT_MODEL_CODE`), proveedor por defecto (`DEFAULT_PROVIDER`).
 - **`constants/questions.ts`**: Preguntas sugeridas para estudiantes y usuarios (`INITIAL_QUESTIONS`).
@@ -155,13 +176,13 @@ Cualquier valor constante, configuración estática o texto institucional **NUNC
 - **`constants/index.ts`**: Archivo barril que re-exporta todas las constantes para importarlas directamente desde `@/constants`:
 
 ```typescript
-import { 
-  buildSystemPromptWithSources, 
-  DEFAULT_MODEL_CODE, 
+import {
+  buildSystemPromptWithSources,
+  DEFAULT_MODEL_CODE,
   DEFAULT_PROVIDER,
   INITIAL_QUESTIONS,
   INITIAL_ADMIN_EMAILS,
-  ROUTES 
+  ROUTES
 } from '@/constants'
 ```
 
@@ -170,6 +191,7 @@ import {
 # 🧩 Protocolo y Catálogo de Componentes de UI (`components/ui/` - Shadcn UI)
 
 ### 📌 Reglas de Instalación y Reutilización:
+
 1. **NUNCA crear manualmente desde cero un componente base de UI si ya existe en Shadcn UI.**
 2. Primero verificar e instalar el componente oficial de Shadcn UI mediante su CLI oficial:
    ```bash
@@ -178,41 +200,41 @@ import {
 
 ### 📚 Catálogo de Componentes Instalados en `components/ui/`:
 
-| Componente | Archivo | Propósito y Uso |
-| :--- | :--- | :--- |
-| **Accordion** | `components/ui/accordion.tsx` | Contenedores colapsables apilados para visualizar preguntas y respuestas en modales de feedback. |
-| **Alert Dialog** | `components/ui/alert-dialog.tsx` | Modal de confirmación para acciones destructivas e irreversibles (eliminar documentos, chunks o desindexar). |
-| **Attachment** | `components/ui/attachment.tsx` | Muestra archivos adjuntos (PDFs, imágenes, etc.) con vista previa, tamaño, estados de subida (idle, uploading, done) y botón de eliminación. |
-| **Avatar** | `components/ui/avatar.tsx` | Foto o iniciales del usuario y del bot con soporte accesible para fallbacks. |
-| **Badge** | `components/ui/badge.tsx` | Insignias de estado (ONLINE, DEGRADED, OFFLINE), roles y categorías. |
-| **Bubble** | `components/ui/bubble.tsx` | Burbuja de texto conversacional con variantes (`default`, `secondary`, `muted`, `ghost`) y contenedor de reacciones (`BubbleReactions`). |
-| **Button** | `components/ui/button.tsx` | Botones de acción principales y secundarios con soporte de variantes y tamaños. |
-| **Collapsible** | `components/ui/collapsible.tsx` | Contenedor colapsable para expandir/ocultar información (ej. razonamiento y pasos de IA). |
-| **Context Menu** | `components/ui/context-menu.tsx` | Menú contextual que se despliega al hacer clic derecho sobre elementos del chat o la página. |
-| **Dialog** | `components/ui/dialog.tsx` | Ventanas modales para confirmaciones, inspección profunda de mensajes e información institucional. |
-| **Drawer** | `components/ui/drawer.tsx` | Panel deslizable desde la parte inferior/lateral para selección de modelos en móvil y desktop. |
-| **Dropdown Menu** | `components/ui/dropdown-menu.tsx` | Menús desplegables para opciones de usuario, acciones rápidas y ajustes. |
-| **Empty** | `components/ui/empty.tsx` | Visualización compuesta de estados vacíos (sin datos, sin fragmentos o sin resultados). |
-| **Field** | `components/ui/field.tsx` | Layout compuesto para etiquetas, títulos y descripciones de controles de formulario. |
-| **Hover Card** | `components/ui/hover-card.tsx` | Tarjetas flotantes activadas al pasar el cursor para previsualizaciones rápidas. |
-| **Input** | `components/ui/input.tsx` | Campo de entrada de texto estilizado y accesible. |
-| **Input Group** | `components/ui/input-group.tsx` | Contenedor compuesto para inputs y textareas con addons, botones y auto-crecimiento vertical. |
-| **Label** | `components/ui/label.tsx` | Etiquetas accesibles vinculadas a elementos de formulario. |
-| **Markdown** | `components/ui/markdown.tsx` | Renderizador Markdown con soporte de sintaxis resaltada, fórmulas KaTeX, diagramas Mermaid, tablas y copia de bloques. |
-| **Marker** | `components/ui/marker.tsx` | Indicador visual de estado de ejecución o eventos en la conversación. |
-| **Message** | `components/ui/message.tsx` | Layout de mensaje de chat con soporte de alineación (`start`/`end`), avatar, encabezado (`MessageHeader`) y pie (`MessageFooter`). |
-| **Message Scroller**| `components/ui/message-scroller.tsx`| Scroll container especializado para chat de IA con streaming, anclaje de turnos (`scrollAnchor`) y seguimiento suave. |
-| **Native Select** | `components/ui/native-select.tsx` | Selector select nativo estilizado y accesible con chevron integrado. |
-| **Popover** | `components/ui/popover.tsx` | Paneles flotantes para mostrar detalles bajo demanda. |
-| **Questionnaire**| `components/ui/questionnaire.tsx`| Módulo de preguntas y respuestas guiadas con opciones, categorías y progreso. |
-| **Radio Group** | `components/ui/radio-group.tsx` | Selector de opciones excluyentes (usado en el selector de modelos). |
-| **Select** | `components/ui/select.tsx` | Componente de selección flotante estilizado con grupos, items y scroll. |
-| **Separator** | `components/ui/separator.tsx` | Línea divisoria horizontal o vertical entre secciones. |
-| **Sheet** | `components/ui/sheet.tsx` | Panel lateral superpuesto para navegación o detalles auxiliares. |
-| **Sidebar** | `components/ui/sidebar.tsx` | Sidebar oficial de navegación colapsable responsive con atajos de teclado. |
-| **Skeleton** | `components/ui/skeleton.tsx` | Placeholders animados para estados de carga de listas y contenido. |
-| **Slider** | `components/ui/slider.tsx` | Control deslizante de rango accesible (usado para ajustar el umbral de similitud coseno RAG). |
-| **Switch** | `components/ui/switch.tsx` | Interruptor toggle accesible para consentimientos, políticas de búsqueda y preferencias. |
-| **Textarea** | `components/ui/textarea.tsx` | Área de texto multilínea para comentarios de feedback y notas. |
-| **Toast** | `components/ui/toast.tsx` | Sistema de notificaciones toast (integrado con `sonner`). |
-| **Tooltip** | `components/ui/tooltip.tsx` | Ayudas visuales al pasar el cursor o hacer focus. |
+| Componente           | Archivo                              | Propósito y Uso                                                                                                                              |
+| :------------------- | :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Accordion**        | `components/ui/accordion.tsx`        | Contenedores colapsables apilados para visualizar preguntas y respuestas en modales de feedback.                                             |
+| **Alert Dialog**     | `components/ui/alert-dialog.tsx`     | Modal de confirmación para acciones destructivas e irreversibles (eliminar documentos, chunks o desindexar).                                 |
+| **Attachment**       | `components/ui/attachment.tsx`       | Muestra archivos adjuntos (PDFs, imágenes, etc.) con vista previa, tamaño, estados de subida (idle, uploading, done) y botón de eliminación. |
+| **Avatar**           | `components/ui/avatar.tsx`           | Foto o iniciales del usuario y del bot con soporte accesible para fallbacks.                                                                 |
+| **Badge**            | `components/ui/badge.tsx`            | Insignias de estado (ONLINE, DEGRADED, OFFLINE), roles y categorías.                                                                         |
+| **Bubble**           | `components/ui/bubble.tsx`           | Burbuja de texto conversacional con variantes (`default`, `secondary`, `muted`, `ghost`) y contenedor de reacciones (`BubbleReactions`).     |
+| **Button**           | `components/ui/button.tsx`           | Botones de acción principales y secundarios con soporte de variantes y tamaños.                                                              |
+| **Collapsible**      | `components/ui/collapsible.tsx`      | Contenedor colapsable para expandir/ocultar información (ej. razonamiento y pasos de IA).                                                    |
+| **Context Menu**     | `components/ui/context-menu.tsx`     | Menú contextual que se despliega al hacer clic derecho sobre elementos del chat o la página.                                                 |
+| **Dialog**           | `components/ui/dialog.tsx`           | Ventanas modales para confirmaciones, inspección profunda de mensajes e información institucional.                                           |
+| **Drawer**           | `components/ui/drawer.tsx`           | Panel deslizable desde la parte inferior/lateral para selección de modelos en móvil y desktop.                                               |
+| **Dropdown Menu**    | `components/ui/dropdown-menu.tsx`    | Menús desplegables para opciones de usuario, acciones rápidas y ajustes.                                                                     |
+| **Empty**            | `components/ui/empty.tsx`            | Visualización compuesta de estados vacíos (sin datos, sin fragmentos o sin resultados).                                                      |
+| **Field**            | `components/ui/field.tsx`            | Layout compuesto para etiquetas, títulos y descripciones de controles de formulario.                                                         |
+| **Hover Card**       | `components/ui/hover-card.tsx`       | Tarjetas flotantes activadas al pasar el cursor para previsualizaciones rápidas.                                                             |
+| **Input**            | `components/ui/input.tsx`            | Campo de entrada de texto estilizado y accesible.                                                                                            |
+| **Input Group**      | `components/ui/input-group.tsx`      | Contenedor compuesto para inputs y textareas con addons, botones y auto-crecimiento vertical.                                                |
+| **Label**            | `components/ui/label.tsx`            | Etiquetas accesibles vinculadas a elementos de formulario.                                                                                   |
+| **Markdown**         | `components/ui/markdown.tsx`         | Renderizador Markdown con soporte de sintaxis resaltada, fórmulas KaTeX, diagramas Mermaid, tablas y copia de bloques.                       |
+| **Marker**           | `components/ui/marker.tsx`           | Indicador visual de estado de ejecución o eventos en la conversación.                                                                        |
+| **Message**          | `components/ui/message.tsx`          | Layout de mensaje de chat con soporte de alineación (`start`/`end`), avatar, encabezado (`MessageHeader`) y pie (`MessageFooter`).           |
+| **Message Scroller** | `components/ui/message-scroller.tsx` | Scroll container especializado para chat de IA con streaming, anclaje de turnos (`scrollAnchor`) y seguimiento suave.                        |
+| **Native Select**    | `components/ui/native-select.tsx`    | Selector select nativo estilizado y accesible con chevron integrado.                                                                         |
+| **Popover**          | `components/ui/popover.tsx`          | Paneles flotantes para mostrar detalles bajo demanda.                                                                                        |
+| **Questionnaire**    | `components/ui/questionnaire.tsx`    | Módulo de preguntas y respuestas guiadas con opciones, categorías y progreso.                                                                |
+| **Radio Group**      | `components/ui/radio-group.tsx`      | Selector de opciones excluyentes (usado en el selector de modelos).                                                                          |
+| **Select**           | `components/ui/select.tsx`           | Componente de selección flotante estilizado con grupos, items y scroll.                                                                      |
+| **Separator**        | `components/ui/separator.tsx`        | Línea divisoria horizontal o vertical entre secciones.                                                                                       |
+| **Sheet**            | `components/ui/sheet.tsx`            | Panel lateral superpuesto para navegación o detalles auxiliares.                                                                             |
+| **Sidebar**          | `components/ui/sidebar.tsx`          | Sidebar oficial de navegación colapsable responsive con atajos de teclado.                                                                   |
+| **Skeleton**         | `components/ui/skeleton.tsx`         | Placeholders animados para estados de carga de listas y contenido.                                                                           |
+| **Slider**           | `components/ui/slider.tsx`           | Control deslizante de rango accesible (usado para ajustar el umbral de similitud coseno RAG).                                                |
+| **Switch**           | `components/ui/switch.tsx`           | Interruptor toggle accesible para consentimientos, políticas de búsqueda y preferencias.                                                     |
+| **Textarea**         | `components/ui/textarea.tsx`         | Área de texto multilínea para comentarios de feedback y notas.                                                                               |
+| **Toast**            | `components/ui/toast.tsx`            | Sistema de notificaciones toast (integrado con `sonner`).                                                                                    |
+| **Tooltip**          | `components/ui/tooltip.tsx`          | Ayudas visuales al pasar el cursor o hacer focus.                                                                                            |

@@ -3,6 +3,7 @@ import {
   generateEmbedding,
   generateEmbeddings,
   computeCosineSimilarity,
+  DEFAULT_EMBEDDING_MODEL,
 } from '@/lib/ai/embeddings'
 
 export interface RetrievedSource {
@@ -89,7 +90,7 @@ export async function searchKnowledgeBase(
           pageNumber: chunk.pageNumber,
           snippetText: chunk.content.trim(),
           relevance: Number(Math.max(0, Math.min(1, similarity)).toFixed(3)),
-          embeddingModel: 'gemini-embedding-2',
+          embeddingModel: DEFAULT_EMBEDDING_MODEL,
         }
       })
 

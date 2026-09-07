@@ -28,6 +28,7 @@ import { Bubble, BubbleContent, BubbleReactions } from '@/components/ui/bubble'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
 import {
   Collapsible,
   CollapsibleContent,
@@ -390,7 +391,7 @@ export function ChatMessageItem({
                                 Modelo de Embeddings:
                               </span>
                               <span className='font-mono font-medium text-foreground'>
-                                {message.embeddingModel || 'gemini-embedding-2'}
+                                {message.embeddingModel || DEFAULT_EMBEDDING_MODEL}
                               </span>
                             </div>
                             <div className='flex justify-between items-center'>

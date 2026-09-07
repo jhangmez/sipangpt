@@ -16,6 +16,7 @@ import {
   getAdminDocuments
 } from '@/lib/actions/admin-documents'
 import { DocumentUploadZone } from '@/components/admin/document-upload-zone'
+import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -1803,7 +1804,7 @@ export function DocumentsManager({
               </div>
               <div className='space-y-0.5'>
                 <p className='font-bold text-foreground'>
-                  Generación de Embeddings Vectoriales (gemini-embedding-2)
+                  Generación de Embeddings Vectoriales ({DEFAULT_EMBEDDING_MODEL})
                 </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
                   Cada fragmento se convierte en un vector denso
