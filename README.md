@@ -20,15 +20,15 @@
 
 **SipánGPT** es una plataforma integral de asistencia conversacional con Inteligencia Artificial Generativa diseñada a la medida para la **Universidad Señor de Sipán (USS)**. Permite a estudiantes, docentes y postulantes resolver consultas sobre procesos de matrícula, trámites de grados y títulos, directivas académicas, mallas curriculares y servicios institucionales con respuestas oficiales, citadas y sustentadas en la normativa universitaria.
 
-La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation)** de alta precisión conectada a una base vectorial en PostgreSQL (Neon), renderizado matemático y de diagramas, soporte para modelos en la nube y locales (Mac Mini M4 vía Cloudflare Tunnel), y un panel administrativo completo para la gobernanza de políticas de IA.
+La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation) de Alta Fidelidad** conectada a una base vectorial en PostgreSQL (Neon), renderizado matemático y de diagramas, soporte para modelos en la nube y locales (Mac Mini M4 vía Cloudflare Tunnel), personalización mediante **Memorias de Usuario**, gobernanza activa de políticas administrativas en el chat y auditoría de costos en tiempo real.
 
 ---
 
 ## 🚀 Características Principales
 
 ### 1. 💬 Experiencia de Chat Conversacional Avanzada
-- **Streaming de Texto en Tiempo Real:** Implementado con **Vercel AI SDK 7.x** (`streamText`, `toUIMessageStream`) y decodificación reactiva de paquetes SSE (`text-delta`).
-- **Persistencia y Continuidad de Conversaciones:** Creación de conversaciones por adelantado, sincronización dinámica de URLs (`/chat/[id]`) y carga de historial íntegro.
+- **Streaming de Texto en Tiempo Real:** Implementado con **Vercel AI SDK 7.x** (`streamText`, `toUIMessageStream`) y decodificación reactiva de paquetes SSE (`text-delta`, `reasoning-delta`).
+- **Persistencia y Continuidad de Conversaciones:** Creación de conversaciones por adelantado, sincronización dinámica de URLs (`/chat/[id]`), regeneración y branching de respuestas alternativas.
 - **Renderizador Markdown Shadcn de Alta Precisión (`shadcn-markdown`):**
   - 📐 **Fórmulas Matemáticas:** Renderizado LaTeX inline (`$E=mc^2$`) y en bloque con KaTeX.
   - 💻 **Bloques de Código:** Resaltador de sintaxis Prism (`vscDarkPlus`), formateo JSON automático y botón interactivo para **Copiar Código**.
@@ -36,63 +36,79 @@ La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation)*
   - 📑 **Tablas GFM Responsivas:** Formateo automático de tablas con scroll horizontal adaptativo.
 - **Sistema de Feedback y Calificación:** Puntuación de mensajes (1 a 5 estrellas) con modales de cuestionario para auditoría de calidad.
 - **Entrada de Voz y Adjuntos Multimodales:** Grabación y transcripción de notas de voz, y análisis visual de capturas y documentos PDF.
+- **Transparencia en la Interfaz de Usuario:** Notificaciones y alertas contextuales directas del servidor (modo mantenimiento, límite de caracteres o cuota de tokens alcanzada).
 
 ---
 
-### 2. 🧠 Motor RAG & Pipeline de Indexación Inteligente
-SipánGPT incorpora una arquitectura RAG de 5 fases para procesar y consultar reglamentos oficiales de la USS:
+### 2. 🧠 Motor RAG Avanzado, Pre-RAG NLU & Pipeline de Indexación
+SipánGPT implementa una arquitectura RAG de dos capas con enriquecimiento semántico diseñada para erradicar falsos negativos:
 
 ```mermaid
 graph TD
-    A["📄 1. Ingesta de Documento (PDF / TXT en UploadThing CDN)"] --> B["🤖 2. Transcripción a Markdown Enriquecido (Gemini 2.5 Flash OCR)"]
-    B --> C["✂️ 3. Segmentación Semántica con Overlap (650 chars / 90 overlap)"]
-    C --> D["📐 4. Generación de Embeddings Vectoriales (gemini-embedding-2)"]
+    A["📄 1. Ingesta de Documento (PDF / TXT / MD en UploadThing)"] --> B["🤖 2. Transcripción OCR Estructurada (Gemini Flash Multimodal)"]
+    B --> C["✂️ 3. Chunking Jerárquico (Header Prepending + Metadatos de Negocio)"]
+    C --> D["📐 4. Vectorización de Embeddings (gemini-embedding-2)"]
     D --> E["🗄️ 5. Indexación en Neon PostgreSQL (DocumentChunk - Estado INDEXED)"]
-    E --> F["💬 6. Consulta en Chat RAG (Similitud Coseno + Citación en Markdown con Enlace al PDF)"]
+    
+    Q["🧑‍🎓 Pregunta del Alumno"] --> F["🔍 6. Pre-RAG NLU (Heurística + Query Rewriter con Gemini)"]
+    F --> G["🛡️ 7. Búsqueda Híbrida Resiliente (Categoría + Fallback Chunks Recientes + Coseno)"]
+    G --> H["💬 8. Generación con Inyección de Fuentes, Año de Vigencia y Memorias de Usuario"]
 ```
 
-#### Las 5 Fases del Pipeline de Indexación:
-1. **☁️ Fase 1: Almacenamiento en CDN (UploadThing):** El archivo PDF institucional se carga a servidores CDN seguros, generándose su URL pública oficial (`publicUrl`) y su registro en base de datos con estado inicial `PROCESSING`.
-2. **🤖 Fase 2: Transcripción y Estructuración a Markdown (Gemini Multimodal OCR):** Gemini 2.5 Flash procesa el archivo binario página por página y lo transcribe a **Markdown estructurado** con encabezados (`#`, `##`), listas, tablas y delimitadores (`--- Página X ---`). Esto asegura que las citas y referencias en el chat conserven formato legible y profesional.
-3. **✂️ Fase 3: Fragmentación Semántica y Solapamiento (*Chunking & Overlap*):** El texto Markdown se segmenta en bloques coherentes de **650 caracteres** con **90 caracteres de solapamiento**, garantizando que ninguna normativa ni artículo se corte a la mitad.
-4. **📐 Fase 4: Vectorización Semántica (*Embeddings*):** Cada fragmento es procesado por el modelo `gemini-embedding-2` / `text-embedding-004`, convirtiéndose en un vector denso multidimensional.
-5. **🟢 Fase 5: Indexación Activa y Citación en Chat:** Los fragmentos se guardan en la tabla `DocumentChunk` de Neon PostgreSQL. El documento pasa a estado **`INDEXED`**. Cuando un estudiante pregunta algo, SipánGPT compara el coseno de similitud, inyecta los mejores fragmentos y genera citas oficiales con enlace directo al PDF original.
+#### Fases de la Arquitectura RAG:
+1. **🔍 Pre-RAG NLU & Expansión de Consultas (`query-rewriter.ts`):** Normaliza expresiones coloquiales estudiantiles (*"jalarme", "vencimiento de mensualidad"*) a terminología formal de la USS mediante reglas heurísticas instantáneas (0ms) con fallback inteligente a Gemini Flash Lite.
+2. **🛡️ Búsqueda Híbrida Resiliente (`rag.ts`):** 
+   - **Capa 1 (Metadatos):** Filtrado por categoría temática sin forzar coincidencia textual estricta (`contains`), complementado con una red de seguridad (*safety net*) de fragmentos recientes para evitar falsos negativos por variantes de redacción.
+   - **Capa 2 (Similitud Coseno Vectorial):** Evaluación semántica mediante embeddings generados con `gemini-embedding-2` con umbral de corte configurable.
+3. **🏷️ Inyección de Encabezados Jerárquicos (*Header Prepending*):** Cada fragmento preserva metadatos institucionales (`documentTitle`, `categoria`, `capitulo`, `articulo`, `anio_vigencia`), permitiendo al modelo resolver discrepancias priorizando normativas actualizadas (ej. 2026 vs años previos).
+4. **📄 Soporte para Documentos Extensos (> 50 páginas):** OCR optimizado con `maxOutputTokens: 8192`, detección de advertencias `MAX_TOKENS` y recomendaciones en la zona de subida para segmentar compendios masivos por títulos o capítulos.
 
 ---
 
-### 3. 🛡️ Gobernanza y Políticas de Grounding para el Administrador (`/admin/settings`)
-El administrador dispone de un panel visual exclusivo para regular las capacidades de búsqueda de los modelos:
-- 📚 **Búsqueda Vectorial RAG (Documentos USS):** Activación/desactivación del motor RAG institucional.
-- 🌐 **Búsqueda Web en Tiempo Real (Google Search Grounding):** Permite o bloquea el acceso a internet para evitar contaminación externa.
-- 🗺️ **Geolocalización y Mapas (Google Maps Grounding):** Control de resolución de rutas y ubicaciones físicas del campus USS.
-- 🖼️ **Visión Multimodal:** Control de análisis de imágenes y archivos adjuntos.
-- 🎯 **Umbral Mínimo de Similitud Coseno:** Control interactivo mediante el componente oficial **`Slider` de Shadcn UI** (20% a 85%) para descartar fragmentos con baja correlación y erradicar alucinaciones.
+### 3. 🧠 Personalización Contextual con Memorias de Usuario (`UserMemory`)
+- Los estudiantes pueden gestionar en `/configuraciones/memorias` hechos y preferencias sobre su trayectoria académica (ej. *"Estudio Ingeniería de Sistemas en Sede Chiclayo"*, *"Curso el 6to ciclo"*).
+- **Inyección Automática en el Chat:** En cada consulta, el sistema recupera las memorias activas del usuario (`isActive: true`) y las inyecta en el prompt del sistema (`[MEMORIA DEL ESTUDIANTE]`), adaptando respuestas y normativas al contexto del alumno sin necesidad de que deba reiterarlo en cada mensaje.
 
 ---
 
-### 4. 📑 Ingesta, Visualización y Edición de Documentos (`/admin/documents`)
-- **Carga de Archivos Oficiales:** Integración con UploadThing para subir reglamentos en PDF y TXT.
+### 4. 🛡️ Gobernanza Activa y Políticas de `SystemSetting` en Tiempo Real
+El administrador regula la plataforma desde `/admin/settings`, aplicándose de forma determinista y preventiva en el endpoint [`/api/chat`](file:///f:/TRABAJOS/HARKAY/LANDING-PAGE/sipangpt/app/api/chat/route.ts):
+
+| Política | Configuración | Comportamiento en Chat |
+| :--- | :--- | :--- |
+| **`maintenanceMode`** | Toggle on/off | Bloquea inmediatamente el chat con código **HTTP 503** para usuarios y estudiantes, permitiendo el ingreso exclusivo a administradores (`Role.ADMIN`). |
+| **`maxPromptChars`** | Límite numérico (ej. 2,000) | Rechaza consultas que excedan el límite (**HTTP 400**) **antes** de procesar RAG o embeddings, previniendo sobrecostos. |
+| **`maxDailyTokensPerUser`** | Límite diario de tokens | Bloquea consultas si el usuario superó su cuota diaria (**HTTP 429**). Incluye **rollover diario automático** a las 24 horas y sincronización dinámica con la página de consumo del estudiante. |
+| **`enableVoiceInput`** | Toggle on/off | Habilita o deshabilita la entrada por notas de voz. |
+| **`enableImageAnalysis`** | Toggle on/off | Permite o deniega el procesamiento multimodal de imágenes adjuntas. |
+| **`minSimilarityScore`** | Slider (0.20 a 0.85) | Umbral de similitud coseno mínimo para aceptar fuentes citadas. |
+| **`enableWebSearch` / `enableMapsSearch`** | Toggles on/off | Restricciones deterministas inyectadas en el prompt para evitar alucinaciones externas al campus USS. |
+
+---
+
+### 5. 📑 Ingesta, Visualización y Edición de Documentos (`/admin/documents`)
+- **Carga de Archivos Oficiales:** Integración con UploadThing para subir reglamentos en PDF, TXT y Markdown (hasta 16 MB).
 - **Visualizador Integrado de Documentos:** Modal para previsualizar el PDF oficial o texto completo directamente dentro de la plataforma sin salir de ella.
-- **Editor de Enlaces Públicos y Metadatos:** Permite modificar el título, categoría y URL pública del PDF institucional.
-- **Explorador y Editor de Chunks RAG:**
+- **Editor de Chunks RAG con Preservación de Metadatos:**
   - Buscador textual interno dentro de los fragmentos del documento.
-  - Editor en línea de texto y número de página con guardado instantáneo.
-  - Incorporación manual de nuevos fragmentos normativos.
+  - Edición en línea de texto y metadatos jerárquicos preservando datos contextuales previos (`prevMeta`).
+  - Creación manual de nuevos fragmentos heredando categoría y año de vigencia.
   - Contador de citas realizadas por la IA por cada fragmento.
 - **Control de Estados RAG:** Alternar entre estados `INDEXED` (Activo para consultas) y `DEINDEXED` (Pausado temporalmente).
 - **Modales de Alerta Reutilizables (`AlertDialog`):** Confirmaciones de seguridad para eliminar documentos, fragmentos o desindexar.
 
 ---
 
-### 5. 🤖 Catálogo Multimodelo, Tarifas y Logs de Tokens (`/admin/models`)
+### 6. 🤖 Auditoría de Tokens, Costos y Monitor de Modelos (`/admin/models`)
 - **Modelos en la Nube y Locales:** Gemini 3.1 Flash-Lite, Gemini 2.5 Flash, Gemini 2.5 Pro, GPT-4o Mini, GPT-4o, Claude 3.5 Sonnet, Groq Llama 3.3 y Mac Mini M4 local vía Cloudflare Tunnel.
-- **Registro y Configuración de Modelos:** Permite a los administradores registrar nuevos modelos, definir proveedor, endpoints y parámetros (`maxTokens`, `temperature`).
+- **🪙 Auditoría Completa de Consumo por Concepto (`TokenUsageLog`):**
+  - `CHAT_COMPLETION`: Respuestas conversacionales del asistente.
+  - `DOCUMENT_OCR_TRANSCRIPTION`: Transcripción multimodal de PDFs a Markdown.
+  - `RAG_EMBEDDING`: Generación de vectores de consulta e ingesta documental masiva (`generateEmbeddingWithUsage`).
+  - `QUERY_ANALYSIS`: Normalización de intenciones del estudiante con Gemini Flash Lite.
 - **Tarifas y Precios Referenciales (USD / 1M Tokens):** Configuración de precios por millón de tokens de entrada (Prompt) y salida (Completion) para estimación de costos en tiempo real.
-- **Métricas y Vistas Acumuladas:** Contador de invocaciones/vistas (`totalInferences`), tokens totales consumidos y costo estimado acumulado por cada modelo.
-- **🪙 Historial y Logs de Consumo por Concepto (`TokenUsageLog`):**
-  - Auditoría cronológica de tokens y costo en USD.
-  - Clasificación por concepto: `CHAT_COMPLETION` (Chat Asistente), `DOCUMENT_OCR_TRANSCRIPTION` (Transcripción de PDFs), `RAG_EMBEDDING` (Vectorización semántica) y `QUERY_ANALYSIS` (Clasificación).
-  - Monitor de salud en tiempo real (`ONLINE`, `DEGRADED`, `OFFLINE` y `DISABLED`).
+- **Métricas y Vistas Acumuladas:** Contador de inferencias (`totalInferences`), tokens totales consumidos y costo estimado acumulado por cada modelo (`AIModelConfig`).
+- **Monitor de Salud en Tiempo Real:** Estados `ONLINE`, `DEGRADED`, `OFFLINE` y `DISABLED`.
 
 ---
 
@@ -180,12 +196,19 @@ sipangpt/
 │   │   │   ├── posts/                  # Novedades y publicaciones institucionales USS
 │   │   │   ├── questions/              # Preguntas sugeridas dinámicas
 │   │   │   └── settings/               # Políticas de búsqueda, RAG, Web, Maps y Slider
+│   │   ├── configuraciones/            # Preferencias de usuario, perfil y consumo
+│   │   │   ├── consumo/                # Monitoreo de cuota diaria y tokens de usuario
+│   │   │   ├── memorias/               # Gestión de recuerdos y hechos personalizados
+│   │   │   ├── sesiones/               # Dispositivos y sesiones activas concurrentes
+│   │   │   └── usuario/                # Datos personales y cambio de contraseña
 │   │   ├── chat/                       # Interfaz conversacional principal
 │   │   │   ├── page.tsx                # Chat nuevo con preguntas sugeridas
 │   │   │   └── [id]/page.tsx           # Chat histórico y persistencia de conversación
 │   ├── api/                            # API Routes & Webhooks
 │   │   ├── auth/                       # Endpoints de NextAuth
 │   │   ├── chat/                       # Route handler de streaming SSE y RAG (AI SDK 7.x)
+│   │   ├── feedback/                   # Calificaciones de respuestas
+│   │   ├── sesiones/                   # Revocación de sesiones
 │   │   └── uploadthing/                # Endpoint de subida de archivos
 │   ├── fonts.ts                        # Configuración de tipografías locales (Exo 2, Fraunces)
 │   ├── globals.css                     # Estilos globales y mapeo Tailwind CSS v4
@@ -194,6 +217,7 @@ sipangpt/
 ├── components/                         # Componentes de React
 │   ├── admin/                          # Componentes del módulo de administración
 │   │   ├── confirm-alert-dialog.tsx    # Modal reutilizable de confirmación destructiva
+│   │   ├── document-upload-zone.tsx    # Zona drag & drop con advertencias para > 50 págs
 │   │   ├── documents-manager.tsx       # Gestor RAG, editor de Chunks y visualizador PDF
 │   │   ├── models-manager.tsx          # Panel de estado y parámetros de modelos
 │   │   └── settings-manager.tsx        # Panel de políticas de grounding y Slider RAG
@@ -206,31 +230,15 @@ sipangpt/
 │   │   ├── chat-message-item.tsx       # Mensajes con MarkdownRenderer y citas RAG
 │   │   ├── chat-side-panel.tsx         # Panel lateral de comunicados USS y fuentes citadas
 │   │   └── model-selector.tsx          # Selector de modelos con soporte móvil (Drawer/Modal)
+│   ├── configuraciones/                # Componentes del perfil de usuario
+│   │   ├── memories-manager.tsx        # Gestor de memorias y preferencias personales
+│   │   └── user-profile-form.tsx       # Formulario de datos de usuario
 │   ├── shared/                         # Componentes compartidos y sidebars
-│   ├── ui/                             # Componentes base Shadcn UI
-│   │   ├── accordion.tsx               # Acordeón colapsable
-│   │   ├── alert-dialog.tsx            # Modales de alerta de confirmación
-│   │   ├── attachment.tsx              # Previsualizador de archivos adjuntos
-│   │   ├── avatar.tsx                  # Avatares de usuario y asistente
-│   │   ├── badge.tsx                   # Insignias de estado y roles
-│   │   ├── bubble.tsx                  # Burbujas de chat conversacionales
-│   │   ├── button.tsx                  # Botones de acción
-│   │   ├── collapsible.tsx             # Contenedores colapsables
-│   │   ├── dialog.tsx                  # Ventanas modales
-│   │   ├── drawer.tsx                  # Paneles deslizables móviles
-│   │   ├── dropdown-menu.tsx           # Menús desplegables
-│   │   ├── empty.tsx                   # Estados vacíos compuestos
-│   │   ├── markdown.tsx                # Renderizador Markdown (KaTeX, Mermaid, Prism)
-│   │   ├── native-select.tsx           # Select nativo accesible con chevron
-│   │   ├── select.tsx                  # Select flotante avanzado
-│   │   ├── sidebar.tsx                 # Sidebar colapsable oficial
-│   │   ├── slider.tsx                  # Control deslizante para umbral RAG
-│   │   ├── switch.tsx                  # Toggles accesibles
-│   │   └── toast.tsx                   # Sistema de notificaciones toast
+│   └── ui/                             # Componentes base Shadcn UI (Slider, Dialog, etc.)
 │
 ├── constants/                          # Constantes y textos institucionales centralizados
 │   ├── admin.ts                        # Correos de administradores iniciales
-│   ├── models.ts                       # Catálogo de modelos de IA y proveedores
+│   ├── models.ts                       # Catálogo de modelos de IA, embeddings y proveedores
 │   ├── prompts.ts                      # Prompts del sistema SipánGPT e inyectores RAG
 │   ├── questions.ts                    # Preguntas iniciales sugeridas
 │   ├── routes.ts                       # Rutas canónicas públicas, protegidas y admin
@@ -238,14 +246,18 @@ sipangpt/
 │
 ├── lib/                                # Lógica de negocio y utilidades
 │   ├── actions/                        # Server Actions de Next.js
-│   │   ├── admin-documents.ts          # Acciones de documentos, chunks y desindexación
+│   │   ├── admin-documents.ts          # Acciones de documentos, chunks y metadatos
 │   │   ├── admin-models.ts             # Acciones de monitoreo de modelos
-│   │   └── admin-settings.ts           # Acciones de políticas de búsqueda e IA
+│   │   ├── admin-settings.ts           # Acciones de políticas de búsqueda e IA
+│   │   └── user-settings.ts            # Acciones de memorias, perfil y consumo
 │   ├── ai/                             # Módulo de Inteligencia Artificial
-│   │   ├── document-processor.ts       # Chunking semántico de reglamentos
-│   │   ├── embeddings.ts               # Generador de embeddings con Gemini y similitud
+│   │   ├── document-processor.ts       # Chunking semántico, Header Prepending y OCR
+│   │   ├── embeddings.ts               # Embeddings con cálculo de tokens de uso
 │   │   ├── providers.ts                # Inicializador de proveedores AI SDK
-│   │   └── rag.ts                      # Búsqueda semántica RAG y filtrado por umbral
+│   │   ├── query-rewriter.ts           # Pre-RAG NLU, expansión y detección de intenciones
+│   │   ├── rag.ts                      # Búsqueda semántica híbrida resiliente
+│   │   ├── resolution-detector.ts      # Detección analítica del estado de resolución
+│   │   └── token-tracker.ts            # Auditoría y estimación de costos en USD
 │   ├── prisma.ts                       # Instancia singleton de PrismaClient con Adapter PG
 │   ├── session.ts                      # Validación de sesión y roles (`requireRole`)
 │   ├── timeago.ts                      # Formateador de tiempo relativo en español
@@ -256,16 +268,8 @@ sipangpt/
 │   ├── migrations/                     # Historial de migraciones SQL versionadas
 │   └── schema.prisma                   # Esquema Prisma con modelos y enums
 │
-├── public/                             # Recursos estáticos
-│   ├── avatars/                        # Avatares predeterminados
-│   ├── fonts/                          # Fuentes locales Exo 2 y Fraunces
-│   ├── imagenes/                       # Capturas y carátula del proyecto
-│   └── uss_logo.webp                   # Logo institucional de la USS
-│
+├── public/                             # Recursos estáticos (avatares, fuentes, imágenes)
 ├── types/                              # Definiciones de tipos TypeScript
-│   ├── chat.ts                         # Tipos de mensajes, fuentes y streaming
-│   └── index.ts                        # Tipos de modelos, documentos y categorías
-│
 ├── AGENTS.md                           # Protocolos de arquitectura, base de datos y UI
 ├── package.json                        # Dependencias y scripts del proyecto
 └── tsconfig.json                       # Configuración de TypeScript
