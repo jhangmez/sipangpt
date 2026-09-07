@@ -315,6 +315,23 @@ Tienes TERMINANTEMENTE PROHIBIDO inventar o buscar información en internet fuer
 No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus Principal de la USS en Chiclayo.`
     }
 
+    // 6.5 Consultar e inyectar memorias activas del estudiante (UserMemory)
+    try {
+      const userMemories = await prisma.userMemory.findMany({
+        where: { userId: session.user.id, isActive: true },
+        select: { fact: true },
+        orderBy: { createdAt: 'asc' },
+      })
+
+      if (userMemories.length > 0) {
+        systemPrompt +=
+          `\n\n[MEMORIA DEL ESTUDIANTE]:\n` +
+          userMemories.map((m) => `- ${m.fact}`).join('\n')
+      }
+    } catch (memErr) {
+      console.warn('[USER_MEMORIES_FETCH_WARN]', memErr)
+    }
+
     // 7. Convertir mensajes de UI a ModelMessages de AI SDK
     const modelMessages = await convertToModelMessages(rawMessages, {
       convertDataPart: (part) => {
