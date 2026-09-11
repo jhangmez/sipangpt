@@ -38,11 +38,13 @@ import {
   Zap,
   SlidersHorizontal,
   Loader2,
+  ListTree,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/utils'
 import { getDocumentPreviewDataAction } from '@/lib/actions/admin-documents'
 import type { DocumentItem } from '@/types'
+import type { DocumentTocTree, TocSectionItem, TocChapterItem, TocArticleItem } from '@/types/stair'
 
 interface DocumentPreviewSheetProps {
   documentId: string | null
@@ -52,7 +54,7 @@ interface DocumentPreviewSheetProps {
   onNavigateToChunks?: (doc: DocumentItem) => void
 }
 
-type TabType = 'markdown' | 'original' | 'chunks'
+type TabType = 'markdown' | 'original' | 'toc' | 'chunks'
 
 interface PreviewData {
   document: {
@@ -67,6 +69,7 @@ interface PreviewData {
     chunkCount: number
     category?: { id: string; name: string; code: string } | null
     uploadedBy?: { name: string | null; email: string } | null
+    tocTree?: DocumentTocTree | null
     createdAt: string
     updatedAt: string
   }
@@ -84,6 +87,9 @@ interface PreviewData {
     content: string
     pageNumber: number | null
     hasEmbedding: boolean
+    breadcrumb?: string | null
+    articulo?: string | null
+    capitulo?: string | null
   }>
 }
 
@@ -552,6 +558,24 @@ export function DocumentPreviewSheet({
 
               <button
                 type='button'
+                onClick={() => setActiveTab('toc')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeTab === 'toc'
+                    ? 'bg-background text-primary shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ListTree className='size-3.5' />
+                <span>Índice ToC (STAIR)</span>
+                {previewData?.document.tocTree && (
+                  <span className='ml-1 text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded-full font-mono font-bold'>
+                    {previewData.document.tocTree.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type='button'
                 onClick={() => setActiveTab('chunks')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                   activeTab === 'chunks'
@@ -952,6 +976,158 @@ export function DocumentPreviewSheet({
               )}
 
               {/* ------------------------------------------------------------- */}
+              {/* PESTAÑA: ÍNDICE JERÁRQUICO (TOC - ARQUITECTURA SIPÁN-STAIR) */}
+              {/* ------------------------------------------------------------- */}
+              {activeTab === 'toc' && (
+                <div className='space-y-4'>
+                  <div className='flex items-center justify-between gap-3 bg-card border border-border/80 px-4 py-3 rounded-2xl text-xs text-muted-foreground shadow-2xs flex-wrap'>
+                    <div className='flex items-center gap-2'>
+                      <ListTree className='size-4 text-emerald-500' />
+                      <span>
+                        Estructura canónica de navegación extraída según la arquitectura <strong>Sipán-STAIR</strong>.
+                      </span>
+                    </div>
+
+                    <Badge
+                      variant='outline'
+                      className='bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-mono'
+                    >
+                      {previewData.document.tocTree?.length || 0} ramas de primer nivel
+                    </Badge>
+                  </div>
+
+                  {!previewData.document.tocTree || previewData.document.tocTree.length === 0 ? (
+                    <div className='text-center py-12 text-muted-foreground text-xs bg-card rounded-3xl border border-border/60 p-8 space-y-3'>
+                      <AlertCircle className='size-8 mx-auto text-amber-500' />
+                      <div className='space-y-1'>
+                        <p className='font-semibold text-foreground text-sm'>
+                          Sin árbol ToC registrado
+                        </p>
+                        <p className='max-w-md mx-auto'>
+                          Este documento fue indexado antes de la integración de Sipán-STAIR.
+                          Puedes re-indexarlo para que el extractor analice sus Títulos, Capítulos y Artículos de forma automática.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='space-y-3'>
+                      {previewData.document.tocTree.map((node, nodeIdx) => {
+                        const isSection = 'chapters' in node || !('articles' in node)
+                        const sectionItem = node as TocSectionItem
+                        const chapterItem = node as TocChapterItem
+
+                        const chapters = isSection
+                          ? sectionItem.chapters || []
+                          : [chapterItem]
+                        const directArticles = isSection
+                          ? sectionItem.articles || []
+                          : []
+
+                        return (
+                          <div
+                            key={nodeIdx}
+                            className='rounded-2xl border border-border/70 bg-card p-4 space-y-3 shadow-2xs'
+                          >
+                            <div className='flex items-center justify-between gap-2 flex-wrap'>
+                              <div className='flex items-center gap-2'>
+                                <Badge
+                                  variant='outline'
+                                  className='bg-primary/10 text-primary border-primary/20 text-[10px] font-bold'
+                                >
+                                  {isSection ? 'Título' : 'Capítulo'}
+                                </Badge>
+                                <h4 className='font-frances font-bold text-sm text-foreground'>
+                                  {node.title}
+                                </h4>
+                              </div>
+                              {node.pageNumber && (
+                                <span className='text-[10px] text-muted-foreground font-mono'>
+                                  Pág. {node.pageNumber}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Capítulos anidados */}
+                            {chapters.length > 0 && (
+                              <div className='space-y-2.5 pl-2 border-l-2 border-primary/20'>
+                                {chapters.map((ch, chIdx) => (
+                                  <div
+                                    key={chIdx}
+                                    className='rounded-xl bg-muted/30 p-3 space-y-2 border border-border/40'
+                                  >
+                                    <div className='flex items-center justify-between text-xs'>
+                                      <span className='font-semibold text-foreground flex items-center gap-1.5'>
+                                        <span className='size-1.5 rounded-full bg-primary' />
+                                        {ch.title}
+                                      </span>
+                                      <Badge
+                                        variant='secondary'
+                                        className='text-[9px] font-mono'
+                                      >
+                                        {ch.articles?.length || 0} artículos
+                                      </Badge>
+                                    </div>
+
+                                    {/* Lista de Artículos */}
+                                    {ch.articles && ch.articles.length > 0 && (
+                                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1'>
+                                        {ch.articles.map((art, artIdx) => (
+                                          <button
+                                            key={artIdx}
+                                            type='button'
+                                            onClick={() => {
+                                              setActiveTab('chunks')
+                                              setSearchQuery(art.articleNumber ? `Art. ${art.articleNumber}` : art.title)
+                                              setChunksPage(1)
+                                            }}
+                                            className='flex items-center justify-between p-2 rounded-lg bg-background border border-border/60 hover:border-primary/50 text-[11px] text-left transition-colors cursor-pointer group'
+                                            title='Ver fragmento indexado de este artículo'
+                                          >
+                                            <span className='truncate font-medium text-foreground group-hover:text-primary'>
+                                              {art.title}
+                                            </span>
+                                            <ChevronRight className='size-3 text-muted-foreground group-hover:text-primary shrink-0 ml-1' />
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Artículos directos de sección */}
+                            {directArticles.length > 0 && (
+                              <div className='grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1'>
+                                {directArticles.map((art, artIdx) => (
+                                  <button
+                                    key={artIdx}
+                                    type='button'
+                                    onClick={() => {
+                                      setActiveTab('chunks')
+                                      setSearchQuery(art.articleNumber ? `Art. ${art.articleNumber}` : art.title)
+                                      setChunksPage(1)
+                                    }}
+                                    className='flex items-center justify-between p-2 rounded-lg bg-background border border-border/60 hover:border-primary/50 text-[11px] text-left transition-colors cursor-pointer group'
+                                    title='Ver fragmento indexado de este artículo'
+                                  >
+                                    <span className='truncate font-medium text-foreground group-hover:text-primary'>
+                                      {art.title}
+                                    </span>
+                                    <ChevronRight className='size-3 text-muted-foreground group-hover:text-primary shrink-0 ml-1' />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ------------------------------------------------------------- */}
               {/* PESTAÑA 3: FRAGMENTOS RAG (CHUNKS) CON PAGINACIÓN */}
               {/* ------------------------------------------------------------- */}
               {activeTab === 'chunks' && (
@@ -1081,6 +1257,13 @@ export function DocumentPreviewSheet({
                                 )}
                               </Button>
                             </div>
+
+                            {chunk.breadcrumb && (
+                              <div className='text-[10px] text-primary font-mono bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/15 flex items-center gap-1.5'>
+                                <span>📌</span>
+                                <span className='truncate font-medium'>{chunk.breadcrumb}</span>
+                              </div>
+                            )}
 
                             <div className='rounded-xl bg-muted/20 border border-border/50 p-3 text-xs font-mono leading-relaxed text-foreground whitespace-pre-wrap select-text max-w-full break-all break-words overflow-hidden'>
                               {chunk.content}

@@ -61,14 +61,18 @@ export default async function ChatIdPage({ params }: ChatIdPageProps) {
     parentId: m.parentId || null,
     isRegeneration: m.isRegeneration,
     regeneratedFromId: m.regeneratedFromId || null,
-    sources: m.citations.map((c) => ({
-      chunkId: c.chunkId,
-      documentId: c.documentId,
-      title: c.title,
-      url: c.sourceUrl || undefined,
-      snippet: c.snippetText,
-      relevance: c.relevance || undefined,
-    })),
+    sources: m.citations.map((c) => {
+      const hasBreadcrumb = c.title.includes(' > ')
+      return {
+        chunkId: c.chunkId,
+        documentId: c.documentId,
+        title: hasBreadcrumb ? c.title.split(' > ')[0] : c.title,
+        url: c.sourceUrl || undefined,
+        snippet: c.snippetText,
+        relevance: c.relevance || undefined,
+        breadcrumb: hasBreadcrumb ? c.title : undefined,
+      }
+    }),
   }))
 
   const latestPost = publishedPosts.length > 0 ? publishedPosts[0] : null

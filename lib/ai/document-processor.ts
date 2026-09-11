@@ -1,8 +1,16 @@
-import { prisma, ModelProvider, TokenUsageConcept } from '@/lib/prisma'
+import { prisma, ModelProvider, TokenUsageConcept, Prisma } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import { DOCUMENT_TRANSCRIPTION_MODEL_CODE, DEFAULT_EMBEDDING_MODEL } from '@/constants'
 import { generateEmbeddingsWithUsage } from '@/lib/ai/embeddings'
 import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
+import {
+  extractTocTreeFromMarkdown,
+  splitTextIntoStructuralChunks,
+} from '@/lib/ai/toc-extractor'
+import type { DocumentTocTree } from '@/types/stair'
+
+export { extractTocTreeFromMarkdown, splitTextIntoStructuralChunks }
+export type { DocumentTocTree }
 
 export interface TextChunk {
   content: string
@@ -96,12 +104,16 @@ export async function extractAndStructureToMarkdown(
 
   const systemTranscriptionPrompt = `Analiza y extrae de manera estructurada y completa todo el contenido, normativas, capítulos, artículos, tablas, cronogramas y directivas presentes en este documento de la Universidad Señor de Sipán (USS).
 
-Reglas de Estructuración en Markdown (.md):
-1. Organiza por secciones y encabezados (#, ##, ###) según los capítulos, reglamentos o títulos del documento.
-2. Si hay páginas identificadas, usa separadores tipo "--- Página X ---".
-3. Si hay tablas o cronogramas, represéntalos en tablas Markdown con sintaxis GFM.
-4. Extrae toda la información operativa, requisitos, procedimientos, artículos y normativas de forma detallada y fidedigna para el sistema RAG de preguntas y respuestas de la universidad.
-5. Mantén la terminología y formalidad institucional de la USS.`
+Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
+1. Estructura la jerarquía formal con encabezados Markdown estandarizados:
+   - Usa nivel 1 (# TÍTULO ...) para Títulos mayores o Denominación del Reglamento.
+   - Usa nivel 2 (## CAPÍTULO ...) para Capítulos normativos (ej: "## Capítulo II: De la Matrícula Regular y Extemporánea").
+   - Usa nivel 3 (### ARTÍCULO ...) para cada Artículo normativo individual (ej: "### Artículo 17: Requisitos y Plazos").
+2. No cortes ni trunques los artículos. Transcribe el texto íntegro de cada artículo incluyendo todos sus incisos, literales y párrafos.
+3. Si el documento contiene un Índice general o Tabla de Contenidos (ToC) al inicio, transcríbelo fielmente con viñetas.
+4. Si hay páginas identificadas en el PDF, incluye separadores con formato exacto "--- Página X ---".
+5. Si hay tablas, escalas de tasas, calendarios de pagos o cronogramas, represéntalos en tablas Markdown con sintaxis GFM.
+6. Mantén la terminología y formalidad institucional estricta de la USS.`
 
   let googleFileName: string | null = null
   let fileUri: string | null = null
@@ -305,138 +317,45 @@ function extractHierarchyHeaders(text: string): {
  * Divide texto o markdown extenso en fragmentos semánticos enriquecidos (chunks) con solapamiento (overlap),
  * inyección de encabezados contextuales (Header Prepending) y extracción de metadatos estructurados.
  */
+/**
+ * Divide texto o markdown en fragmentos semánticos enriquecidos basados en la jerarquía
+ * normativa institucional (STAIR), asegurando que los artículos no sean cortados arbitrariamente
+ * e inyectando breadcrumbs contextuales completos.
+ */
 export function splitTextIntoChunks(
   text: string,
-  chunkSize: number = 650,
-  overlap: number = 90,
+  _chunkSize: number = 3000,
+  _overlap: number = 90,
   documentTitle: string = 'Documento Institucional USS',
   categoryCode: string = 'GENERAL'
 ): TextChunk[] {
-  const clean = text.trim()
-  if (!clean) return []
+  const structuralChunks = splitTextIntoStructuralChunks(
+    text,
+    documentTitle,
+    categoryCode,
+    _chunkSize
+  )
 
-  const chunks: TextChunk[] = []
-
-  // Dividir por párrafos primero para preservar límites semánticos naturales
-  const paragraphs = clean
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0)
-
-  let currentChunk = ''
-  let currentPage: number | null = 1
-  let currentCapitulo: string | null = null
-  let currentArticulo: string | null = null
-  let chunkIndex = 0
-
-  // Detectar año de vigencia (ej: 2026, 2025)
-  const yearMatch = text.match(/\b(202[4-9]|203[0-5])\b/)
-  const anioVigencia = yearMatch ? parseInt(yearMatch[1], 10) : 2026
-
-  const buildPrefixedChunk = (content: string): { content: string; metadata: Record<string, unknown> } => {
-    const headerPrefixLines: string[] = [`[DOCUMENTO: ${documentTitle}]`]
-    if (currentCapitulo) headerPrefixLines.push(`[CAPÍTULO: ${currentCapitulo}]`)
-    if (currentArticulo) headerPrefixLines.push(`[ARTÍCULO: ${currentArticulo}]`)
-
-    const headerBlock = headerPrefixLines.join('\n')
-    // Evitar duplicar encabezado si ya está presente
-    const finalContent = content.startsWith('[DOCUMENTO:')
-      ? content
-      : `${headerBlock}\n\n${content}`
-
-    return {
-      content: finalContent.trim(),
-      metadata: {
-        documentTitle,
-        categoria: categoryCode,
-        capitulo: currentCapitulo,
-        articulo: currentArticulo,
-        anio_vigencia: anioVigencia,
-        estado: 'ACTIVO',
-        pageNumber: currentPage,
-      },
-    }
-  }
-
-  for (const para of paragraphs) {
-    // Detección de patrones de página (ej. "--- Página 5 ---", "Página 5", "Pag. 5")
-    const pageMatch = para.match(/(?:---\s*página|página|pag\.|pág\.)\s*(\d+)/i)
-    if (pageMatch) {
-      currentPage = parseInt(pageMatch[1], 10)
-    }
-
-    // Rastrear jerarquía de capítulos y artículos
-    const hierarchy = extractHierarchyHeaders(para)
-    if (hierarchy.capitulo) currentCapitulo = hierarchy.capitulo
-    if (hierarchy.articulo) currentArticulo = hierarchy.articulo
-
-    if ((currentChunk + '\n\n' + para).length <= chunkSize) {
-      currentChunk = currentChunk ? `${currentChunk}\n\n${para}` : para
-    } else {
-      if (currentChunk.length > 0) {
-        const enriched = buildPrefixedChunk(currentChunk)
-        chunks.push({
-          content: enriched.content,
-          pageNumber: currentPage,
-          chunkIndex,
-          metadata: enriched.metadata,
-        })
-        chunkIndex++
-
-        // Conservar solapamiento final
-        const words = currentChunk.split(/\s+/)
-        const overlapText = words
-          .slice(-Math.max(1, Math.floor(overlap / 10)))
-          .join(' ')
-        currentChunk = overlapText ? `${overlapText}\n\n${para}` : para
-      } else {
-        // Párrafo muy largo, dividir por frases
-        const sentences = para.match(/[^.!?]+[.!?]+/g) || [para]
-        for (const sent of sentences) {
-          if ((currentChunk + ' ' + sent).length <= chunkSize) {
-            currentChunk = currentChunk ? `${currentChunk} ${sent}` : sent
-          } else {
-            if (currentChunk) {
-              const enriched = buildPrefixedChunk(currentChunk)
-              chunks.push({
-                content: enriched.content,
-                pageNumber: currentPage,
-                chunkIndex,
-                metadata: enriched.metadata,
-              })
-              chunkIndex++
-            }
-            currentChunk = sent
-          }
-        }
-      }
-    }
-  }
-
-  if (currentChunk.trim().length > 0) {
-    const enriched = buildPrefixedChunk(currentChunk)
-    chunks.push({
-      content: enriched.content,
-      pageNumber: currentPage,
-      chunkIndex,
-      metadata: enriched.metadata,
-    })
-  }
-
-  return chunks
+  return structuralChunks.map((c) => ({
+    content: c.content,
+    pageNumber: c.pageNumber,
+    chunkIndex: c.chunkIndex,
+    metadata: c.metadata as unknown as Record<string, unknown>,
+  }))
 }
 
 /**
- * Indexa el contenido textual completo de un documento en la tabla DocumentChunk de Prisma,
- * estructurando metadatos y persistiendo vector embeddings pre-calculados (Estrategia 1 y 4).
+ * Indexa el contenido textual completo de un documento en la base de datos (Prisma),
+ * extrayendo el Árbol ToC jerárquico (STAIR), segmentando por artículos completos con breadcrumbs,
+ * persistiendo vector embeddings pre-calculados y actualizando el estado a INDEXED.
  */
 export async function indexDocumentContent(
   documentId: string,
   rawContent: string
-): Promise<{ success: boolean; chunkCount: number }> {
-  const logPrefix = `[RAG_INDEXER] [${new Date().toISOString()}]`
+): Promise<{ success: boolean; chunkCount: number; tocNodesCount: number }> {
+  const logPrefix = `[RAG_INDEXER_STAIR] [${new Date().toISOString()}]`
   console.log(
-    `${logPrefix} ✂️ [Paso 3/3] Segmentando texto en chunks semánticos contextuales...`
+    `${logPrefix} ✂️ [Paso 3/3] Iniciando segmentación estructural y extracción de ToC (Sipán-STAIR)...`
   )
 
   // Consultar metadatos del documento desde la BD
@@ -448,15 +367,40 @@ export async function indexDocumentContent(
   const docTitle = doc?.title || 'Reglamento Institucional USS'
   const categoryCode = doc?.category?.code || 'GENERAL'
 
-  // Limpiar cualquier imagen base64 y normalizar codificación antes de crear chunks
+  // Limpiar cualquier imagen base64 y normalizar codificación antes de procesar
   const cleanedContent = stripBase64Images(sanitizeMojibake(rawContent))
 
-  const chunks = splitTextIntoChunks(cleanedContent, 650, 90, docTitle, categoryCode)
+  // 1. Extraer el Árbol ToC Canónico (STAIR: Títulos > Capítulos > Artículos)
+  console.log(`${logPrefix} 🌳 Extrayendo árbol ToC jerárquico para "${docTitle}"...`)
+  const tocTree = extractTocTreeFromMarkdown(cleanedContent, docTitle)
+  const tocNodesCount = tocTree.reduce((acc, node) => {
+    let count = 1
+    if ('chapters' in node && node.chapters) {
+      count += node.chapters.length
+      for (const ch of node.chapters) {
+        if (ch.articles) count += ch.articles.length
+      }
+    } else if ('articles' in node && node.articles) {
+      count += node.articles.length
+    }
+    return acc + count
+  }, 0)
+
   console.log(
-    `${logPrefix} 🧩 Chunks contextuales generados: ${chunks.length} fragmentos con Header Prepending.`
+    `${logPrefix} ✅ Árbol ToC generado: ${tocTree.length} ramas principales, ~${tocNodesCount} nodos identificados.`
   )
 
-  if (chunks.length === 0) {
+  // 2. Segmentación estructural por Artículos / Nodos Hoja con Breadcrumbs Inyectados
+  const structuralChunks = splitTextIntoStructuralChunks(
+    cleanedContent,
+    docTitle,
+    categoryCode
+  )
+  console.log(
+    `${logPrefix} 🧩 Chunks estructurales generados: ${structuralChunks.length} fragmentos basados en artículos/secciones con Breadcrumbs.`
+  )
+
+  if (structuralChunks.length === 0) {
     console.error(
       `${logPrefix} ❌ El contenido resultante no produjo ningún chunk legible.`
     )
@@ -465,13 +409,13 @@ export async function indexDocumentContent(
     )
   }
 
-  // 1. Pre-calcular vector embeddings para todos los chunks de una sola vez
+  // 3. Pre-calcular vector embeddings para todos los chunks de una sola vez
   console.log(
-    `${logPrefix} 📐 Calculando embeddings vectoriales persistentes (${chunks.length} fragmentos)...`
+    `${logPrefix} 📐 Calculando embeddings vectoriales persistentes (${structuralChunks.length} fragmentos)...`
   )
   let chunkEmbeddings: number[][] = []
   try {
-    const chunkTexts = chunks.map((c) => c.content)
+    const chunkTexts = structuralChunks.map((c) => c.content)
     const embStart = Date.now()
     const { embeddings, tokens: embTokens } = await generateEmbeddingsWithUsage(chunkTexts)
     chunkEmbeddings = embeddings
@@ -490,8 +434,8 @@ export async function indexDocumentContent(
       latencyMs: embDuration,
       metadata: {
         documentId,
-        totalChunks: chunks.length,
-        action: 'DOCUMENT_INGESTION_EMBEDDINGS',
+        totalChunks: structuralChunks.length,
+        action: 'DOCUMENT_INGESTION_EMBEDDINGS_STAIR',
       },
     })
   } catch (embErr) {
@@ -501,7 +445,7 @@ export async function indexDocumentContent(
     )
   }
 
-  // 2. Eliminar fragmentos previos del documento para re-indexación limpia
+  // 4. Eliminar fragmentos previos del documento para re-indexación limpia
   console.log(
     `${logPrefix} 🧹 Limpiando fragmentos antiguos de doc ID "${documentId}" en base de datos...`
   )
@@ -509,12 +453,12 @@ export async function indexDocumentContent(
     where: { documentId }
   })
 
-  // 3. Insertar los nuevos fragmentos en Prisma con metadatos y vector embedding persistido
+  // 5. Insertar los nuevos fragmentos en Prisma con metadatos y vector embedding persistido
   console.log(
-    `${logPrefix} 💾 Guardando ${chunks.length} chunks con metadatos y embeddings en PostgreSQL...`
+    `${logPrefix} 💾 Guardando ${structuralChunks.length} chunks con metadatos jerárquicos y embeddings en PostgreSQL...`
   )
   await prisma.documentChunk.createMany({
-    data: chunks.map((c, idx) => ({
+    data: structuralChunks.map((c, idx) => ({
       documentId,
       chunkIndex: c.chunkIndex,
       content: c.content,
@@ -527,21 +471,26 @@ export async function indexDocumentContent(
     }))
   })
 
-  // 4. Actualizar estado del documento a INDEXED y su conteo de chunks
+  // 6. Actualizar estado del documento a INDEXED, conteo de chunks y persistir el tocTree (STAIR)
   console.log(
-    `${logPrefix} 🏷️ Marcando documento ID "${documentId}" como INDEXED (chunkCount: ${chunks.length})...`
+    `${logPrefix} 🏷️ Guardando tocTree y marcando documento ID "${documentId}" como INDEXED (chunkCount: ${structuralChunks.length})...`
   )
   await prisma.document.update({
     where: { id: documentId },
     data: {
       status: 'INDEXED',
-      chunkCount: chunks.length,
+      chunkCount: structuralChunks.length,
+      tocTree: tocTree.length > 0 ? (tocTree as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
       updatedAt: new Date()
     }
   })
 
   console.log(
-    `${logPrefix} 🏁 ✅ ¡Indexación RAG contextual y vectorial completada para "${docTitle}"!`
+    `${logPrefix} 🏁 ✅ ¡Indexación Sipán-STAIR completada exitosamente para "${docTitle}"!`
   )
-  return { success: true, chunkCount: chunks.length }
+  return {
+    success: true,
+    chunkCount: structuralChunks.length,
+    tocNodesCount,
+  }
 }

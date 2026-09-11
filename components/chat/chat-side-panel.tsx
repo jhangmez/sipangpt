@@ -137,7 +137,7 @@ export function ChatSidePanel({
                   className='rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs space-y-2.5 text-xs hover:border-primary/40 transition-colors'
                 >
                   {/* Encabezado de la Fuente */}
-                  <div className='space-y-1'>
+                  <div className='space-y-1.5'>
                     <div className='flex items-center justify-between gap-2'>
                       <span className='font-bold text-foreground text-xs line-clamp-2 leading-snug'>
                         {source.title}
@@ -151,6 +151,14 @@ export function ChatSidePanel({
                         </Badge>
                       )}
                     </div>
+
+                    {/* Ruta Oficial Jerárquica Sipán-STAIR */}
+                    {source.breadcrumb && (
+                      <div className='rounded-lg bg-primary/5 px-2 py-1 border border-primary/15 text-[10px] text-primary flex items-start gap-1 leading-tight font-sans'>
+                        <span className='font-semibold shrink-0'>📌 Ruta:</span>
+                        <span className='font-medium'>{source.breadcrumb}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Texto Recuperado del Fragmento */}

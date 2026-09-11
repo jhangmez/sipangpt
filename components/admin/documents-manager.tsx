@@ -43,6 +43,7 @@ import {
   CheckCircle2,
   Trash2,
   ExternalLink,
+  ListTree,
   HardDrive,
   Database,
   Layers,
@@ -761,6 +762,16 @@ export function DocumentsManager({
                               >
                                 <span className='size-1.5 rounded-full bg-emerald-500 animate-pulse' />
                                 Indexado RAG ({doc.chunkCount || 0} chunks)
+                              </Badge>
+                            )}
+                            {doc.tocTree && (
+                              <Badge
+                                variant='outline'
+                                className='border-primary/30 text-primary bg-primary/10 text-[9px] font-bold py-0 gap-1'
+                                title='Estructura ToC analizada con la arquitectura Sipán-STAIR'
+                              >
+                                <ListTree className='size-2.5 text-primary' />
+                                Sipán-STAIR
                               </Badge>
                             )}
                             {isDeindexed && (

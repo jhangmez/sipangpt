@@ -13,6 +13,7 @@ export {
   InvitationStatus,
   ResolutionStatus,
   TokenUsageConcept,
+  Prisma,
 } from '@prisma/client'
 export type {
   User,

@@ -481,6 +481,12 @@ export function ChatMessageItem({
                                       </a>
                                     )}
                                   </div>
+                                  {src.breadcrumb && (
+                                    <div className='text-[10px] text-primary/90 font-sans font-medium flex items-center gap-1'>
+                                      <span className='font-semibold'>📌 Ruta:</span>
+                                      <span>{src.breadcrumb}</span>
+                                    </div>
+                                  )}
                                   {src.snippet && (
                                     <p className='text-[11px] text-muted-foreground leading-relaxed'>
                                       {src.snippet}

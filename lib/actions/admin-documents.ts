@@ -504,6 +504,9 @@ export async function getDocumentPreviewDataAction(documentId: string) {
       content: stripBase64Images(sanitizeMojibake(c.content)),
       pageNumber: c.pageNumber,
       hasEmbedding,
+      breadcrumb: (meta?.breadcrumb as string) || null,
+      articulo: (meta?.articulo as string) || null,
+      capitulo: (meta?.capitulo as string) || null,
     }
   })
 
@@ -529,6 +532,7 @@ export async function getDocumentPreviewDataAction(documentId: string) {
       chunkCount: doc.chunkCount,
       category: doc.category,
       uploadedBy: doc.uploadedBy,
+      tocTree: doc.tocTree,
       createdAt: doc.createdAt.toISOString(),
       updatedAt: doc.updatedAt.toISOString(),
     },

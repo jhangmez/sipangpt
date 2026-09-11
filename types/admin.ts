@@ -7,6 +7,7 @@ import type {
   User,
   SystemSetting,
 } from '@/lib/prisma'
+import type { DocumentTocTree } from './stair'
 
 export interface TopicSubcategoryItem {
   id: string
@@ -69,6 +70,7 @@ export interface DocumentItem {
     name: string | null
     email: string
   } | string | null
+  tocTree?: DocumentTocTree | any | null
 }
 
 export interface QuestionItem {

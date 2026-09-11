@@ -41,6 +41,9 @@ export interface MessageSource {
   snippet?: string
   relevance?: number
   embeddingModel?: string
+  breadcrumb?: string | null
+  capitulo?: string | null
+  articulo?: string | null
 }
 
 export interface ChatMessage {

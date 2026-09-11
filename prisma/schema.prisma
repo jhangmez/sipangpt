@@ -328,6 +328,9 @@ model Document {
   categoryId   String?        @map("category_id") // Categoría temática general del PDF
   uploadedById String?        @map("uploaded_by_id")
 
+  // Árbol jerárquico del Índice (ToC) para recuperación en dos etapas Sipán-STAIR
+  tocTree      Json?          @map("toc_tree")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

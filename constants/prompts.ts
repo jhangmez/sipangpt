@@ -21,6 +21,9 @@ export function buildSystemPromptWithSources(
     snippetText: string
     categoria?: string | null
     anioVigencia?: number | null
+    breadcrumb?: string | null
+    capitulo?: string | null
+    articulo?: string | null
   }>
 ): string {
   if (sources.length === 0) {
@@ -35,7 +38,9 @@ export function buildSystemPromptWithSources(
       if (s.pageNumber) metaParts.push(`Pág. ${s.pageNumber}`)
       const metaSuffix = metaParts.length > 0 ? ` | ${metaParts.join(' | ')}` : ''
 
-      return `[Fuente ${idx + 1}: ${s.title}${metaSuffix}]\n${s.snippetText}`
+      const sourceHeader = s.breadcrumb || s.title
+
+      return `[Fuente ${idx + 1}: ${sourceHeader}${metaSuffix}]\n${s.snippetText}`
     })
     .join('\n\n')
 
@@ -44,5 +49,5 @@ export function buildSystemPromptWithSources(
 --- INFORMACIÓN OFICIAL VERIFICADA DE LA UNIVERSIDAD SEÑOR DE SIPÁN (RAG) ---
 ${formattedSources}
 
-Instrucción estricta: Utiliza prioritariamente la información oficial anterior para formular tu respuesta. Cuando existan reglamentos de diferentes años, prioriza siempre el de mayor vigencia temporal (ej. 2026 sobre años anteriores) y cita el nombre del documento oficial correspondiente.`
+Instrucción estricta: Utiliza prioritariamente la información oficial anterior para formular tu respuesta. Cita con precisión el nombre del reglamento, capítulo y número de artículo correspondiente (ej. «Conforme al Reglamento General de Matrícula, Capítulo II, Artículo 17...») para dotar a la respuesta de validez y trazabilidad institucional. Cuando existan reglamentos de diferentes años, prioriza siempre el de mayor vigencia temporal (ej. 2026 sobre años anteriores).`
 }

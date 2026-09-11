@@ -505,7 +505,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                   messageId: assistantMsg.id,
                   documentId: s.documentId,
                   chunkId: s.chunkId || null,
-                  title: s.title,
+                  title: s.breadcrumb || s.title,
                   sourceUrl: s.sourceUrl,
                   pageNumber: s.pageNumber,
                   snippetText: s.snippetText,
@@ -518,7 +518,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                 data: sources.map((s) => ({
                   messageId: assistantMsg.id,
                   documentId: s.documentId,
-                  title: s.title,
+                  title: s.breadcrumb || s.title,
                   sourceUrl: s.sourceUrl,
                   pageNumber: s.pageNumber,
                   snippetText: s.snippetText,
@@ -637,6 +637,9 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
               snippet: s.snippetText,
               relevance: s.relevance,
               embeddingModel: s.embeddingModel || DEFAULT_EMBEDDING_MODEL,
+              breadcrumb: s.breadcrumb,
+              capitulo: s.capitulo,
+              articulo: s.articulo,
             })),
           }
         }
