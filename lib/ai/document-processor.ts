@@ -25,52 +25,62 @@ export interface TextChunk {
  */
 export async function extractAndStructureToMarkdown(
   fileUrl: string,
-  mimeType: string = 'application/pdf'
+  mimeType: string = 'application/pdf',
+  optionalBuffer?: Buffer
 ): Promise<string> {
   const logPrefix = `[RAG_INDEXER] [${new Date().toISOString()}]`
   const cleanUrl = fileUrl.trim()
-  if (!cleanUrl) {
-    console.error(`${logPrefix} ❌ URL de documento vacía o inválida.`)
+  if (!cleanUrl && (!optionalBuffer || optionalBuffer.byteLength === 0)) {
+    console.error(`${logPrefix} ❌ URL de documento vacía o inválida y no se suministró buffer.`)
     throw new Error('La URL del documento no es válida.')
   }
 
-  console.log(`${logPrefix} 🚀 [Paso 1/3] Iniciando descarga de archivo...`)
-  console.log(`${logPrefix} 🔗 URL: ${cleanUrl}`)
+  console.log(`${logPrefix} 🚀 [Paso 1/3] Preparando binario de archivo...`)
+  console.log(`${logPrefix} 🔗 URL: ${cleanUrl || '(buffer en memoria)'}`)
   console.log(`${logPrefix} 📋 MimeType esperado: ${mimeType}`)
 
-  // 1. Descargar el binario del documento desde UploadThing u origen (timeout: 30s)
-  let response: Response
-  const downloadStart = Date.now()
-  try {
-    response = await fetch(cleanUrl, {
-      signal: AbortSignal.timeout(30_000)
-    })
-  } catch (err: unknown) {
-    const isTimeout = err instanceof DOMException && err.name === 'TimeoutError'
-    console.error(`${logPrefix} ❌ [Paso 1/3] Error en fetch de archivo:`, err)
-    throw new Error(
-      isTimeout
-        ? 'Tiempo de espera agotado al descargar el archivo desde UploadThing (>30s).'
-        : `Error de red al descargar el archivo: ${err instanceof Error ? err.message : String(err)}`
+  let buffer: Buffer
+
+  if (optionalBuffer && optionalBuffer.byteLength > 0) {
+    buffer = optionalBuffer
+    console.log(
+      `${logPrefix} ⚡ Reutilizando binario en memoria (${buffer.byteLength} bytes / ${(buffer.byteLength / 1024).toFixed(1)} KB)`
+    )
+  } else {
+    // 1. Descargar el binario del documento desde UploadThing u origen (timeout: 30s)
+    let response: Response
+    const downloadStart = Date.now()
+    try {
+      response = await fetch(cleanUrl, {
+        signal: AbortSignal.timeout(30_000)
+      })
+    } catch (err: unknown) {
+      const isTimeout = err instanceof DOMException && err.name === 'TimeoutError'
+      console.error(`${logPrefix} ❌ [Paso 1/3] Error en fetch de archivo:`, err)
+      throw new Error(
+        isTimeout
+          ? 'Tiempo de espera agotado al descargar el archivo desde UploadThing (>30s).'
+          : `Error de red al descargar el archivo: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+
+    if (!response.ok) {
+      console.error(
+        `${logPrefix} ❌ [Paso 1/3] Respuesta HTTP no exitosa: ${response.status} ${response.statusText}`
+      )
+      throw new Error(
+        `No se pudo descargar el archivo (HTTP ${response.status} ${response.statusText}). Verifica que la URL sea accesible.`
+      )
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    buffer = Buffer.from(arrayBuffer)
+    const downloadDurationMs = Date.now() - downloadStart
+
+    console.log(
+      `${logPrefix} ✅ [Paso 1/3] Archivo descargado en ${downloadDurationMs}ms: ${buffer.byteLength} bytes (${(buffer.byteLength / 1024).toFixed(1)} KB)`
     )
   }
-
-  if (!response.ok) {
-    console.error(
-      `${logPrefix} ❌ [Paso 1/3] Respuesta HTTP no exitosa: ${response.status} ${response.statusText}`
-    )
-    throw new Error(
-      `No se pudo descargar el archivo (HTTP ${response.status} ${response.statusText}). Verifica que la URL sea accesible.`
-    )
-  }
-
-  const arrayBuffer = await response.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
-  const downloadDurationMs = Date.now() - downloadStart
-
-  console.log(
-    `${logPrefix} ✅ [Paso 1/3] Archivo descargado en ${downloadDurationMs}ms: ${buffer.byteLength} bytes (${(buffer.byteLength / 1024).toFixed(1)} KB)`
-  )
 
   // Si es un archivo de texto plano o markdown simple
   if (
@@ -148,7 +158,7 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
           'X-Goog-Upload-Offset': '0',
           'X-Goog-Upload-Command': 'upload, finalize'
         },
-        body: buffer,
+        body: new Uint8Array(buffer),
         signal: AbortSignal.timeout(60_000)
       })
 

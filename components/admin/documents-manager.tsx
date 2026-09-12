@@ -665,8 +665,11 @@ export function DocumentsManager({
             </div>
           </div>
 
-          {/* Zona de Carga Rápida con UploadThing y Shadcn Attachment */}
-          <DocumentUploadZone />
+          {/* Zona de Carga Rápida Dual (Archivos Locales & Enlace / URL) */}
+          <DocumentUploadZone
+            topicCategories={topicCategories}
+            onUploadSuccess={() => handleRefreshDocuments(false)}
+          />
 
           {/* Listado de Documentos */}
           <div className='rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4'>

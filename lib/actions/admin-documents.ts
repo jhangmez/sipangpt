@@ -547,3 +547,197 @@ export async function getDocumentPreviewDataAction(documentId: string) {
     chunks: formattedChunks,
   }
 }
+
+/**
+ * Ingesta un documento institucional descargándolo directamente desde una URL pública
+ * (ej. portal de transparencia USS o Sunedu), registrándolo en la base de conocimiento,
+ * preservando la URL original como publicUrl institucional y ejecutando el pipeline Sipán-STAIR.
+ */
+export async function ingestDocumentFromUrlAction(data: {
+  url: string
+  title?: string
+  categoryId?: string | null
+}) {
+  const logPrefix = `[ACTION_INGEST_URL] [${new Date().toISOString()}]`
+  console.log(`${logPrefix} 🚀 Iniciando ingesta desde URL: "${data.url}"`)
+
+  const user = await requireRole(Role.ADMIN)
+
+  const rawUrl = data.url?.trim()
+  if (!rawUrl) {
+    throw new Error('La URL del documento es requerida.')
+  }
+
+  let parsedUrl: URL
+  try {
+    parsedUrl = new URL(rawUrl)
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('El protocolo debe ser http: o https:')
+    }
+  } catch {
+    throw new Error('La URL ingresada no es válida. Debe incluir http:// o https://')
+  }
+
+  // 1. Descargar el binario del documento (timeout 45s)
+  console.log(`${logPrefix} 📥 Descargando archivo desde: ${rawUrl}`)
+  let downloadRes: Response
+  try {
+    downloadRes = await fetch(rawUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 SipánGPT/1.0',
+        Accept: 'application/pdf,text/plain,text/markdown,*/*',
+      },
+      signal: AbortSignal.timeout(45_000),
+    })
+  } catch (netErr: unknown) {
+    const isTimeout = netErr instanceof DOMException && netErr.name === 'TimeoutError'
+    console.error(`${logPrefix} ❌ Error de red descargando desde URL:`, netErr)
+    throw new Error(
+      isTimeout
+        ? 'Tiempo de espera agotado al descargar el archivo desde el enlace (>45s).'
+        : `Error de conexión al descargar desde el enlace: ${netErr instanceof Error ? netErr.message : String(netErr)}`
+    )
+  }
+
+  if (!downloadRes.ok) {
+    console.error(
+      `${logPrefix} ❌ HTTP no exitoso: ${downloadRes.status} ${downloadRes.statusText}`
+    )
+    throw new Error(
+      `No se pudo descargar el documento (HTTP ${downloadRes.status} ${downloadRes.statusText}). Verifica que el enlace sea público y accesible.`
+    )
+  }
+
+  const contentType = downloadRes.headers.get('content-type')?.toLowerCase() || ''
+  const contentDisposition = downloadRes.headers.get('content-disposition') || ''
+
+  // 2. Extraer nombre de archivo
+  let fileName = ''
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i)
+    if (match?.[1]) {
+      fileName = decodeURIComponent(match[1].trim())
+    }
+  }
+
+  if (!fileName) {
+    const pathname = parsedUrl.pathname
+    const lastSegment = pathname.split('/').filter(Boolean).pop()
+    if (lastSegment && lastSegment.includes('.')) {
+      fileName = decodeURIComponent(lastSegment)
+    }
+  }
+
+  // 3. Determinar MIME Type
+  let mimeType = 'application/pdf'
+  if (contentType.includes('text/plain') || fileName.toLowerCase().endsWith('.txt')) {
+    mimeType = 'text/plain'
+  } else if (
+    contentType.includes('text/markdown') ||
+    fileName.toLowerCase().endsWith('.md') ||
+    fileName.toLowerCase().endsWith('.markdown')
+  ) {
+    mimeType = 'text/markdown'
+  } else if (contentType.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
+    mimeType = 'application/pdf'
+  } else if (contentType.startsWith('text/')) {
+    mimeType = 'text/plain'
+  }
+
+  if (!fileName) {
+    const ext = mimeType === 'text/markdown' ? 'md' : mimeType === 'text/plain' ? 'txt' : 'pdf'
+    fileName = `documento-institucional-${Date.now()}.${ext}`
+  }
+
+  const arrayBuffer = await downloadRes.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const sizeBytes = buffer.byteLength
+
+  console.log(
+    `${logPrefix} 📦 Binario descargado: ${fileName}, ${sizeBytes} bytes (${(sizeBytes / 1024).toFixed(1)} KB), Mime: ${mimeType}`
+  )
+
+  if (sizeBytes === 0) {
+    throw new Error('El archivo descargado está vacío (0 bytes).')
+  }
+  if (sizeBytes > 32 * 1024 * 1024) {
+    throw new Error('El archivo excede el tamaño máximo permitido de 32 MB.')
+  }
+
+  // Deducción de título limpio
+  const derivedTitle = fileName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const finalTitle = data.title?.trim() || derivedTitle || 'Documento Institucional USS'
+
+  // 4. Intentar guardar una copia persistente en UploadThing mediante UTApi
+  let storageFileUrl = rawUrl
+  try {
+    const { UTApi } = await import('uploadthing/server')
+    const utapi = new UTApi()
+    const fileObj = new File([buffer], fileName, { type: mimeType })
+    const uploadRes = await utapi.uploadFiles([fileObj])
+    if (uploadRes?.[0]?.data?.ufsUrl) {
+      storageFileUrl = uploadRes[0].data.ufsUrl
+      console.log(`${logPrefix} ☁️ Copia persistente subida a UploadThing: ${storageFileUrl}`)
+    }
+  } catch (utErr) {
+    console.warn(`${logPrefix} ⚠️ No se pudo respaldar en UploadThing, usando URL origen:`, utErr)
+  }
+
+  // 5. Registrar el documento en Prisma
+  const doc = await prisma.document.create({
+    data: {
+      title: finalTitle,
+      fileName,
+      fileUrl: storageFileUrl,
+      publicUrl: rawUrl, // Enlace público institucional para citas y navegación de estudiantes
+      mimeType,
+      sizeBytes,
+      categoryId: data.categoryId && data.categoryId !== 'none' ? data.categoryId : null,
+      uploadedById: user.id,
+      status: 'PROCESSING',
+    },
+  })
+
+  console.log(`${logPrefix} 📄 Documento registrado en BD con ID: ${doc.id}`)
+
+  // 6. Transcribir e indexar automáticamente con la arquitectura Sipán-STAIR
+  try {
+    const markdownContent = await extractAndStructureToMarkdown(
+      storageFileUrl,
+      mimeType,
+      buffer
+    )
+    const result = await indexDocumentContent(doc.id, markdownContent)
+
+    revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
+    revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
+
+    console.log(
+      `${logPrefix} ✅ Documento indexado exitosamente (${result.chunkCount} chunks, ToC Tree registrado).`
+    )
+
+    return {
+      success: true,
+      documentId: doc.id,
+      title: doc.title,
+      chunkCount: result.chunkCount,
+      publicUrl: rawUrl,
+    }
+  } catch (indexErr) {
+    console.error(`${logPrefix} ❌ Error en pipeline de indexación para doc ID ${doc.id}:`, indexErr)
+    await prisma.document.update({
+      where: { id: doc.id },
+      data: { status: 'ERROR' },
+    })
+    revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
+    throw new Error(
+      `El documento se guardó pero falló la indexación: ${indexErr instanceof Error ? indexErr.message : String(indexErr)}`
+    )
+  }
+}
+
