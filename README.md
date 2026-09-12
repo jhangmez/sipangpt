@@ -40,28 +40,44 @@ La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation) 
 
 ---
 
-### 2. 🧠 Motor RAG Avanzado, Pre-RAG NLU & Pipeline de Indexación
-SipánGPT implementa una arquitectura RAG de dos capas con enriquecimiento semántico diseñada para erradicar falsos negativos:
+### 2. 🏛️ Arquitectura "Sipán-STAIR" (Structure-Aware Indexing and Retrieval) & Pipeline RAG
+Para la recuperación de normativas universitarias y reglamentos oficiales de la USS, SipánGPT implementa la metodología de **STAIR** (*Structure-Aware Indexing and Retrieval*), adaptada para superar las limitaciones de los sistemas RAG convencionales basados en ventanas ciegas de texto:
 
 ```mermaid
 graph TD
-    A["📄 1. Ingesta de Documento (PDF / TXT / MD en UploadThing)"] --> B["🤖 2. Transcripción OCR Estructurada (Gemini Flash Multimodal)"]
-    B --> C["✂️ 3. Chunking Jerárquico (Header Prepending + Metadatos de Negocio)"]
-    C --> D["📐 4. Vectorización de Embeddings (gemini-embedding-2)"]
-    D --> E["🗄️ 5. Indexación en Neon PostgreSQL (DocumentChunk - Estado INDEXED)"]
-    
-    Q["🧑‍🎓 Pregunta del Alumno"] --> F["🔍 6. Pre-RAG NLU (Heurística + Query Rewriter con Gemini)"]
-    F --> G["🛡️ 7. Búsqueda Híbrida Resiliente (Categoría + Fallback Chunks Recientes + Coseno)"]
-    G --> H["💬 8. Generación con Inyección de Fuentes, Año de Vigencia y Memorias de Usuario"]
+    subgraph INGESTA_DUAL ["📥 1. Ingesta Dual de Documentos"]
+        A1["📂 Archivo Local (Drag & Drop / Explorar)"] --> P["⚡ Pre-procesamiento de Archivo"]
+        A2["🔗 Enlace Web / URL (Portal USS / SUNEDU)"] --> P
+    end
+
+    P --> B["🤖 2. OCR Multimodal Gemini (65k Tokens + Continuación Multi-Pass)"]
+    B --> C["🌳 3. Extractor de Árbol ToC Canónico (Títulos > Capítulos > Artículos)"]
+    C --> D["✂️ 4. Chunking Estructural por Artículos Completos (sin cortes arbitrarios)"]
+    D --> E["📐 5. Generación de Embeddings Vectoriales (gemini-embedding-2)"]
+    E --> F["🗄️ 6. Indexación en Neon PostgreSQL (Document.tocTree + DocumentChunk)"]
+
+    subgraph CONSULTA ["🧑‍🎓 7. Recuperación en Dos Etapas (Two-Stage ToC Retrieval)"]
+        Q["❓ Consulta del Estudiante"] --> R1["🌳 Etapa 1: Poda de Árbol ToC en Memoria (routeQueryToToCBranches)"]
+        R1 --> R2["🎯 Etapa 2: Búsqueda Vectorial Semántica en Hojas (Leaf Retrieval)"]
+        R2 --> CIT["📌 8. Generación con Cita Jerárquica y Enlace Oficial (publicUrl)"]
+    end
 ```
 
-#### Fases de la Arquitectura RAG:
-1. **🔍 Pre-RAG NLU & Expansión de Consultas (`query-rewriter.ts`):** Normaliza expresiones coloquiales estudiantiles (*"jalarme", "vencimiento de mensualidad"*) a terminología formal de la USS mediante reglas heurísticas instantáneas (0ms) con fallback inteligente a Gemini Flash Lite.
-2. **🛡️ Búsqueda Híbrida Resiliente (`rag.ts`):** 
-   - **Capa 1 (Metadatos):** Filtrado por categoría temática sin forzar coincidencia textual estricta (`contains`), complementado con una red de seguridad (*safety net*) de fragmentos recientes para evitar falsos negativos por variantes de redacción.
-   - **Capa 2 (Similitud Coseno Vectorial):** Evaluación semántica mediante embeddings generados con `gemini-embedding-2` con umbral de corte configurable.
-3. **🏷️ Inyección de Encabezados Jerárquicos (*Header Prepending*):** Cada fragmento preserva metadatos institucionales (`documentTitle`, `categoria`, `capitulo`, `articulo`, `anio_vigencia`), permitiendo al modelo resolver discrepancias priorizando normativas actualizadas (ej. 2026 vs años previos).
-4. **📄 Soporte para Documentos Extensos (> 50 páginas):** OCR optimizado con `maxOutputTokens: 8192`, detección de advertencias `MAX_TOKENS` y recomendaciones en la zona de subida para segmentar compendios masivos por títulos o capítulos.
+#### Pilares Metodológicos de Sipán-STAIR:
+1. **🌳 Extracción y Persistencia del Árbol ToC (`Document.tocTree`):**
+   - Construye una representación jerárquica canónica de la norma (`Secciones > Capítulos > Artículos`).
+   - Almacenado como estructura `JSONB` en PostgreSQL para permitir podas de árbol en memoria ultrarrápidas (< 5ms).
+2. **✂️ Chunking Estructural por Artículos Completos (`splitTextIntoStructuralChunks`):**
+   - En lugar de cortar el texto arbitrariamente cada 650 caracteres a mitad de una frase o artículo, delimita el fragmento respetando las fronteras normativas del reglamento.
+   - Si un artículo es muy extenso (> 3,000 caracteres), se segmenta internamente preservando el contexto padre.
+   - **Inyección de Breadcrumbs Contextuales:** Cada fragmento incluye en su cabecera y metadatos la ruta jerárquica completa (ej: `[Reglamento General de Matrícula USS > Capítulo II > Artículo 17: Matrícula Extemporánea]`).
+3. **🎯 Recuperación en Dos Etapas (*Two-Stage ToC Retrieval*):**
+   - **Etapa 1 (Poda de Árbol / ToC Routing):** Evalúa la consulta del estudiante contra los títulos de capítulos y artículos del índice ToC en memoria.
+     - **Detección Flexible de Artículos:** Expresión regular con límite de palabra insensible a puntos (`/\b(?:art[íi]culo|art\.?)\s*([0-9]+)/i`) para interpretar tanto `"art 15"` como `"art. 15"` o `"artículo 15"`.
+     - **Filtro de Stop Words en Español:** Excluye preposiciones y artículos comunes (`del`, `los`, `con`, `para`) para evitar sesgos de puntuación.
+   - **Etapa 2 (Leaf Retrieval):** Búsqueda semántica con similitud de coseno (`gemini-embedding-2`) dirigida hacia las ramas podadas, combinada con red de seguridad (*safety net*) de fragmentos recientes.
+4. **📌 Citas Oficiales con Enlace Institucional:**
+   - La IA fundamenta cada respuesta citando expresamente la norma, capítulo y artículo correspondiente, acompañándolo con la insignia de ruta y el enlace directo (`publicUrl`) para abrir el reglamento oficial original.
 
 ---
 
@@ -86,9 +102,18 @@ El administrador regula la plataforma desde `/admin/settings`, aplicándose de f
 
 ---
 
-### 5. 📑 Ingesta, Visualización y Edición de Documentos (`/admin/documents`)
-- **Carga de Archivos Oficiales:** Integración con UploadThing para subir reglamentos en PDF, TXT y Markdown (hasta 16 MB).
-- **Visualizador Integrado de Documentos:** Modal para previsualizar el PDF oficial o texto completo directamente dentro de la plataforma sin salir de ella.
+### 5. 📑 Ingesta Dual, Visualización y Edición de Documentos (`/admin/documents`)
+- **Ingesta Dual de Documentos (Archivos Locales & Enlaces Web Oficiales):**
+  - **📂 Modo Archivos Locales:** Carga rápida multiarchivo mediante UploadThing y componentes `Attachment` de Shadcn UI (PDF, TXT y Markdown hasta 16 MB).
+  - **🔗 Modo Importar desde Enlace / URL:** Ingesta directa ingresando la URL pública de un reglamento institucional (ej. portal de transparencia de la USS, repositorio institucional o directivas SUNEDU).
+  - **Preservación de `publicUrl`:** El enlace proporcionado se guarda permanentemente como la URL pública oficial institucional del documento y se utiliza en las citas del chat para que los estudiantes contrasten la fuente original con un solo clic.
+  - **Copia de Respaldo Persistente:** Almacenamiento seguro del binario en la CDN vía `UTApi`.
+- **Motor OCR de Alta Capacidad para Documentos Extensos:**
+  - **65,536 Tokens de Salida:** Capacidad ampliada en 8x para transcribir íntegramente compendios densos de 80 a 120 páginas en una sola pasada.
+  - **Bucle de Continuación Multi-Turno Automática:** Ante compendios masivos (> 150 páginas), si la API reporta `finishReason: MAX_TOKENS`, el sistema envía solicitudes consecutivas de continuación hasta alcanzar `finishReason: STOP`, garantizando **0% de pérdida de artículos, tablas o caracteres**.
+- **Visualizador Avanzado con Pestaña de Índice ToC (STAIR):**
+  - Vista previa en modal y Sheet lateral interactivo (`DocumentPreviewSheet`).
+  - Pestaña **"Índice ToC (STAIR)"** que permite navegar el árbol jerárquico de Capítulos y Artículos y saltar directamente al fragmento semántico correspondiente en la pestaña de Chunks.
 - **Editor de Chunks RAG con Preservación de Metadatos:**
   - Buscador textual interno dentro de los fragmentos del documento.
   - Edición en línea de texto y metadatos jerárquicos preservando datos contextuales previos (`prevMeta`).
@@ -100,12 +125,15 @@ El administrador regula la plataforma desde `/admin/settings`, aplicándose de f
 ---
 
 ### 6. 🤖 Auditoría de Tokens, Costos y Monitor de Modelos (`/admin/models`)
-- **Modelos en la Nube y Locales:** Gemini 3.1 Flash-Lite, Gemini 2.5 Flash, Gemini 2.5 Pro, GPT-4o Mini, GPT-4o, Claude 3.5 Sonnet, Groq Llama 3.3 y Mac Mini M4 local vía Cloudflare Tunnel.
+- **Modelos en la Nube y Locales:** Gemini 3.1 Flash-Lite, Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 2.5 Pro, GPT-4o Mini, GPT-4o, Claude 3.5 Sonnet, Groq Llama 3.3 y Mac Mini M4 local vía Cloudflare Tunnel.
 - **🪙 Auditoría Completa de Consumo por Concepto (`TokenUsageLog`):**
   - `CHAT_COMPLETION`: Respuestas conversacionales del asistente.
   - `DOCUMENT_OCR_TRANSCRIPTION`: Transcripción multimodal de PDFs a Markdown.
   - `RAG_EMBEDDING`: Generación de vectores de consulta e ingesta documental masiva (`generateEmbeddingWithUsage`).
   - `QUERY_ANALYSIS`: Normalización de intenciones del estudiante con Gemini Flash Lite.
+- **Resiliencia Numérica y Relacional en Base de Datos:**
+  - Sanitización estricta contra valores `NaN` o indefinidos en conteos de tokens y cálculo de costos en USD.
+  - Inserciones relacionales seguras en Prisma Client 7 compatibles con conexiones opcionales de usuario y conversación.
 - **Tarifas y Precios Referenciales (USD / 1M Tokens):** Configuración de precios por millón de tokens de entrada (Prompt) y salida (Completion) para estimación de costos en tiempo real.
 - **Métricas y Vistas Acumuladas:** Contador de inferencias (`totalInferences`), tokens totales consumidos y costo estimado acumulado por cada modelo (`AIModelConfig`).
 - **Monitor de Salud en Tiempo Real:** Estados `ONLINE`, `DEGRADED`, `OFFLINE` y `DISABLED`.
@@ -217,7 +245,8 @@ sipangpt/
 ├── components/                         # Componentes de React
 │   ├── admin/                          # Componentes del módulo de administración
 │   │   ├── confirm-alert-dialog.tsx    # Modal reutilizable de confirmación destructiva
-│   │   ├── document-upload-zone.tsx    # Zona drag & drop con advertencias para > 50 págs
+│   │   ├── document-preview-sheet.tsx  # Sheet interactivo con visor de árbol ToC (STAIR) y chunks
+│   │   ├── document-upload-zone.tsx    # Ingesta dual: archivos locales y enlaces web oficiales
 │   │   ├── documents-manager.tsx       # Gestor RAG, editor de Chunks y visualizador PDF
 │   │   ├── models-manager.tsx          # Panel de estado y parámetros de modelos
 │   │   └── settings-manager.tsx        # Panel de políticas de grounding y Slider RAG
@@ -234,7 +263,7 @@ sipangpt/
 │   │   ├── memories-manager.tsx        # Gestor de memorias y preferencias personales
 │   │   └── user-profile-form.tsx       # Formulario de datos de usuario
 │   ├── shared/                         # Componentes compartidos y sidebars
-│   └── ui/                             # Componentes base Shadcn UI (Slider, Dialog, etc.)
+│   └── ui/                             # Componentes base Shadcn UI (Slider, Dialog, Attachment, etc.)
 │
 ├── constants/                          # Constantes y textos institucionales centralizados
 │   ├── admin.ts                        # Correos de administradores iniciales
@@ -246,17 +275,18 @@ sipangpt/
 │
 ├── lib/                                # Lógica de negocio y utilidades
 │   ├── actions/                        # Server Actions de Next.js
-│   │   ├── admin-documents.ts          # Acciones de documentos, chunks y metadatos
+│   │   ├── admin-documents.ts          # Ingesta URL, chunks, metadatos y reindexación
 │   │   ├── admin-models.ts             # Acciones de monitoreo de modelos
 │   │   ├── admin-settings.ts           # Acciones de políticas de búsqueda e IA
 │   │   └── user-settings.ts            # Acciones de memorias, perfil y consumo
 │   ├── ai/                             # Módulo de Inteligencia Artificial
-│   │   ├── document-processor.ts       # Chunking semántico, Header Prepending y OCR
-│   │   ├── embeddings.ts               # Embeddings con cálculo de tokens de uso
+│   │   ├── document-processor.ts       # Chunking STAIR, OCR multimodal 65k tokens y continuación
+│   │   ├── embeddings.ts               # Embeddings vectoriales con cómputo de tokens seguro
 │   │   ├── providers.ts                # Inicializador de proveedores AI SDK
 │   │   ├── query-rewriter.ts           # Pre-RAG NLU, expansión y detección de intenciones
-│   │   ├── rag.ts                      # Búsqueda semántica híbrida resiliente
+│   │   ├── rag.ts                      # Two-Stage ToC Retrieval y búsqueda híbrida resiliente
 │   │   ├── resolution-detector.ts      # Detección analítica del estado de resolución
+│   │   ├── toc-extractor.ts            # Extracción canónica de ToC Tree y segmentación por artículos
 │   │   └── token-tracker.ts            # Auditoría y estimación de costos en USD
 │   ├── prisma.ts                       # Instancia singleton de PrismaClient con Adapter PG
 │   ├── session.ts                      # Validación de sesión y roles (`requireRole`)
@@ -270,6 +300,10 @@ sipangpt/
 │
 ├── public/                             # Recursos estáticos (avatares, fuentes, imágenes)
 ├── types/                              # Definiciones de tipos TypeScript
+│   ├── admin.ts                        # Tipos de administración y documentos
+│   ├── chat.ts                         # Tipos de mensajería y fuentes
+│   ├── stair.ts                        # Tipos de la arquitectura Sipán-STAIR (ToC Tree)
+│   └── index.ts                        # Exportaciones consolidadas
 ├── AGENTS.md                           # Protocolos de arquitectura, base de datos y UI
 ├── package.json                        # Dependencias y scripts del proyecto
 └── tsconfig.json                       # Configuración de TypeScript
