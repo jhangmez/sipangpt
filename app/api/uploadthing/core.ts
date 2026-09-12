@@ -7,9 +7,9 @@ const f = createUploadthing({
   errorFormatter: (err) => {
     return {
       message: err.message,
-      cause: err.cause ? String(err.cause) : null,
+      cause: err.cause ? String(err.cause) : null
     }
-  },
+  }
 })
 
 export const ourFileRouter = {
@@ -17,8 +17,8 @@ export const ourFileRouter = {
   imageUploader: f({
     image: {
       maxFileSize: '4MB',
-      maxFileCount: 1,
-    },
+      maxFileCount: 1
+    }
   })
     .middleware(async () => {
       const session = await auth()
@@ -36,21 +36,23 @@ export const ourFileRouter = {
   documentUploader: f({
     pdf: {
       maxFileSize: '16MB',
-      maxFileCount: 5,
+      maxFileCount: 5
     },
     text: {
       maxFileSize: '4MB',
-      maxFileCount: 5,
+      maxFileCount: 5
     },
     blob: {
       maxFileSize: '4MB',
-      maxFileCount: 5,
-    },
+      maxFileCount: 5
+    }
   })
     .middleware(async () => {
       const session = await auth()
       if (!session?.user?.id) {
-        throw new UploadThingError('Debes iniciar sesión para subir documentos.')
+        throw new UploadThingError(
+          'Debes iniciar sesión para subir documentos.'
+        )
       }
       return { userId: session.user.id }
     })
@@ -65,32 +67,42 @@ export const ourFileRouter = {
           mimeType: file.type || 'application/pdf',
           sizeBytes: file.size,
           uploadedById: metadata.userId,
-          status: 'PROCESSING',
-        },
+          status: 'PROCESSING'
+        }
       })
-      console.log(`[UPLOADTHING] 📄 Documento registrado en BD con ID: ${doc.id}`)
+      console.log(
+        `[UPLOADTHING] 📄 Documento registrado en BD con ID: ${doc.id}`
+      )
 
       // 2. Transcribir e indexar automáticamente de una sola vez con Gemini 3.1 Flash-Lite
       try {
-        const { extractAndStructureToMarkdown, indexDocumentContent } = await import(
-          '@/lib/ai/document-processor'
-        )
+        const { extractAndStructureToMarkdown, indexDocumentContent } =
+          await import('@/lib/ai/document-processor')
         const markdownContent = await extractAndStructureToMarkdown(
           file.ufsUrl,
           file.type || 'application/pdf'
         )
         const result = await indexDocumentContent(doc.id, markdownContent)
-        console.log(`[UPLOADTHING] ✅ Auto-indexación completada para "${file.name}" (${result.chunkCount} chunks)`)
+        console.log(
+          `[UPLOADTHING] ✅ Auto-indexación completada para "${file.name}" (${result.chunkCount} chunks)`
+        )
       } catch (autoErr) {
-        console.error(`[UPLOADTHING] ❌ Error en auto-indexación para doc ID ${doc.id}:`, autoErr)
+        console.error(
+          `[UPLOADTHING] ❌ Error en auto-indexación para doc ID ${doc.id}:`,
+          autoErr
+        )
         await prisma.document.update({
           where: { id: doc.id },
-          data: { status: 'ERROR' },
+          data: { status: 'ERROR' }
         })
       }
 
-      return { documentId: doc.id, uploadedBy: metadata.userId, url: file.ufsUrl }
-    }),
+      return {
+        documentId: doc.id,
+        uploadedBy: metadata.userId,
+        url: file.ufsUrl
+      }
+    })
 } satisfies FileRouter
 
 export type OurFileRouter = typeof ourFileRouter

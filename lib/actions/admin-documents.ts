@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { CACHE_PATHS } from '@/constants'
 import {
   indexDocumentContent,
-  extractAndStructureToMarkdown,
+  extractAndStructureToMarkdown
 } from '@/lib/ai/document-processor'
 import { generateEmbedding } from '@/lib/ai/embeddings'
 import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
@@ -21,36 +21,39 @@ export async function getAdminDocuments() {
           select: {
             id: true,
             name: true,
-            code: true,
-          },
+            code: true
+          }
         },
         uploadedBy: {
           select: {
             name: true,
-            email: true,
-          },
+            email: true
+          }
         },
         _count: {
           select: {
             chunks: true,
-            citations: true,
-          },
-        },
+            citations: true
+          }
+        }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' }
     }),
     prisma.topicCategory.findMany({
       orderBy: { order: 'asc' },
       include: {
         subcategories: true,
         _count: {
-          select: { documents: true, messages: true },
-        },
-      },
-    }),
+          select: { documents: true, messages: true }
+        }
+      }
+    })
   ])
 
-  const totalBytes = documents.reduce((acc, doc) => acc + (doc.sizeBytes || 0), 0)
+  const totalBytes = documents.reduce(
+    (acc, doc) => acc + (doc.sizeBytes || 0),
+    0
+  )
   const indexedCount = documents.filter((d) => d.status === 'INDEXED').length
 
   return {
@@ -59,8 +62,8 @@ export async function getAdminDocuments() {
     stats: {
       total: documents.length,
       indexed: indexedCount,
-      totalBytes,
-    },
+      totalBytes
+    }
   }
 }
 
@@ -77,7 +80,9 @@ export async function createDocumentDirectAction(data: {
     throw new Error('El título del documento es requerido.')
   }
   if (!data.content.trim()) {
-    throw new Error('Debe proporcionar el contenido del documento o reglamento.')
+    throw new Error(
+      'Debe proporcionar el contenido del documento o reglamento.'
+    )
   }
 
   const cleanContent = stripBase64Images(sanitizeMojibake(data.content.trim()))
@@ -85,15 +90,17 @@ export async function createDocumentDirectAction(data: {
   const doc = await prisma.document.create({
     data: {
       title: data.title.trim(),
-      fileName: data.fileName || `${data.title.trim().toLowerCase().replace(/\s+/g, '-')}.txt`,
+      fileName:
+        data.fileName ||
+        `${data.title.trim().toLowerCase().replace(/\s+/g, '-')}.txt`,
       publicUrl: data.publicUrl?.trim() || null,
       fileUrl: data.publicUrl?.trim() || null,
       mimeType: 'text/plain',
       sizeBytes: Buffer.byteLength(cleanContent, 'utf8'),
       categoryId: data.categoryId || null,
       uploadedById: user.id,
-      status: 'PROCESSING',
-    },
+      status: 'PROCESSING'
+    }
   })
 
   // Indexar chunks inmediatamente
@@ -111,14 +118,14 @@ export async function getDocumentChunksAction(documentId: string) {
     orderBy: { chunkIndex: 'asc' },
     include: {
       _count: {
-        select: { citations: true },
-      },
-    },
+        select: { citations: true }
+      }
+    }
   })
 
   const doc = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { id: true, title: true, publicUrl: true, status: true },
+    select: { id: true, title: true, publicUrl: true, status: true }
   })
 
   return { document: doc, chunks }
@@ -142,7 +149,7 @@ export async function updateDocumentChunkAction(
 
   const existingChunk = await prisma.documentChunk.findUnique({
     where: { id: chunkId },
-    select: { metadata: true },
+    select: { metadata: true }
   })
   const prevMeta = (existingChunk?.metadata as Record<string, unknown>) || {}
 
@@ -155,9 +162,9 @@ export async function updateDocumentChunkAction(
         ...prevMeta,
         embedding: embedding || prevMeta.embedding || null,
         estado: 'ACTIVO',
-        updatedAt: new Date().toISOString(),
-      },
-    },
+        updatedAt: new Date().toISOString()
+      }
+    }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
@@ -178,17 +185,17 @@ export async function addDocumentChunkAction(
   const [doc, lastChunk, sampleChunk] = await Promise.all([
     prisma.document.findUnique({
       where: { id: documentId },
-      include: { category: true },
+      include: { category: true }
     }),
     prisma.documentChunk.findFirst({
       where: { documentId },
       orderBy: { chunkIndex: 'desc' },
-      select: { chunkIndex: true },
+      select: { chunkIndex: true }
     }),
     prisma.documentChunk.findFirst({
       where: { documentId },
-      select: { metadata: true },
-    }),
+      select: { metadata: true }
+    })
   ])
 
   const newIndex = (lastChunk?.chunkIndex ?? -1) + 1
@@ -211,9 +218,9 @@ export async function addDocumentChunkAction(
         anio_vigencia: sampleMeta.anio_vigencia || 2026,
         embedding,
         estado: 'ACTIVO',
-        createdAt: new Date().toISOString(),
-      },
-    },
+        createdAt: new Date().toISOString()
+      }
+    }
   })
 
   // Incrementar chunkCount en Document
@@ -221,8 +228,8 @@ export async function addDocumentChunkAction(
     where: { id: documentId },
     data: {
       chunkCount: { increment: 1 },
-      status: 'INDEXED',
-    },
+      status: 'INDEXED'
+    }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
@@ -233,15 +240,15 @@ export async function deleteDocumentChunkAction(chunkId: string) {
   await requireRole(Role.ADMIN)
 
   const chunk = await prisma.documentChunk.delete({
-    where: { id: chunkId },
+    where: { id: chunkId }
   })
 
   if (chunk) {
     await prisma.document.update({
       where: { id: chunk.documentId },
       data: {
-        chunkCount: { decrement: 1 },
-      },
+        chunkCount: { decrement: 1 }
+      }
     })
   }
 
@@ -249,7 +256,10 @@ export async function deleteDocumentChunkAction(chunkId: string) {
   return { success: true }
 }
 
-export async function reindexDocumentAction(documentId: string, content: string) {
+export async function reindexDocumentAction(
+  documentId: string,
+  content: string
+) {
   await requireRole(Role.ADMIN)
 
   if (!content.trim()) {
@@ -281,35 +291,41 @@ export async function updateDocumentDetailsAction(
       title: data.title.trim(),
       publicUrl: data.publicUrl?.trim() || null,
       fileUrl: data.publicUrl?.trim() || null,
-      categoryId: data.categoryId || null,
+      categoryId: data.categoryId || null
     },
     include: {
-      category: true,
-    },
+      category: true
+    }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
 }
 
-export async function toggleDocumentStatus(documentId: string, status: DocumentStatus) {
+export async function toggleDocumentStatus(
+  documentId: string,
+  status: DocumentStatus
+) {
   await requireRole(Role.ADMIN)
 
   const updated = await prisma.document.update({
     where: { id: documentId },
-    data: { status },
+    data: { status }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
 }
 
-export async function updateDocumentCategory(documentId: string, categoryId: string | null) {
+export async function updateDocumentCategory(
+  documentId: string,
+  categoryId: string | null
+) {
   await requireRole(Role.ADMIN)
 
   const updated = await prisma.document.update({
     where: { id: documentId },
-    data: { categoryId: categoryId || null },
+    data: { categoryId: categoryId || null }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
@@ -320,7 +336,7 @@ export async function deleteDocumentAction(documentId: string) {
   await requireRole(Role.ADMIN)
 
   await prisma.document.delete({
-    where: { id: documentId },
+    where: { id: documentId }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
@@ -332,7 +348,7 @@ export async function markDocumentAsIndexed(documentId: string) {
 
   const updated = await prisma.document.update({
     where: { id: documentId },
-    data: { status: 'INDEXED' },
+    data: { status: 'INDEXED' }
   })
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
@@ -345,31 +361,39 @@ export async function markDocumentAsIndexed(documentId: string) {
  */
 export async function processAndIndexDocumentAction(documentId: string) {
   const logPrefix = `[ACTION_PROCESS_INDEX] [${new Date().toISOString()}]`
-  console.log(`${logPrefix} 📥 Invocando Server Action para Document ID: "${documentId}"`)
+  console.log(
+    `${logPrefix} 📥 Invocando Server Action para Document ID: "${documentId}"`
+  )
 
   await requireRole(Role.ADMIN)
 
   const doc = await prisma.document.findUnique({
-    where: { id: documentId },
+    where: { id: documentId }
   })
 
   if (!doc) {
-    console.error(`${logPrefix} ❌ Documento con ID "${documentId}" no encontrado en base de datos.`)
+    console.error(
+      `${logPrefix} ❌ Documento con ID "${documentId}" no encontrado en base de datos.`
+    )
     throw new Error('Documento no encontrado.')
   }
 
   const fileUrl = doc.fileUrl || doc.publicUrl
   if (!fileUrl) {
-    console.error(`${logPrefix} ❌ El documento no dispone de una URL válida (fileUrl/publicUrl vacíos).`)
+    console.error(
+      `${logPrefix} ❌ El documento no dispone de una URL válida (fileUrl/publicUrl vacíos).`
+    )
     throw new Error('El documento no dispone de una URL válida para procesar.')
   }
 
-  console.log(`${logPrefix} 📄 Documento: "${doc.title || doc.fileName}", Tamaño: ${doc.sizeBytes} bytes, Mime: ${doc.mimeType}`)
+  console.log(
+    `${logPrefix} 📄 Documento: "${doc.title || doc.fileName}", Tamaño: ${doc.sizeBytes} bytes, Mime: ${doc.mimeType}`
+  )
 
   // 1. Marcar temporalmente como PROCESSING
   await prisma.document.update({
     where: { id: documentId },
-    data: { status: 'PROCESSING' },
+    data: { status: 'PROCESSING' }
   })
 
   try {
@@ -381,26 +405,33 @@ export async function processAndIndexDocumentAction(documentId: string) {
     )
 
     // 3. Segmentar semánticamente en chunks con solapamiento e indexar en Neon
-    console.log(`${logPrefix} ⏳ Llamando a indexDocumentContent con ${markdownContent.length} caracteres...`)
+    console.log(
+      `${logPrefix} ⏳ Llamando a indexDocumentContent con ${markdownContent.length} caracteres...`
+    )
     const result = await indexDocumentContent(documentId, markdownContent)
 
     revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
     revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
 
-    console.log(`${logPrefix} 🎉 Server Action completado con éxito: ${result.chunkCount} chunks creados.`)
+    console.log(
+      `${logPrefix} 🎉 Server Action completado con éxito: ${result.chunkCount} chunks creados.`
+    )
     return {
       success: true,
       chunkCount: result.chunkCount,
-      markdownPreview: markdownContent.substring(0, 500),
+      markdownPreview: markdownContent.substring(0, 500)
     }
   } catch (err: unknown) {
     console.error(`${logPrefix} 💥 Error fatal en Server Action:`, err)
     // Marcar como ERROR si falla
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'ERROR' },
+      data: { status: 'ERROR' }
     })
-    const msg = err instanceof Error ? err.message : 'Error durante el procesamiento e indexación del documento.'
+    const msg =
+      err instanceof Error
+        ? err.message
+        : 'Error durante el procesamiento e indexación del documento.'
     throw new Error(msg)
   }
 }
@@ -410,7 +441,9 @@ export async function processAndIndexDocumentAction(documentId: string) {
  */
 export async function getDocumentPreviewDataAction(documentId: string) {
   const logPrefix = `[ACTION_PREVIEW_DOC] [${new Date().toISOString()}]`
-  console.log(`${logPrefix} 🔍 Solicitando vista previa de documento: "${documentId}"`)
+  console.log(
+    `${logPrefix} 🔍 Solicitando vista previa de documento: "${documentId}"`
+  )
 
   await requireRole(Role.ADMIN)
 
@@ -421,14 +454,14 @@ export async function getDocumentPreviewDataAction(documentId: string) {
         select: {
           id: true,
           name: true,
-          code: true,
-        },
+          code: true
+        }
       },
       uploadedBy: {
         select: {
           name: true,
-          email: true,
-        },
+          email: true
+        }
       },
       chunks: {
         orderBy: { chunkIndex: 'asc' },
@@ -437,10 +470,10 @@ export async function getDocumentPreviewDataAction(documentId: string) {
           chunkIndex: true,
           content: true,
           pageNumber: true,
-          metadata: true,
-        },
-      },
-    },
+          metadata: true
+        }
+      }
+    }
   })
 
   if (!doc) {
@@ -453,15 +486,18 @@ export async function getDocumentPreviewDataAction(documentId: string) {
     doc.fileName.toLowerCase().endsWith('.pdf')
 
   let markdownContent = ''
-  let sourceOrigin: 'file_download' | 'reconstructed_chunks' = 'reconstructed_chunks'
+  let sourceOrigin: 'file_download' | 'reconstructed_chunks' =
+    'reconstructed_chunks'
 
   // 1. Si no es PDF y posee URL pública o de archivo, intentar descargar el contenido original
   const directUrl = doc.fileUrl || doc.publicUrl
   if (!isPdf && directUrl) {
     try {
-      console.log(`${logPrefix} 🌐 Descargando contenido directo desde URL: ${directUrl}`)
+      console.log(
+        `${logPrefix} 🌐 Descargando contenido directo desde URL: ${directUrl}`
+      )
       const res = await fetch(directUrl, {
-        signal: AbortSignal.timeout(12_000),
+        signal: AbortSignal.timeout(12_000)
       })
       if (res.ok) {
         const arrayBuf = await res.arrayBuffer()
@@ -506,15 +542,12 @@ export async function getDocumentPreviewDataAction(documentId: string) {
       hasEmbedding,
       breadcrumb: (meta?.breadcrumb as string) || null,
       articulo: (meta?.articulo as string) || null,
-      capitulo: (meta?.capitulo as string) || null,
+      capitulo: (meta?.capitulo as string) || null
     }
   })
 
   // Estadísticas básicas
-  const wordCount = markdownContent
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length
+  const wordCount = markdownContent.trim().split(/\s+/).filter(Boolean).length
   const charCount = markdownContent.length
   const estimatedReadTimeMinutes = Math.max(1, Math.ceil(wordCount / 200))
 
@@ -534,7 +567,7 @@ export async function getDocumentPreviewDataAction(documentId: string) {
       uploadedBy: doc.uploadedBy,
       tocTree: doc.tocTree,
       createdAt: doc.createdAt.toISOString(),
-      updatedAt: doc.updatedAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString()
     },
     isPdf,
     markdownContent,
@@ -542,9 +575,9 @@ export async function getDocumentPreviewDataAction(documentId: string) {
     stats: {
       wordCount,
       charCount,
-      estimatedReadTimeMinutes,
+      estimatedReadTimeMinutes
     },
-    chunks: formattedChunks,
+    chunks: formattedChunks
   }
 }
 
@@ -575,7 +608,9 @@ export async function ingestDocumentFromUrlAction(data: {
       throw new Error('El protocolo debe ser http: o https:')
     }
   } catch {
-    throw new Error('La URL ingresada no es válida. Debe incluir http:// o https://')
+    throw new Error(
+      'La URL ingresada no es válida. Debe incluir http:// o https://'
+    )
   }
 
   // 1. Descargar el binario del documento (timeout 45s)
@@ -586,12 +621,13 @@ export async function ingestDocumentFromUrlAction(data: {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 SipánGPT/1.0',
-        Accept: 'application/pdf,text/plain,text/markdown,*/*',
+        Accept: 'application/pdf,text/plain,text/markdown,*/*'
       },
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(45_000)
     })
   } catch (netErr: unknown) {
-    const isTimeout = netErr instanceof DOMException && netErr.name === 'TimeoutError'
+    const isTimeout =
+      netErr instanceof DOMException && netErr.name === 'TimeoutError'
     console.error(`${logPrefix} ❌ Error de red descargando desde URL:`, netErr)
     throw new Error(
       isTimeout
@@ -609,13 +645,17 @@ export async function ingestDocumentFromUrlAction(data: {
     )
   }
 
-  const contentType = downloadRes.headers.get('content-type')?.toLowerCase() || ''
-  const contentDisposition = downloadRes.headers.get('content-disposition') || ''
+  const contentType =
+    downloadRes.headers.get('content-type')?.toLowerCase() || ''
+  const contentDisposition =
+    downloadRes.headers.get('content-disposition') || ''
 
   // 2. Extraer nombre de archivo
   let fileName = ''
   if (contentDisposition) {
-    const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i)
+    const match = contentDisposition.match(
+      /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i
+    )
     if (match?.[1]) {
       fileName = decodeURIComponent(match[1].trim())
     }
@@ -631,7 +671,10 @@ export async function ingestDocumentFromUrlAction(data: {
 
   // 3. Determinar MIME Type
   let mimeType = 'application/pdf'
-  if (contentType.includes('text/plain') || fileName.toLowerCase().endsWith('.txt')) {
+  if (
+    contentType.includes('text/plain') ||
+    fileName.toLowerCase().endsWith('.txt')
+  ) {
     mimeType = 'text/plain'
   } else if (
     contentType.includes('text/markdown') ||
@@ -639,14 +682,22 @@ export async function ingestDocumentFromUrlAction(data: {
     fileName.toLowerCase().endsWith('.markdown')
   ) {
     mimeType = 'text/markdown'
-  } else if (contentType.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
+  } else if (
+    contentType.includes('application/pdf') ||
+    fileName.toLowerCase().endsWith('.pdf')
+  ) {
     mimeType = 'application/pdf'
   } else if (contentType.startsWith('text/')) {
     mimeType = 'text/plain'
   }
 
   if (!fileName) {
-    const ext = mimeType === 'text/markdown' ? 'md' : mimeType === 'text/plain' ? 'txt' : 'pdf'
+    const ext =
+      mimeType === 'text/markdown'
+        ? 'md'
+        : mimeType === 'text/plain'
+          ? 'txt'
+          : 'pdf'
     fileName = `documento-institucional-${Date.now()}.${ext}`
   }
 
@@ -671,7 +722,8 @@ export async function ingestDocumentFromUrlAction(data: {
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  const finalTitle = data.title?.trim() || derivedTitle || 'Documento Institucional USS'
+  const finalTitle =
+    data.title?.trim() || derivedTitle || 'Documento Institucional USS'
 
   // 4. Intentar guardar una copia persistente en UploadThing mediante UTApi
   let storageFileUrl = rawUrl
@@ -682,10 +734,15 @@ export async function ingestDocumentFromUrlAction(data: {
     const uploadRes = await utapi.uploadFiles([fileObj])
     if (uploadRes?.[0]?.data?.ufsUrl) {
       storageFileUrl = uploadRes[0].data.ufsUrl
-      console.log(`${logPrefix} ☁️ Copia persistente subida a UploadThing: ${storageFileUrl}`)
+      console.log(
+        `${logPrefix} ☁️ Copia persistente subida a UploadThing: ${storageFileUrl}`
+      )
     }
   } catch (utErr) {
-    console.warn(`${logPrefix} ⚠️ No se pudo respaldar en UploadThing, usando URL origen:`, utErr)
+    console.warn(
+      `${logPrefix} ⚠️ No se pudo respaldar en UploadThing, usando URL origen:`,
+      utErr
+    )
   }
 
   // 5. Registrar el documento en Prisma
@@ -697,10 +754,11 @@ export async function ingestDocumentFromUrlAction(data: {
       publicUrl: rawUrl, // Enlace público institucional para citas y navegación de estudiantes
       mimeType,
       sizeBytes,
-      categoryId: data.categoryId && data.categoryId !== 'none' ? data.categoryId : null,
+      categoryId:
+        data.categoryId && data.categoryId !== 'none' ? data.categoryId : null,
       uploadedById: user.id,
-      status: 'PROCESSING',
-    },
+      status: 'PROCESSING'
+    }
   })
 
   console.log(`${logPrefix} 📄 Documento registrado en BD con ID: ${doc.id}`)
@@ -726,13 +784,16 @@ export async function ingestDocumentFromUrlAction(data: {
       documentId: doc.id,
       title: doc.title,
       chunkCount: result.chunkCount,
-      publicUrl: rawUrl,
+      publicUrl: rawUrl
     }
   } catch (indexErr) {
-    console.error(`${logPrefix} ❌ Error en pipeline de indexación para doc ID ${doc.id}:`, indexErr)
+    console.error(
+      `${logPrefix} ❌ Error en pipeline de indexación para doc ID ${doc.id}:`,
+      indexErr
+    )
     await prisma.document.update({
       where: { id: doc.id },
-      data: { status: 'ERROR' },
+      data: { status: 'ERROR' }
     })
     revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
     throw new Error(
@@ -740,4 +801,3 @@ export async function ingestDocumentFromUrlAction(data: {
     )
   }
 }
-
