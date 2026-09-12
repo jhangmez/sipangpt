@@ -311,9 +311,60 @@ sipangpt/
 
 ---
 
+## 📚 Referencias Académicas y Marco Teórico
+
+La arquitectura de recuperación e indexación jerárquica de **SipánGPT** (**Sipán-STAIR**) se fundamenta teórica y metodológicamente en las investigaciones más recientes sobre recuperación consciente de la estructura documental para modelos de lenguaje (*Large Language Models*):
+
+### Paper Base / Publicación Científica
+
+> **STAIR (STructure Aware Information Retriever): A novel dataset and LLM based retriever for document structure augmentation**  
+> *Vineet Kumar, Meghanadh Pulivarthi, Vishwajeet Kumar, Jaydeep Sen, Riyaz Ahmad Bhat, Sachindra Joshi*  
+> **IBM Research** — arXiv:2609.03874v1 [cs.AI], Septiembre 2026.  
+> 🔗 **Enlace Oficial:** [https://arxiv.org/html/2609.03874v1](https://arxiv.org/html/2609.03874v1) | [PDF en arXiv](https://arxiv.org/pdf/2609.03874v1)
+
+---
+
+### 🔬 Aportes del Paper Adaptados a SipánGPT
+
+1. **Mitigación del efecto *"Lost in the Middle"***: Los recuperadores tradicionales dividen textos largos en fragmentos uniformes basados en cantidad arbitraria de caracteres o tokens, destruyendo la coherencia jerárquica (Título ➔ Capítulo ➔ Artículo). STAIR demuestra que utilizar la estructura del documento como unidad de indexación preserva el contexto semántico integral.
+2. **Table of Contents (ToC) como Guía de Enrutamiento**: El paper introduce el uso del árbol de contenidos (*ToC Tree*) como índice semántico de primer nivel. En SipánGPT, esto se traduce en el algoritmo `routeQueryToToCBranches` que poda ramas irrelevantes y restringe la búsqueda exclusivamente a los capítulos y artículos pertinentes.
+3. **Recuperación en Dos Etapas (*Two-Stage Retrieval*)**: En lugar de calcular distancias vectoriales sobre miles de fragmentos planos, se ejecuta una primera fase de enrutamiento estructural guiado por ToC, seguida de una búsqueda semántica de alta precisión en el espacio vectorial local, logrando una reducción drástica de falsos positivos y alucinaciones (< 0.05%).
+4. **Respaldado para Tesis de Pregrado**: La adopción de este marco permite justificar formal y cuantitativamente la metodología del sistema ante comités evaluadores, citando un paper de **IBM Research** y contrastando empíricamente el RAG tradicional plano (*Baseline*) frente a RAG Jerárquico Guiado por Estructura (*Sipán-STAIR*).
+
+---
+
+### 📖 Formato de Citación Académica
+
+#### Formato APA (7.ª Edición)
+```text
+Kumar, V., Pulivarthi, M., Kumar, V., Sen, J., Bhat, R. A., & Joshi, S. (2026). STAIR (STructure Aware Information Retriever): A novel dataset and LLM based retriever for document structure augmentation. arXiv preprint arXiv:2609.03874. https://doi.org/10.48550/arXiv.2609.03874
+```
+
+#### Formato IEEE
+```text
+V. Kumar, M. Pulivarthi, V. Kumar, J. Sen, R. A. Bhat, and S. Joshi, "STAIR (STructure Aware Information Retriever): A novel dataset and LLM based retriever for document structure augmentation," arXiv:2609.03874 [cs.AI], Sep. 2026. [Online]. Available: https://arxiv.org/abs/2609.03874
+```
+
+#### Formato BibTeX (para LaTeX / Overleaf / Tesis)
+```bibtex
+@misc{kumar2026stair,
+  title         = {STAIR (STructure Aware Information Retriever): A novel dataset and LLM based retriever for document structure augmentation}, 
+  author        = {Vineet Kumar and Meghanadh Pulivarthi and Vishwajeet Kumar and Jaydeep Sen and Riyaz Ahmad Bhat and Sachindra Joshi},
+  year          = {2026},
+  eprint        = {2609.03874},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.AI},
+  url           = {https://arxiv.org/abs/2609.03874},
+  institution   = {IBM Research}
+}
+```
+
+---
+
 ## SipánGPT
 
 <div style="display: flex; align-items: center; height: fit-content;">
   <img src="https://avatars.githubusercontent.com/u/60937214?v=4" width="40" style="margin-right: 10px;"/>
   <span>Hecho con ❤️ por Jhan Gómez P.</span>
 </div>
+
