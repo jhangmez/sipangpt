@@ -488,41 +488,40 @@ export async function indexDocumentContent(
     )
   }
 
-  // 3. Pre-calcular vector embeddings para todos los chunks de una sola vez
+  // 3. Pre-calcular vector embeddings para todos los chunks con sublotes seguros y reintentos adaptativos
   console.log(
     `${logPrefix} 📐 Calculando embeddings vectoriales persistentes (${structuralChunks.length} fragmentos)...`
   )
-  let chunkEmbeddings: number[][] = []
-  try {
-    const chunkTexts = structuralChunks.map((c) => c.content)
-    const embStart = Date.now()
-    const { embeddings, tokens: embTokens } = await generateEmbeddingsWithUsage(chunkTexts)
-    chunkEmbeddings = embeddings
-    const embDuration = Date.now() - embStart
-    console.log(
-      `${logPrefix} ✅ Embeddings generados exitosamente (${chunkEmbeddings.length} vectores persistidos, ${embTokens} tokens).`
-    )
+  const chunkTexts = structuralChunks.map((c) => c.content)
+  const embStart = Date.now()
+  const { embeddings: chunkEmbeddings, tokens: embTokens } =
+    await generateEmbeddingsWithUsage(chunkTexts)
+  const embDuration = Date.now() - embStart
 
-    // Registrar consumo de tokens de embeddings durante la ingesta documental
-    await recordTokenUsageLog({
-      modelCode: DEFAULT_EMBEDDING_MODEL,
-      provider: ModelProvider.GEMINI,
-      concept: TokenUsageConcept.RAG_EMBEDDING,
-      promptTokens: embTokens,
-      completionTokens: 0,
-      latencyMs: embDuration,
-      metadata: {
-        documentId,
-        totalChunks: structuralChunks.length,
-        action: 'DOCUMENT_INGESTION_EMBEDDINGS_STAIR',
-      },
-    })
-  } catch (embErr) {
-    console.warn(
-      `${logPrefix} ⚠️ Error generando embeddings en lote durante ingesta, se guardarán sin vector inicial:`,
-      embErr
+  if (chunkEmbeddings.length !== structuralChunks.length) {
+    throw new Error(
+      `Discrepancia crítica de embeddings: se esperaban ${structuralChunks.length} vectores y se obtuvieron ${chunkEmbeddings.length}.`
     )
   }
+
+  console.log(
+    `${logPrefix} ✅ Embeddings generados exitosamente (${chunkEmbeddings.length} vectores persistidos, ${embTokens} tokens).`
+  )
+
+  // Registrar consumo de tokens de embeddings durante la ingesta documental
+  await recordTokenUsageLog({
+    modelCode: DEFAULT_EMBEDDING_MODEL,
+    provider: ModelProvider.GEMINI,
+    concept: TokenUsageConcept.RAG_EMBEDDING,
+    promptTokens: embTokens,
+    completionTokens: 0,
+    latencyMs: embDuration,
+    metadata: {
+      documentId,
+      totalChunks: structuralChunks.length,
+      action: 'DOCUMENT_INGESTION_EMBEDDINGS_STAIR',
+    },
+  })
 
   // 4. Eliminar fragmentos previos del documento para re-indexación limpia
   console.log(
