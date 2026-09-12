@@ -29,6 +29,12 @@ export interface SearchKnowledgeBaseContext {
   conversationId?: string | null
 }
 
+const STOP_WORDS = new Set([
+  'que', 'del', 'los', 'las', 'por', 'para', 'con', 'una', 'uno', 'unos', 'unas',
+  'sus', 'este', 'esta', 'estos', 'estas', 'como', 'sobre', 'entre', 'hacia',
+  'desde', 'hasta', 'cuando', 'donde', 'cual', 'quien', 'mas', 'pero', 'sin'
+])
+
 /**
  * ETAPA 1 STAIR: Enrutamiento por Índice (ToC Routing / Poda de Árbol).
  * Evalúa la consulta del estudiante contra los árboles ToC jerárquicos de los reglamentos
@@ -51,8 +57,8 @@ export async function routeQueryToToCBranches(
       )
     )
 
-    // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 84")
-    const directArtMatch = cleanQuery.match(/(?:art[íi]culo|art\.)\s*([0-9]+)/i)
+    // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84")
+    const directArtMatch = cleanQuery.match(/\b(?:art[íi]culo|art\.?)\s*([0-9]+)/i)
     const directArtNum = directArtMatch ? directArtMatch[1] : null
 
     // Consultar reglamentos indexados con árbol ToC registrado
@@ -93,10 +99,12 @@ export async function routeQueryToToCBranches(
           const chapTitle = chapter.title
           const chapLower = chapTitle.toLowerCase()
 
-          // Evaluar afinidad del capítulo con las palabras clave
+          // Evaluar afinidad del capítulo con las palabras clave (excluyendo stop words)
           let chapScore = 0
           for (const word of queryWords) {
-            if (chapLower.includes(word)) chapScore += 0.25
+            if (!STOP_WORDS.has(word) && chapLower.includes(word)) {
+              chapScore += 0.25
+            }
           }
 
           // Evaluar artículos contenidos dentro del capítulo
@@ -113,9 +121,9 @@ export async function routeQueryToToCBranches(
                 artScore += 0.70
               }
 
-              // Coincidencias de palabras clave en el título del artículo
+              // Coincidencias de palabras clave en el título del artículo (excluyendo stop words)
               for (const word of queryWords) {
-                if (artLower.includes(word)) {
+                if (!STOP_WORDS.has(word) && artLower.includes(word)) {
                   artScore += 0.35
                 }
               }

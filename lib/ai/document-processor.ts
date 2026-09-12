@@ -305,7 +305,7 @@ function extractHierarchyHeaders(text: string): {
   articulo?: string
 } {
   const capMatch = text.match(/(?:^|\n)(?:#+\s*)?(?:(cap[íi]tulo|t[íi]tulo)\s+[IVXLCDM\d]+[^\n.:]*)/i)
-  const artMatch = text.match(/(?:^|\n)(?:#+\s*)?(?:(art[íi]culo|art\.)\s*\d+[^\n.:]*)/i)
+  const artMatch = text.match(/(?:^|\n)(?:#+\s*)?(?:(art[íi]culo|art\.?)\s*\d+[^\n.:]*)/i)
 
   return {
     capitulo: capMatch ? capMatch[0].replace(/^#+\s*/, '').trim() : undefined,

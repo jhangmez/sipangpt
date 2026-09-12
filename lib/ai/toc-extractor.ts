@@ -27,7 +27,7 @@ function cleanTitle(title: string): string {
  * Extrae el número de artículo de un texto o título (ej. "Artículo 17: Matrícula" -> "17")
  */
 export function extractArticleNumber(text: string): string | undefined {
-  const match = text.match(/(?:art[íi]culo|art\.)\s*([0-9]+[A-Za-z\-º°]*)/i)
+  const match = text.match(/(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i)
   return match ? match[1].replace(/[º°]/g, '').trim() : undefined
 }
 
@@ -52,7 +52,7 @@ export function extractSectionNumber(text: string): string | undefined {
  */
 export function isArticleHeader(line: string): boolean {
   const clean = cleanTitle(line)
-  return /^(?:art[íi]culo|art\.)\s*\d+/i.test(clean)
+  return /^(?:art[íi]culo|art\.?)\s*\d+/i.test(clean)
 }
 
 /**
@@ -134,8 +134,8 @@ export function extractTocTreeFromMarkdown(
       continue
     }
 
-    // 3. Detectar Artículo (ej. "Artículo 17: Matrícula Extemporánea" o "### Art. 18.-")
-    if (isArticleHeader(rawLine) || /^#{2,4}\s*(?:art[íi]culo|art\.)/i.test(rawLine)) {
+    // 3. Detectar Artículo (ej. "Artículo 17: Matrícula Extemporánea" o "### Art 18" o "### Art. 18.-")
+    if (isArticleHeader(rawLine) || /^#{2,4}\s*(?:art[íi]culo|art\.?)/i.test(rawLine)) {
       const title = cleanTitle(rawLine)
       const artNum = extractArticleNumber(title)
 
@@ -403,7 +403,7 @@ export function splitTextIntoStructuralChunks(
     }
 
     // 3. Detectar frontera de ARTÍCULO
-    if (isArticleHeader(trimmed) || /^#{2,4}\s*(?:art[íi]culo|art\.)/i.test(trimmed)) {
+    if (isArticleHeader(trimmed) || /^#{2,4}\s*(?:art[íi]culo|art\.?)/i.test(trimmed)) {
       if (accumulatedContent.length > 0) {
         flushCurrentUnit(
           currentArticulo,
