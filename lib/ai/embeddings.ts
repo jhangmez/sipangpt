@@ -76,9 +76,15 @@ export async function generateEmbeddingsWithUsage(
     values: cleanedTexts,
   })
   const totalChars = cleanedTexts.reduce((acc, t) => acc + t.length, 0)
+  const usageTokens = res.usage?.tokens
+  const safeTokens =
+    typeof usageTokens === 'number' && !isNaN(usageTokens) && usageTokens > 0
+      ? usageTokens
+      : Math.max(1, Math.ceil(totalChars / 4))
+
   return {
     embeddings: res.embeddings,
-    tokens: res.usage?.tokens ?? Math.max(1, Math.ceil(totalChars / 4)),
+    tokens: safeTokens,
   }
 }
 

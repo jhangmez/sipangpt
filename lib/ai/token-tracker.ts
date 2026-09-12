@@ -76,24 +76,33 @@ export async function recordTokenUsageLog({
   metadata,
 }: RecordTokenUsageParams) {
   try {
-    const totalTokens = promptTokens + completionTokens
-    const estimatedCostUsd = calculateEstimatedCost(modelCode, promptTokens, completionTokens)
+    const safePromptTokens =
+      typeof promptTokens === 'number' && !isNaN(promptTokens)
+        ? Math.round(promptTokens)
+        : 0
+    const safeCompletionTokens =
+      typeof completionTokens === 'number' && !isNaN(completionTokens)
+        ? Math.round(completionTokens)
+        : 0
+    const totalTokens = safePromptTokens + safeCompletionTokens
+    const rawCost = calculateEstimatedCost(modelCode, safePromptTokens, safeCompletionTokens)
+    const estimatedCostUsd = isNaN(rawCost) ? 0 : rawCost
 
     // 1. Insertar el registro detallado en token_usage_logs
     await prisma.tokenUsageLog.create({
       data: {
-        userId: userId || null,
-        conversationId: conversationId || null,
-        messageId: messageId || null,
         modelCode,
         provider,
         concept,
-        promptTokens,
-        completionTokens,
+        promptTokens: safePromptTokens,
+        completionTokens: safeCompletionTokens,
         totalTokens,
         estimatedCostUsd,
-        latencyMs: latencyMs ?? null,
+        latencyMs: latencyMs && !isNaN(latencyMs) ? Math.round(latencyMs) : null,
+        messageId: messageId || null,
         metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
+        ...(userId ? { user: { connect: { id: userId } } } : {}),
+        ...(conversationId ? { conversation: { connect: { id: conversationId } } } : {}),
       },
     })
 

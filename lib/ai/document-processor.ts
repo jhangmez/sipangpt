@@ -207,7 +207,7 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
       }
     ],
     generationConfig: {
-      maxOutputTokens: 8192,
+      maxOutputTokens: 65536,
       temperature: 0.1
     }
   }
@@ -239,16 +239,85 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
     }
 
     const candidate = data.candidates?.[0]
-    const finishReason = candidate?.finishReason
-
-    if (finishReason === 'MAX_TOKENS') {
-      console.warn(
-        `${logPrefix} ⚠️ [ALERTA] Gemini alcanzó el límite máximo de tokens de salida (MAX_TOKENS). El documento supera la longitud recomendada (> 50 páginas o muy denso) y su transcripción pudo haber quedado truncada. Se recomienda dividir el documento por capítulos o secciones.`
-      )
-    }
-
-    const transcribedText =
+    let finishReason = candidate?.finishReason
+    let transcribedText =
       candidate?.content?.parts?.[0]?.text?.trim() || ''
+
+    // Si el documento es masivo y alcanzó MAX_TOKENS, solicitar continuación automática para CERO pérdida de datos
+    let continuationPass = 1
+    const maxContinuationPasses = 5
+
+    while (finishReason === 'MAX_TOKENS' && continuationPass < maxContinuationPasses) {
+      continuationPass++
+      console.warn(
+        `${logPrefix} 🔄 [Paso 2/3 - Continuación #${continuationPass}] Gemini alcanzó límite de salida. Solicitando continuación para preservar el 100% de los artículos y caracteres...`
+      )
+
+      const continuationPayload = {
+        contents: [
+          {
+            role: 'user',
+            parts
+          },
+          {
+            role: 'model',
+            parts: [{ text: transcribedText }]
+          },
+          {
+            role: 'user',
+            parts: [
+              {
+                text: 'Continúa transcribiendo el documento exactamente desde donde te quedaste, sin repetir lo anterior. Transcribe íntegramente los artículos faltantes, manteniendo la jerarquía Markdown (#, ##, ###) y todos sus incisos y literales.'
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          maxOutputTokens: 65536,
+          temperature: 0.1
+        }
+      }
+
+      try {
+        const contRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(continuationPayload),
+            signal: AbortSignal.timeout(180_000)
+          }
+        )
+
+        const contData = await contRes.json()
+        if (!contRes.ok || contData.error) {
+          console.warn(
+            `${logPrefix} ⚠️ Error en solicitud de continuación #${continuationPass}:`,
+            contData.error
+          )
+          break
+        }
+
+        const contCandidate = contData.candidates?.[0]
+        const contText = contCandidate?.content?.parts?.[0]?.text?.trim() || ''
+        finishReason = contCandidate?.finishReason
+
+        if (contText) {
+          transcribedText += '\n\n' + contText
+          console.log(
+            `${logPrefix} 📥 [Continuación #${continuationPass}] +${contText.length} caracteres añadidos (Total acumulado: ${transcribedText.length}). finishReason: ${finishReason}`
+          )
+        } else {
+          break
+        }
+      } catch (contErr) {
+        console.warn(
+          `${logPrefix} ⚠️ Fallo de conexión en continuación #${continuationPass}:`,
+          contErr
+        )
+        break
+      }
+    }
 
     if (!transcribedText || transcribedText.length < 20) {
       console.error(
