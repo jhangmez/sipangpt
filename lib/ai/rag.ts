@@ -266,41 +266,34 @@ export async function searchKnowledgeBase(
       }
     }
 
-    // FASE 2 (PRIORIDAD COMPLEMENTARIA): Chunks adicionales por palabras clave sustantivas y categoría
+    // FASE 2 (PRIORIDAD COMPLEMENTARIA): Chunks adicionales por palabras clave sustantivas filtradas por ámbito institucional
     const remainingSlots = Math.max(30, 60 - candidateMap.size)
-    const complementaryConditions: Array<Record<string, unknown>> = []
+    const keywordConditions =
+      keywords.length > 0
+        ? keywords.map((word) => ({
+            content: {
+              contains: word,
+              mode: 'insensitive' as const,
+            },
+          }))
+        : []
 
-    // Coincidencias por categoría institucional inferida o documentos generales
-    if (categoryFilter) {
-      complementaryConditions.push({
-        document: {
-          status: 'INDEXED',
-          OR: [
-            { category: { code: categoryFilter } },
-            { categoryId: null },
-            { category: { code: { in: [...UNIVERSAL_CATEGORY_CODES] } } },
-          ],
-        },
-      })
-    }
-
-    // Coincidencias complementarias por palabras clave sustantivas (sin stopwords)
-    if (keywords.length > 0) {
-      keywords.forEach((word) => {
-        complementaryConditions.push({
-          content: {
-            contains: word,
-            mode: 'insensitive' as const,
-          },
-        })
-      })
-    }
-
-    if (complementaryConditions.length > 0) {
+    if (keywordConditions.length > 0) {
       const complementaryChunks = await prisma.documentChunk.findMany({
         where: {
-          document: { status: 'INDEXED' },
-          OR: complementaryConditions,
+          document: {
+            status: 'INDEXED',
+            ...(categoryFilter
+              ? {
+                  OR: [
+                    { category: { code: categoryFilter } },
+                    { categoryId: null },
+                    { category: { code: { in: [...UNIVERSAL_CATEGORY_CODES] } } },
+                  ],
+                }
+              : {}),
+          },
+          OR: keywordConditions,
         },
         take: remainingSlots,
         include: chunkInclude,

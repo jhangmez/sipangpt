@@ -290,7 +290,6 @@ export async function updateDocumentDetailsAction(
     data: {
       title: data.title.trim(),
       publicUrl: data.publicUrl?.trim() || null,
-      fileUrl: data.publicUrl?.trim() || null,
       categoryId: data.categoryId || null
     },
     include: {

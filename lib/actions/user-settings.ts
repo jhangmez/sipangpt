@@ -269,7 +269,11 @@ export async function verifyEmailWithTokenAction(token: string) {
     }),
   ])
 
-  revalidatePath(CACHE_PATHS.CONFIG_USUARIO)
+  try {
+    revalidatePath(CACHE_PATHS.CONFIG_USUARIO)
+  } catch {
+    // Si se invoca durante el render SSR de un Server Component, la página ya leerá datos frescos de la BD
+  }
   return { success: true, message: '¡Correo electrónico verificado exitosamente!' }
 }
 
