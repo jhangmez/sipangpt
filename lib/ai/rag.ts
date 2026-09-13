@@ -51,8 +51,8 @@ export async function routeQueryToToCBranches(
       keywords.concat(extractCleanKeywords(cleanQuery))
     )
 
-    // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84")
-    const directArtMatch = cleanQuery.match(/\b(?:art[íi]culo|art\.?)\s*([0-9]+)/i)
+    // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84", "art. 17-A", "art 24°")
+    const directArtMatch = cleanQuery.match(/\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i)
     const directArtNum = directArtMatch ? directArtMatch[1] : null
 
     // Consultar reglamentos indexados con árbol ToC registrado
@@ -120,8 +120,12 @@ export async function routeQueryToToCBranches(
 
               let artScore = chapScore
 
-              // Coincidencia exacta de número de artículo
-              if (directArtNum && artNum === directArtNum) {
+              // Coincidencia exacta de número de artículo (insensible a mayúsculas para sufijos como 17-A vs 17-a)
+              if (
+                directArtNum &&
+                artNum &&
+                artNum.toLowerCase() === directArtNum.toLowerCase()
+              ) {
                 artScore += 0.70
               }
 

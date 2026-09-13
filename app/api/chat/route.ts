@@ -720,7 +720,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
         if (part.type === 'finish') {
           return {
             conversationId: activeConvId,
-            totalTokens: part.totalUsage.totalTokens,
+            totalTokens: part.totalUsage?.totalTokens ?? 0,
             latencyMs: Date.now() - startTime,
           }
         }
