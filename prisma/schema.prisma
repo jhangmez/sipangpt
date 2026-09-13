@@ -288,6 +288,8 @@ model Message {
   feedbacks      Feedback[]
   citations      MessageCitation[]
 
+  @@index([conversationId])
+  @@index([createdAt])
   @@map("messages")
 }
 
@@ -354,6 +356,8 @@ model DocumentChunk {
   document  Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
   citations MessageCitation[]
 
+  @@index([documentId])
+  @@index([pageNumber])
   @@map("document_chunks")
 }
 
