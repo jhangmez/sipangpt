@@ -712,8 +712,8 @@ export async function ingestDocumentFromUrlAction(data: {
   if (sizeBytes === 0) {
     throw new Error('El archivo descargado está vacío (0 bytes).')
   }
-  if (sizeBytes > 32 * 1024 * 1024) {
-    throw new Error('El archivo excede el tamaño máximo permitido de 32 MB.')
+  if (sizeBytes > 16 * 1024 * 1024) {
+    throw new Error('El archivo excede el tamaño máximo permitido de 16 MB.')
   }
 
   // Deducción de título limpio

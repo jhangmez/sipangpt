@@ -27,18 +27,41 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join(' | ')
 
+    // Verificar integridad referencial del mensaje calificado con reintento por concurrencia con streaming
+    let safeMessageId: string | null = null
+    if (id_mensaje) {
+      let targetMsg = await prisma.message
+        .findUnique({
+          where: { id: id_mensaje },
+          select: { id: true },
+        })
+        .catch(() => null)
+
+      if (!targetMsg) {
+        await new Promise((r) => setTimeout(r, 400))
+        targetMsg = await prisma.message
+          .findUnique({
+            where: { id: id_mensaje },
+            select: { id: true },
+          })
+          .catch(() => null)
+      }
+
+      safeMessageId = targetMsg?.id || null
+    }
+
     const feedbackRecord = await prisma.feedback.create({
       data: {
         userId: session?.user?.id || null,
-        messageId: id_mensaje || null,
+        messageId: safeMessageId,
         rating,
         reasons: reasonsArray,
         comment: formattedComment || null,
       },
     })
 
-    // Si el usuario calificó, su veredicto es verdad absoluta sobre el estado del mensaje
-    if (id_mensaje) {
+    // Si el mensaje existe en la base de datos, actualizar su resolutionStatus
+    if (safeMessageId) {
       const resolutionStatus =
         rating >= 4
           ? 'POSITIVE_FEEDBACK'
@@ -48,7 +71,7 @@ export async function POST(req: NextRequest) {
 
       if (resolutionStatus) {
         await prisma.message.update({
-          where: { id: id_mensaje },
+          where: { id: safeMessageId },
           data: { resolutionStatus },
         }).catch((e) => console.warn('[MESSAGE_RESOLUTION_UPDATE_ERROR]', e))
       }

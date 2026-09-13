@@ -519,7 +519,7 @@ export function DocumentUploadZone({
                   Enlace Web / URL Pública del Documento *
                 </span>
                 <span className='text-[10px] font-normal text-muted-foreground'>
-                  Formatos: PDF, TXT, MD (hasta 32 MB)
+                  Formatos: PDF, TXT, MD (hasta 16 MB)
                 </span>
               </Label>
               <Input

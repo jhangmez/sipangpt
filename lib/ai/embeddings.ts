@@ -221,5 +221,7 @@ export function computeCosineSimilarity(
   vectorA: number[],
   vectorB: number[]
 ): number {
-  return cosineSimilarity(vectorA, vectorB)
+  if (!vectorA || !vectorB || vectorA.length === 0 || vectorB.length === 0) return 0
+  const sim = cosineSimilarity(vectorA, vectorB)
+  return isNaN(sim) ? 0.0 : sim
 }

@@ -34,6 +34,7 @@ export interface ChatAttachment {
 
 export interface ChatRequestBody {
   id?: string
+  assistantId?: string
   conversationId?: string
   modelCode?: string
   provider?: ModelProvider
@@ -505,10 +506,12 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
           }
 
           // Persistir mensaje del asistente con métricas de tokens y desglose de latencia
+          const clientAssistantMessageId = body.assistantId || undefined
           let assistantMsg: Message | null = null
           try {
             assistantMsg = await prisma.message.create({
               data: {
+                id: clientAssistantMessageId,
                 conversationId: activeConvId,
                 role: 'ASSISTANT',
                 content: text,
@@ -526,11 +529,35 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                 regeneratedFromId: regeneratedFromId || null,
                 parentId: assistantParentId,
               },
+            }).catch(async (err) => {
+              console.warn('[ASSISTANT_MSG_CREATE_RETRY]', err)
+              // Si el ID del cliente tuviera colisión, generar con CUID por defecto
+              return prisma.message.create({
+                data: {
+                  conversationId: activeConvId,
+                  role: 'ASSISTANT',
+                  content: text,
+                  modelUsed: modelCode,
+                  embeddingModel: DEFAULT_EMBEDDING_MODEL,
+                  promptTokens: usage?.inputTokens || 0,
+                  totalTokens: usage?.totalTokens || 0,
+                  latencyMs: totalDurationMs,
+                  retrievalLatencyMs,
+                  generationLatencyMs,
+                  resolutionStatus,
+                  categoryId: docCategoryId,
+                  detectedIntent: rewrittenQuery?.detectedIntent || null,
+                  isRegeneration,
+                  regeneratedFromId: regeneratedFromId || null,
+                  parentId: assistantParentId,
+                },
+              }).catch(() => null)
             })
           } catch (createErr) {
             // Fallback si la instancia en caliente aún no refrescó los campos nuevos
             assistantMsg = await prisma.message.create({
               data: {
+                id: clientAssistantMessageId,
                 conversationId: activeConvId,
                 role: 'ASSISTANT',
                 content: text,
@@ -541,7 +568,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
                 resolutionStatus,
                 categoryId: docCategoryId,
               },
-            })
+            }).catch(() => null)
           }
 
           // Persistir citas RAG vinculadas a la respuesta con chunkId y embeddingModel

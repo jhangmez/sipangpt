@@ -379,9 +379,10 @@ export async function searchKnowledgeBase(
       // Calcular similitud coseno sobre cada fragmento e inyectar metadatos STAIR
       const scoredResults: RetrievedSource[] = candidateChunks.map((chunk, idx) => {
         const chunkVector = resolvedEmbeddings[idx]
-        let similarity = chunkVector
+        const rawSim = chunkVector
           ? computeCosineSimilarity(queryEmbedding, chunkVector)
           : 0.5
+        let similarity = isNaN(rawSim) ? 0.0 : rawSim
 
         const meta = chunk.metadata as Record<string, unknown> | null
         const categoria =
@@ -407,6 +408,8 @@ export async function searchKnowledgeBase(
           similarity = Math.min(1.0, similarity + 0.05)
         }
 
+        const safeRelevance = isNaN(similarity) ? 0.0 : similarity
+
         return {
           chunkId: chunk.id,
           documentId: chunk.document.id,
@@ -414,7 +417,7 @@ export async function searchKnowledgeBase(
           sourceUrl: chunk.document.publicUrl || chunk.document.fileUrl,
           pageNumber: chunk.pageNumber,
           snippetText: chunk.content.trim(),
-          relevance: Number(Math.max(0, Math.min(1, similarity)).toFixed(3)),
+          relevance: Number(Math.max(0, Math.min(1, safeRelevance)).toFixed(3)),
           embeddingModel: DEFAULT_EMBEDDING_MODEL,
           categoria,
           anioVigencia,

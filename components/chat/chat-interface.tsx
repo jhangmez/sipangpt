@@ -312,11 +312,14 @@ export function ChatInterface({
         })
       )
 
+      const assistantTempId = crypto.randomUUID()
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: userMessageId,
+          assistantId: assistantTempId,
           message: textToSend,
           conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
@@ -352,7 +355,6 @@ export function ChatInterface({
       }
 
       let assistantAdded = false
-      const assistantTempId = crypto.randomUUID()
       const decoder = new TextDecoder()
       let buffer = ''
       let accumulatedText = ''
@@ -756,6 +758,7 @@ export function ChatInterface({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          assistantId: newAssistantTempId,
           messages: historyPayload,
           conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
