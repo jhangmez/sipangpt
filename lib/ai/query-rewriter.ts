@@ -26,8 +26,14 @@ const HEURISTIC_PATTERNS: Array<{
   {
     regex: /(?:fecha|vence|vencimiento|cu[aá]ndo pago|pagar|mensualidad|pensi[oó]n|sin mora|recargo)/i,
     expanded: 'Cronograma de vencimiento de pensiones, fechas de pago y recargos por mora semestre académico USS',
-    category: 'PAGOS',
+    category: 'PAGOS_PENSIONES',
     intent: 'CONSULTA_PAGOS_PENSIONES',
+  },
+  {
+    regex: /(?:admisi[oó]n|postular|postulante|examen de admisi[oó]n|centro pre)/i,
+    expanded: 'Modalidades de ingreso, examen de admisión ordinario y requisitos de postulación USS',
+    category: 'ADMISION',
+    intent: 'CONSULTA_ADMISION',
   },
   {
     regex: /(?:jalarme|cambiar(?:me)? de carrera|traslado interno)/i,
@@ -50,7 +56,7 @@ const HEURISTIC_PATTERNS: Array<{
   {
     regex: /(?:aplazado|sustitutorio|examen de aplazados|rendir aplazado)/i,
     expanded: 'Reglamento de evaluación del aprendizaje, requisitos y tasas para rendir examen de aplazados USS',
-    category: 'EVALUACION',
+    category: 'MATRICULA',
     intent: 'CONSULTA_EXAMEN_APLAZADOS',
   },
   {
@@ -60,9 +66,15 @@ const HEURISTIC_PATTERNS: Array<{
     intent: 'CONSULTA_GRADOS_TITULOS',
   },
   {
+    regex: /(?:beca|descuento|bienestar|apoyo econ[oó]mico|rendimiento acad[eé]mico)/i,
+    expanded: 'Reglamento de becas, categorización socioeconómica y beneficios de bienestar universitario USS',
+    category: 'BECAS',
+    intent: 'CONSULTA_BECAS',
+  },
+  {
     regex: /(?:carn[eé]|carnet universitario|duplicado de carn[eé])/i,
     expanded: 'Trámite, pago de tasas y solicitud de expedición o duplicado de carné universitario SUNEDU USS',
-    category: 'TRAMITES',
+    category: 'OTROS',
     intent: 'TRAMITE_CARNET_UNIVERSITARIO',
   },
   {
@@ -74,7 +86,7 @@ const HEURISTIC_PATTERNS: Array<{
   {
     regex: /(?:constancia|certificado de estudios|r[eé]cord de notas)/i,
     expanded: 'Procedimiento, requisitos y costo para emisión de constancias de estudio y certificado de notas oficial USS',
-    category: 'TRAMITES',
+    category: 'OTROS',
     intent: 'TRAMITE_CONSTANCIAS_NOTAS',
   },
 ]
@@ -125,7 +137,7 @@ Tu tarea es convertir la pregunta coloquial o informal de un estudiante en una c
 Debes responder ÚNICAMENTE un JSON válido con esta estructura:
 {
   "expandedQuery": "Texto de búsqueda formal optimizado",
-  "inferredCategory": "MATRICULA | PAGOS | CONVALIDACIONES | GRADOS_TITULOS | TRAMITES | BIENESTAR | GENERAL",
+  "inferredCategory": "ADMISION | MATRICULA | PAGOS_PENSIONES | CONVALIDACIONES | GRADOS_TITULOS | BECAS | OTROS | GENERAL",
   "detectedIntent": "CODIGO_INTENCION_BREVE"
 }`,
       prompt: `Consulta del estudiante: "${clean}"`,
@@ -151,6 +163,17 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
       } catch {}
     }
 
+    // Normalizar categoría inferida para que coincida 100% con los códigos canónicos de la base de datos
+    let normalizedCategory: string | undefined = undefined
+    if (parsed?.inferredCategory) {
+      let cat = parsed.inferredCategory.trim().toUpperCase()
+      if (cat === 'PAGOS' || cat === 'PAGOS_Y_PENSIONES') cat = 'PAGOS_PENSIONES'
+      if (cat === 'TRAMITES' || cat === 'SERVICIOS') cat = 'OTROS'
+      if (cat === 'BIENESTAR' || cat === 'BIENESTAR_UNIVERSITARIO') cat = 'BECAS'
+      if (cat === 'EVALUACION' || cat === 'ACADEMICO') cat = 'MATRICULA'
+      normalizedCategory = cat
+    }
+
     // Registrar consumo de tokens para QUERY_ANALYSIS
     recordTokenUsageLog({
       userId: context?.userId || null,
@@ -163,7 +186,7 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
       latencyMs,
       metadata: {
         rawQuery: clean,
-        inferredCategory: parsed?.inferredCategory,
+        inferredCategory: normalizedCategory || parsed?.inferredCategory,
         detectedIntent: parsed?.detectedIntent,
       },
     }).catch((err) => console.warn('[QUERY_ANALYSIS_TOKEN_LOG_WARN]', err))
@@ -172,7 +195,7 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
       return {
         originalQuery: clean,
         expandedQuery: parsed.expandedQuery ? `${clean} ${parsed.expandedQuery}` : clean,
-        inferredCategory: parsed.inferredCategory,
+        inferredCategory: normalizedCategory || parsed.inferredCategory,
         detectedIntent: parsed.detectedIntent,
       }
     }

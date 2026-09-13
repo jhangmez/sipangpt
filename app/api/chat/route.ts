@@ -429,14 +429,20 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
         safeUserParentId = parentRecord ? parentRecord.id : null
       }
 
+      const attachmentsLabel =
+        attachments.length > 0
+          ? `\n\n[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`
+          : ''
+      const finalUserContent = userText
+        ? `${userText}${attachmentsLabel}`
+        : attachmentsLabel.trim() || '[Mensaje]'
+
       const userMsg = await prisma.message.create({
         data: {
           id: clientUserMessageId,
           conversationId: activeConvId,
           role: 'USER',
-          content:
-            userText ||
-            `[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`,
+          content: finalUserContent,
           isVoiceInput,
           parentId: safeUserParentId,
         },
@@ -447,9 +453,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
           data: {
             conversationId: activeConvId,
             role: 'USER',
-            content:
-              userText ||
-              `[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`,
+            content: finalUserContent,
             isVoiceInput,
             parentId: safeUserParentId,
           },

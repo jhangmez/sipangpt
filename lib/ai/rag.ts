@@ -53,7 +53,9 @@ export async function routeQueryToToCBranches(
 
     // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84", "art. 17-A", "art 24°")
     const directArtMatch = cleanQuery.match(/\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i)
-    const directArtNum = directArtMatch ? directArtMatch[1] : null
+    const directArtNum = directArtMatch
+      ? directArtMatch[1].replace(/[º°]/g, '').trim()
+      : null
 
     // Consultar reglamentos indexados con árbol ToC registrado
     // Si hay categoryFilter activo, incluir también documentos generales (categoryId: null)
