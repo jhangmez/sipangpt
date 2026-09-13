@@ -57,30 +57,43 @@ export const ourFileRouter = {
       return { userId: session.user.id }
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // 1. Registrar el documento en la base de datos Prisma
+      // 1. Determinar el MIME type real por extensión si el SO/navegador lo omite (ej. .md en Windows)
+      let resolvedMimeType = file.type
+      if (!resolvedMimeType || resolvedMimeType === 'application/octet-stream') {
+        const lowerName = file.name.toLowerCase()
+        if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) {
+          resolvedMimeType = 'text/markdown'
+        } else if (lowerName.endsWith('.txt')) {
+          resolvedMimeType = 'text/plain'
+        } else {
+          resolvedMimeType = 'application/pdf'
+        }
+      }
+
+      // 2. Registrar el documento en la base de datos Prisma
       const doc = await prisma.document.create({
         data: {
           title: file.name,
           fileName: file.name,
           fileUrl: file.ufsUrl,
           publicUrl: file.ufsUrl,
-          mimeType: file.type || 'application/pdf',
+          mimeType: resolvedMimeType,
           sizeBytes: file.size,
           uploadedById: metadata.userId,
           status: 'PROCESSING'
         }
       })
       console.log(
-        `[UPLOADTHING] 📄 Documento registrado en BD con ID: ${doc.id}`
+        `[UPLOADTHING] 📄 Documento registrado en BD con ID: ${doc.id} (${resolvedMimeType})`
       )
 
-      // 2. Transcribir e indexar automáticamente de una sola vez con Gemini 3.1 Flash-Lite
+      // 3. Transcribir e indexar automáticamente de una sola vez con Gemini 3.1 Flash-Lite
       try {
         const { extractAndStructureToMarkdown, indexDocumentContent } =
           await import('@/lib/ai/document-processor')
         const markdownContent = await extractAndStructureToMarkdown(
           file.ufsUrl,
-          file.type || 'application/pdf'
+          resolvedMimeType
         )
         const result = await indexDocumentContent(doc.id, markdownContent)
         console.log(

@@ -61,6 +61,7 @@ export default async function ChatIdPage({ params }: ChatIdPageProps) {
     parentId: m.parentId || null,
     isRegeneration: m.isRegeneration,
     regeneratedFromId: m.regeneratedFromId || null,
+    rating: m.feedbacks?.[0]?.rating || undefined,
     sources: m.citations.map((c) => {
       const hasBreadcrumb = c.title.includes(' > ')
       return {

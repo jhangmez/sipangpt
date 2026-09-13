@@ -274,7 +274,7 @@ export function splitTextIntoStructuralChunks(
     // Si el artículo o sección cabe en el límite recomendado, guardar como un solo chunk íntegro
     if (rawUnitText.length <= maxArticleChars) {
       const headerPrefix = `[${breadcrumb}]\n\n`
-      const finalContent = rawUnitText.startsWith('[')
+      const finalContent = rawUnitText.startsWith(`[${breadcrumb}]`)
         ? rawUnitText
         : `${headerPrefix}${rawUnitText}`
 
@@ -334,7 +334,7 @@ export function splitTextIntoStructuralChunks(
           : breadcrumb
 
       const headerPrefix = `[${partBreadcrumb}]\n\n`
-      const finalContent = partText.startsWith('[')
+      const finalContent = partText.startsWith(`[${partBreadcrumb}]`)
         ? partText
         : `${headerPrefix}${partText}`
 

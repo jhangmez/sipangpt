@@ -337,11 +337,19 @@ export function DocumentPreviewSheet({
     initialDoc?.fileName ||
     'Documento Institucional'
 
-  const directFileUrl =
+  // Para el botón de enlace externo: priorizar publicUrl institucional
+  const externalLinkUrl =
     previewData?.document.publicUrl ||
     previewData?.document.fileUrl ||
     initialDoc?.publicUrl ||
     initialDoc?.fileUrl
+
+  // Para el iframe del visor: priorizar fileUrl en CDN de UploadThing (evita bloqueo por X-Frame-Options SAMEORIGIN de webs externas)
+  const iframeSrc =
+    previewData?.document.fileUrl ||
+    previewData?.document.publicUrl ||
+    initialDoc?.fileUrl ||
+    initialDoc?.publicUrl
 
   // Chunks filtrados por búsqueda y paginados
   const allFilteredChunks = React.useMemo(() => {
@@ -470,9 +478,9 @@ export function DocumentPreviewSheet({
 
             {/* Acciones de Cabecera */}
             <div className='flex items-center gap-1.5 shrink-0'>
-              {directFileUrl && (
+              {externalLinkUrl && (
                 <a
-                  href={directFileUrl}
+                  href={externalLinkUrl}
                   target='_blank'
                   rel='noreferrer'
                   className='inline-flex items-center justify-center rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer'
@@ -919,8 +927,8 @@ export function DocumentPreviewSheet({
               {activeTab === 'original' && (
                 <div className='space-y-4'>
                   {previewData.isPdf &&
-                  directFileUrl &&
-                  directFileUrl.trim() ? (
+                  iframeSrc &&
+                  iframeSrc.trim() ? (
                     <div className='space-y-3'>
                       <div className='flex items-center justify-between bg-sky-500/10 border border-sky-500/20 px-4 py-2.5 rounded-2xl text-xs text-sky-700 dark:text-sky-300'>
                         <div className='flex items-center gap-2'>
@@ -930,19 +938,21 @@ export function DocumentPreviewSheet({
                             alta fidelidad.
                           </span>
                         </div>
-                        <a
-                          href={directFileUrl}
-                          target='_blank'
-                          rel='noreferrer'
-                          className='inline-flex items-center gap-1 font-semibold hover:underline'
-                        >
-                          Pantalla completa <ExternalLink className='size-3' />
-                        </a>
+                        {externalLinkUrl && (
+                          <a
+                            href={externalLinkUrl}
+                            target='_blank'
+                            rel='noreferrer'
+                            className='inline-flex items-center gap-1 font-semibold hover:underline'
+                          >
+                            Pantalla completa <ExternalLink className='size-3' />
+                          </a>
+                        )}
                       </div>
 
                       <div className='w-full h-[75vh] rounded-3xl border border-border/80 overflow-hidden bg-muted/20 shadow-xs'>
                         <iframe
-                          src={directFileUrl}
+                          src={iframeSrc}
                           className='w-full h-full border-0'
                           title={previewData.document.title}
                         />

@@ -48,10 +48,15 @@ export const getConversationById = cache(async (id: string, userId: string) => {
         messages: {
           orderBy: { createdAt: 'asc' },
           include: {
-            citations: true
-          }
-        }
-      }
+            citations: true,
+            feedbacks: {
+              select: { rating: true },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
     })
   } catch {
     return await prisma.conversation.findFirst({
@@ -60,10 +65,15 @@ export const getConversationById = cache(async (id: string, userId: string) => {
         messages: {
           orderBy: { createdAt: 'asc' },
           include: {
-            citations: true
-          }
-        }
-      }
+            citations: true,
+            feedbacks: {
+              select: { rating: true },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
+      },
     })
   }
 })
