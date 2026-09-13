@@ -334,6 +334,29 @@ export async function updateDocumentCategory(
 export async function deleteDocumentAction(documentId: string) {
   await requireRole(Role.ADMIN)
 
+  const doc = await prisma.document
+    .findUnique({
+      where: { id: documentId },
+      select: { fileUrl: true }
+    })
+    .catch(() => null)
+
+  // Si tiene archivo en UploadThing, liberar espacio en almacenamiento CDN
+  if (doc?.fileUrl) {
+    try {
+      const { UTApi } = await import('uploadthing/server')
+      const utapi = new UTApi()
+      const match = doc.fileUrl.match(/\/(?:f|a\/[^\/]+)\/([a-zA-Z0-9_-]+)/)
+      const fileKey = match ? match[1] : doc.fileUrl.split('/').pop()
+      if (fileKey && !fileKey.startsWith('http')) {
+        await utapi.deleteFiles(fileKey)
+        console.log(`[DELETE_DOC] 🗑️ Archivo eliminado de UploadThing: ${fileKey}`)
+      }
+    } catch (utErr) {
+      console.warn('[DELETE_DOC_UTAPI_WARN] No se pudo borrar el binario en UploadThing:', utErr)
+    }
+  }
+
   await prisma.document.delete({
     where: { id: documentId }
   })

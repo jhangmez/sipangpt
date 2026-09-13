@@ -121,14 +121,16 @@ export function ConversationsInspector({
       conv.messages.forEach((m: any) => {
         if (m.citations && m.citations.length > 0) {
           m.citations.forEach((c: any) => {
+            const hasBreadcrumb = typeof c.title === 'string' && c.title.includes(' > ')
             allSources.push({
               chunkId: c.chunkId,
               documentId: c.documentId,
-              title: c.title,
-              url: c.url,
-              snippet: c.snippet,
+              title: hasBreadcrumb ? c.title.split(' > ')[0] : c.title,
+              url: c.sourceUrl || c.url || undefined,
+              snippet: c.snippetText || c.snippet || '',
               relevance: c.relevance,
-              embeddingModel: c.embeddingModel
+              embeddingModel: c.embeddingModel,
+              breadcrumb: hasBreadcrumb ? c.title : (c.breadcrumb || undefined),
             })
           })
         }
@@ -156,15 +158,19 @@ export function ConversationsInspector({
   const chatMessages: ChatMessage[] = React.useMemo(() => {
     if (!selectedConversation?.messages) return []
     return selectedConversation.messages.map((m: any) => {
-      const sources: MessageSource[] = (m.citations || []).map((c: any) => ({
-        chunkId: c.chunkId,
-        documentId: c.documentId,
-        title: c.title,
-        url: c.url,
-        snippet: c.snippet,
-        relevance: c.relevance,
-        embeddingModel: c.embeddingModel
-      }))
+      const sources: MessageSource[] = (m.citations || []).map((c: any) => {
+        const hasBreadcrumb = typeof c.title === 'string' && c.title.includes(' > ')
+        return {
+          chunkId: c.chunkId,
+          documentId: c.documentId,
+          title: hasBreadcrumb ? c.title.split(' > ')[0] : c.title,
+          url: c.sourceUrl || c.url || undefined,
+          snippet: c.snippetText || c.snippet || '',
+          relevance: c.relevance,
+          embeddingModel: c.embeddingModel,
+          breadcrumb: hasBreadcrumb ? c.title : (c.breadcrumb || undefined),
+        }
+      })
 
       return {
         id: m.id,
@@ -174,6 +180,7 @@ export function ConversationsInspector({
         parentId: m.parentId,
         isRegeneration: m.isRegeneration,
         modelName: m.modelCode || defaultModel.name,
+        rating: m.feedbacks?.[0]?.rating || m.rating || undefined,
         sources: sources.length > 0 ? sources : undefined
       }
     })
