@@ -107,10 +107,13 @@ export async function recordTokenUsageLog({
     })
 
     // 2. Incrementar contadores en AIModelConfig si el modelo está registrado
+    // Normalizar modelCode para remover prefijos como "models/" y asegurar coincidencia exacta
+    const normalizedModelCode = modelCode.replace(/^models\//i, '').trim()
+
     await prisma.aIModelConfig.updateMany({
       where: {
         modelCode: {
-          contains: modelCode,
+          equals: normalizedModelCode,
           mode: 'insensitive',
         },
       },

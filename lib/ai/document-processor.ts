@@ -128,53 +128,81 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
   let googleFileName: string | null = null
   let fileUri: string | null = null
 
-  // 2.1 Intentar subir a Google Files API para procesamiento ultrarrápido y soporte de archivos pesados
-  try {
-    console.log(`${logPrefix} 📤 Subiendo binario a Google Files API...`)
-    const initRes = await fetch(
-      `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'X-Goog-Upload-Protocol': 'resumable',
-          'X-Goog-Upload-Command': 'start',
-          'X-Goog-Upload-Header-Content-Length': buffer.byteLength.toString(),
-          'X-Goog-Upload-Header-Content-Type': 'application/pdf',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          file: { display_name: 'Documento USS RAG' }
-        }),
-        signal: AbortSignal.timeout(30_000)
+  // Umbral máximo de 14 MB para payload inline Base64 (el recargo del 33% del Base64 se mantiene bajo el límite de 20 MB de Gemini)
+  const MAX_INLINE_BUFFER_BYTES = 14 * 1024 * 1024
+
+  // 2.1 Intentar subir a Google Files API con reintentos para procesamiento ultrarrápido y soporte de archivos pesados
+  let lastFileApiErr: unknown = null
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      console.log(
+        `${logPrefix} 📤 Subiendo binario a Google Files API (intento ${attempt}/2, ${(buffer.byteLength / (1024 * 1024)).toFixed(2)} MB)...`
+      )
+      const initRes = await fetch(
+        `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'X-Goog-Upload-Protocol': 'resumable',
+            'X-Goog-Upload-Command': 'start',
+            'X-Goog-Upload-Header-Content-Length': buffer.byteLength.toString(),
+            'X-Goog-Upload-Header-Content-Type': 'application/pdf',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            file: { display_name: 'Documento USS RAG' },
+          }),
+          signal: AbortSignal.timeout(35_000),
+        }
+      )
+
+      const uploadUrl = initRes.headers.get('x-goog-upload-url')
+      if (uploadUrl) {
+        const uploadBinaryRes = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Length': buffer.byteLength.toString(),
+            'X-Goog-Upload-Offset': '0',
+            'X-Goog-Upload-Command': 'upload, finalize',
+          },
+          body: new Uint8Array(buffer),
+          signal: AbortSignal.timeout(75_000),
+        })
+
+        const fileData = await uploadBinaryRes.json()
+        if (fileData.file?.uri) {
+          fileUri = fileData.file.uri
+          googleFileName = fileData.file.name
+          console.log(
+            `${logPrefix} 📦 Archivo registrado exitosamente en Google Files: ${fileUri}`
+          )
+          break
+        }
       }
-    )
-
-    const uploadUrl = initRes.headers.get('x-goog-upload-url')
-    if (uploadUrl) {
-      const uploadBinaryRes = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Length': buffer.byteLength.toString(),
-          'X-Goog-Upload-Offset': '0',
-          'X-Goog-Upload-Command': 'upload, finalize'
-        },
-        body: new Uint8Array(buffer),
-        signal: AbortSignal.timeout(60_000)
-      })
-
-      const fileData = await uploadBinaryRes.json()
-      if (fileData.file?.uri) {
-        fileUri = fileData.file.uri
-        googleFileName = fileData.file.name
-        console.log(
-          `${logPrefix} 📦 Archivo registrado en Google Files: ${fileUri}`
-        )
+    } catch (err) {
+      lastFileApiErr = err
+      console.warn(
+        `${logPrefix} ⚠️ Intento ${attempt}/2 falló en Google Files API:`,
+        err instanceof Error ? err.message : err
+      )
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
     }
-  } catch (fileApiErr) {
+  }
+
+  // Si falló Google Files API, verificar si es seguro usar el fallback inline Base64
+  if (!fileUri) {
+    if (buffer.byteLength > MAX_INLINE_BUFFER_BYTES) {
+      const mbSize = (buffer.byteLength / (1024 * 1024)).toFixed(1)
+      throw new Error(
+        `El documento pesa ${mbSize} MB (supera el umbral seguro de 14 MB) y requiere Google Files API para su transcripción multimodal. No fue posible registrar el archivo temporal en Google: ${
+          lastFileApiErr instanceof Error ? lastFileApiErr.message : String(lastFileApiErr || 'Error de conexión')
+        }`
+      )
+    }
     console.warn(
-      `${logPrefix} ⚠️ No se pudo usar Google Files API, usando payload inline:`,
-      fileApiErr
+      `${logPrefix} ℹ️ Usando payload inline Base64 como contingencia (${(buffer.byteLength / (1024 * 1024)).toFixed(2)} MB <= 14 MB).`
     )
   }
 

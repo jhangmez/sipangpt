@@ -6,6 +6,11 @@ import {
   DEFAULT_EMBEDDING_MODEL,
 } from '@/lib/ai/embeddings'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
+import {
+  SPANISH_STOP_WORDS,
+  extractCleanKeywords,
+  UNIVERSAL_CATEGORY_CODES,
+} from '@/constants'
 import type { DocumentTocTree, ToCRouteMatch, TocChapterItem, TocSectionItem } from '@/types/stair'
 
 export interface RetrievedSource {
@@ -29,12 +34,6 @@ export interface SearchKnowledgeBaseContext {
   conversationId?: string | null
 }
 
-const STOP_WORDS = new Set([
-  'que', 'del', 'los', 'las', 'por', 'para', 'con', 'una', 'uno', 'unos', 'unas',
-  'sus', 'este', 'esta', 'estos', 'estas', 'como', 'sobre', 'entre', 'hacia',
-  'desde', 'hasta', 'cuando', 'donde', 'cual', 'quien', 'mas', 'pero', 'sin'
-])
-
 /**
  * ETAPA 1 STAIR: Enrutamiento por Índice (ToC Routing / Poda de Árbol).
  * Evalúa la consulta del estudiante contra los árboles ToC jerárquicos de los reglamentos
@@ -49,12 +48,7 @@ export async function routeQueryToToCBranches(
   try {
     const cleanQuery = query.toLowerCase()
     const queryWords = new Set(
-      keywords.concat(
-        cleanQuery
-          .replace(/[¿?¡!.,;:()]/g, ' ')
-          .split(/\s+/)
-          .filter((w) => w.length > 2)
-      )
+      keywords.concat(extractCleanKeywords(cleanQuery))
     )
 
     // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84")
@@ -62,18 +56,28 @@ export async function routeQueryToToCBranches(
     const directArtNum = directArtMatch ? directArtMatch[1] : null
 
     // Consultar reglamentos indexados con árbol ToC registrado
+    // Si hay categoryFilter activo, incluir también documentos generales (categoryId: null)
+    // y normativas transversales universales (Estatutos, Normativa General)
     const docsWithToc = await prisma.document.findMany({
       where: {
         status: 'INDEXED',
         tocTree: { not: Prisma.JsonNull },
-        ...(categoryFilter ? { category: { code: categoryFilter } } : {}),
+        ...(categoryFilter
+          ? {
+              OR: [
+                { category: { code: categoryFilter } },
+                { categoryId: null },
+                { category: { code: { in: [...UNIVERSAL_CATEGORY_CODES] } } },
+              ],
+            }
+          : {}),
       },
       select: {
         id: true,
         title: true,
         tocTree: true,
       },
-      take: 20,
+      take: 50,
     })
 
     if (!docsWithToc || docsWithToc.length === 0) {
@@ -102,7 +106,7 @@ export async function routeQueryToToCBranches(
           // Evaluar afinidad del capítulo con las palabras clave (excluyendo stop words)
           let chapScore = 0
           for (const word of queryWords) {
-            if (!STOP_WORDS.has(word) && chapLower.includes(word)) {
+            if (!SPANISH_STOP_WORDS.has(word) && chapLower.includes(word)) {
               chapScore += 0.25
             }
           }
@@ -123,7 +127,7 @@ export async function routeQueryToToCBranches(
 
               // Coincidencias de palabras clave en el título del artículo (excluyendo stop words)
               for (const word of queryWords) {
-                if (!STOP_WORDS.has(word) && artLower.includes(word)) {
+                if (!SPANISH_STOP_WORDS.has(word) && artLower.includes(word)) {
                   artScore += 0.35
                 }
               }
@@ -189,12 +193,8 @@ export async function searchKnowledgeBase(
     const cleanQuery = query.trim()
     if (!cleanQuery) return []
 
-    // 1. Extraer términos clave para pre-filtrado y ToC routing
-    const keywords = cleanQuery
-      .toLowerCase()
-      .replace(/[¿?¡!.,;:()]/g, '')
-      .split(/\s+/)
-      .filter((w) => w.length > 2)
+    // 1. Extraer términos clave sustantivos (excluyendo stop words de constants/stopwords.ts)
+    const keywords = extractCleanKeywords(cleanQuery)
 
     // 2. ETAPA 1 (STAIR): Enrutamiento por Índice / Poda de Árbol
     const routeMatches = await routeQueryToToCBranches(
@@ -203,52 +203,87 @@ export async function searchKnowledgeBase(
       categoryFilter
     )
 
-    const candidateConditions: Array<Record<string, unknown>> = []
+    const chunkInclude = {
+      document: {
+        select: {
+          id: true,
+          title: true,
+          publicUrl: true,
+          fileUrl: true,
+          category: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
+        },
+      },
+    }
 
-    // Si el enrutador ToC identificó ramas normativas candidatas, priorizar sus chunks
+    // Mapa de deduplicación para preservar el orden de prioridad
+    const candidateMap = new Map<string, any>()
+
+    // FASE 1 (PRIORIDAD ALTA STAIR): Recuperar de forma dedicada los chunks de las ramas ToC afines
     if (routeMatches.length > 0) {
       console.log(
         `[SIPAN_STAIR] 🌳 ToC Routing identificó ${routeMatches.length} ramas normativas afines:`,
         routeMatches.map((r) => `${r.documentTitle} -> ${r.branchTitle} (${Math.round(r.score * 100)}%)`).join(' | ')
       )
 
+      const tocConditions: Array<Record<string, unknown>> = []
       for (const branch of routeMatches) {
-        // Filtrar por documento y fragmentos que pertenezcan a esa rama o artículo
-        const branchKeywords = [branch.branchTitle, branch.articleTitle]
-          .filter(Boolean)
-          .join(' ')
-          .replace(/[#*]/g, '')
-          .trim()
-
         if (branch.articleTitle) {
-          candidateConditions.push({
+          tocConditions.push({
             documentId: branch.documentId,
             content: { contains: branch.articleTitle, mode: 'insensitive' as const },
           })
         }
         if (branch.branchTitle) {
-          candidateConditions.push({
+          tocConditions.push({
             documentId: branch.documentId,
             content: { contains: branch.branchTitle, mode: 'insensitive' as const },
           })
         }
       }
+
+      if (tocConditions.length > 0) {
+        const tocChunks = await prisma.documentChunk.findMany({
+          where: {
+            document: { status: 'INDEXED' },
+            OR: tocConditions,
+          },
+          take: 30,
+          include: chunkInclude,
+        })
+
+        for (const chunk of tocChunks) {
+          candidateMap.set(chunk.id, chunk)
+        }
+      }
     }
 
-    // Coincidencias por categoría institucional inferida
+    // FASE 2 (PRIORIDAD COMPLEMENTARIA): Chunks adicionales por palabras clave sustantivas y categoría
+    const remainingSlots = Math.max(30, 60 - candidateMap.size)
+    const complementaryConditions: Array<Record<string, unknown>> = []
+
+    // Coincidencias por categoría institucional inferida o documentos generales
     if (categoryFilter) {
-      candidateConditions.push({
+      complementaryConditions.push({
         document: {
           status: 'INDEXED',
-          category: { code: categoryFilter },
+          OR: [
+            { category: { code: categoryFilter } },
+            { categoryId: null },
+            { category: { code: { in: [...UNIVERSAL_CATEGORY_CODES] } } },
+          ],
         },
       })
     }
 
-    // Coincidencias complementarias por palabras clave normativas
+    // Coincidencias complementarias por palabras clave sustantivas (sin stopwords)
     if (keywords.length > 0) {
       keywords.forEach((word) => {
-        candidateConditions.push({
+        complementaryConditions.push({
           content: {
             contains: word,
             mode: 'insensitive' as const,
@@ -257,29 +292,24 @@ export async function searchKnowledgeBase(
       })
     }
 
-    let candidateChunks = await prisma.documentChunk.findMany({
-      where: {
-        document: { status: 'INDEXED' },
-        ...(candidateConditions.length > 0 ? { OR: candidateConditions } : {}),
-      },
-      take: Math.max(topK * 12, 60),
-      include: {
-        document: {
-          select: {
-            id: true,
-            title: true,
-            publicUrl: true,
-            fileUrl: true,
-            category: {
-              select: {
-                code: true,
-                name: true,
-              },
-            },
-          },
+    if (complementaryConditions.length > 0) {
+      const complementaryChunks = await prisma.documentChunk.findMany({
+        where: {
+          document: { status: 'INDEXED' },
+          OR: complementaryConditions,
         },
-      },
-    })
+        take: remainingSlots,
+        include: chunkInclude,
+      })
+
+      for (const chunk of complementaryChunks) {
+        if (!candidateMap.has(chunk.id)) {
+          candidateMap.set(chunk.id, chunk)
+        }
+      }
+    }
+
+    let candidateChunks = Array.from(candidateMap.values())
 
     // Red de Seguridad contra Falsos Negativos (Resiliencia):
     // Si no hubo candidatos, recuperar los chunks indexados más recientes para evaluación vectorial
@@ -290,22 +320,7 @@ export async function searchKnowledgeBase(
         },
         take: 40,
         orderBy: { createdAt: 'desc' },
-        include: {
-          document: {
-            select: {
-              id: true,
-              title: true,
-              publicUrl: true,
-              fileUrl: true,
-              category: {
-                select: {
-                  code: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
+        include: chunkInclude,
       })
     }
 

@@ -33,6 +33,7 @@ export interface ChatAttachment {
 }
 
 export interface ChatRequestBody {
+  id?: string
   conversationId?: string
   modelCode?: string
   provider?: ModelProvider
@@ -45,7 +46,8 @@ export interface ChatRequestBody {
   attachments?: ChatAttachment[]
 }
 
-export const maxDuration = 45
+export const maxDuration = 60
+
 
 export async function POST(req: Request) {
   const startTime = Date.now()
@@ -409,21 +411,66 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
     // Persistir mensaje del usuario inmediatamente solo si es una nueva consulta
     let createdUserMsgId: string | null = null
     if (!isRegeneration) {
+      const clientUserMessageId =
+        body.id ||
+        rawMessages.find((m) => m.role === 'user')?.id ||
+        undefined
+
+      // Validar si el parentId recibido existe en la base de datos para evitar violación de FK
+      let safeUserParentId: string | null = null
+      if (parentId) {
+        const parentRecord = await prisma.message
+          .findUnique({
+            where: { id: parentId },
+            select: { id: true },
+          })
+          .catch(() => null)
+        safeUserParentId = parentRecord ? parentRecord.id : null
+      }
+
       const userMsg = await prisma.message.create({
         data: {
+          id: clientUserMessageId,
           conversationId: activeConvId,
           role: 'USER',
           content:
             userText ||
             `[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`,
           isVoiceInput,
-          parentId: parentId || null,
+          parentId: safeUserParentId,
         },
-      }).catch(() => null)
+      }).catch(async (err) => {
+        console.warn('[USER_MSG_CREATE_RETRY]', err)
+        // Si el ID del cliente tuviera colisión, generar con CUID por defecto
+        return prisma.message.create({
+          data: {
+            conversationId: activeConvId,
+            role: 'USER',
+            content:
+              userText ||
+              `[Adjunto: ${attachments.map((a) => a.name).join(', ')}]`,
+            isVoiceInput,
+            parentId: safeUserParentId,
+          },
+        }).catch(() => null)
+      })
       createdUserMsgId = userMsg?.id || null
     }
 
-    const assistantParentId = createdUserMsgId || parentId || null
+    let assistantParentId = createdUserMsgId || parentId || null
+    // Red de seguridad de integridad referencial: validar que el parentId del asistente exista
+    if (assistantParentId) {
+      const parentRecord = await prisma.message
+        .findUnique({
+          where: { id: assistantParentId },
+          select: { id: true },
+        })
+        .catch(() => null)
+      if (!parentRecord) {
+        assistantParentId = null
+      }
+    }
+
 
     // 10. Inferencia con streamText de Vercel AI SDK (conciso y rápido)
     const generationStartTime = Date.now()
