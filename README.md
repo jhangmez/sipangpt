@@ -311,6 +311,70 @@ sipangpt/
 
 ---
 
+## 🧬 Ecosistema del Proyecto de Tesis: Pipeline de Datos y Fine-Tuning
+
+**SipánGPT** no es únicamente una interfaz web conversacional; constituye el componente aplicativo central de una investigación y desarrollo de tesis para la **Universidad Señor de Sipán (USS)**. Para dotar al asistente de respuestas fiables, tanto a nivel de recuperación contextual (**RAG Sipán-STAIR**) como en la especialización de modelos mediante ajuste fino (*Fine-Tuning*), el proyecto se articula en un flujo integral dividido en tres fases principales respaldadas por repositorios complementarios:
+
+```mermaid
+flowchart LR
+    subgraph FASE1 ["📄 FASE 1: Ingesta & Transcripción"]
+        A["13 Manuales y Reglamentos USS (PDF/.url)"] --> B["Pipeline Gemini OCR/Transcripción"]
+        B --> C["Corpus Normalizado en Markdown (.md)"]
+    end
+
+    subgraph FASE2 ["🧪 FASE 2: Síntesis ShareGPT"]
+        C --> D["267 Secciones Semánticas Atómicas"]
+        D --> E["Fábrica de Datos Sintéticos (Gemini + Pydantic)"]
+        E --> F["Dataset 400 Diálogos (ShareGPT / Unsloth)"]
+    end
+
+    subgraph FASE3 ["🚀 FASE 3 / APLICACIÓN: SipánGPT"]
+        C -. Corpus Base .-> G["Motor RAG Sipán-STAIR (Neon PostgreSQL)"]
+        F -. Fine-Tuning Gemma 4 .-> H["Modelos Locales & en la Nube"]
+        G --> I["Plataforma Conversacional Web (Next.js 16)"]
+        H --> I
+    end
+```
+
+### 📦 Repositorios Complementarios del Proyecto
+
+| Fase | Repositorio Oficial | Rol y Contribución al Proyecto | Tecnologías Clave |
+| :--- | :--- | :--- | :--- |
+| **Fase 1** | [**`codigo_para_generar_dataset_finetuning`**](https://github.com/jhangmez/codigo_para_generar_dataset_finetuning) | **Pipeline de Ingesta y Transcripción Técnica de Documentación USS:** Descarga automatizada condicional de 13 reglamentos y manuales institucionales vía `.url`, particionado PDF en memoria (`pypdf`) y transcripción estructurada a Markdown de alta fidelidad con **Google Gemini**, interpretando tablas analíticas y secuencias de interfaz gráfica. | Python 3.10+, `google-genai`, `pypdf`, `requests`, `pydantic` |
+| **Fase 2** | [**`codigo_para_sintesis_dataset_sharegpt`**](https://github.com/jhangmez/codigo_para_sintesis_dataset_sharegpt) | **Fábrica de Datos Sintéticos ShareGPT para Fine-Tuning:** Generación determinista y controlada por cuotas de un dataset de **400 conversaciones balanceadas** (70% monoturno / 30% multiturno) con 3 arquetipos lingüísticos peruanos y formato dual nativo listo para entrenar modelos con **Unsloth** y **Gemma 4**. | Python 3.10+, Gemini Structured Outputs, Pydantic, Unsloth ShareGPT |
+
+---
+
+### 🔍 Detalle de los Módulos Complementarios
+
+#### 1. 📄 [Fase 1: Pipeline de Ingesta y Transcripción Técnica de Documentación USS](https://github.com/jhangmez/codigo_para_generar_dataset_finetuning)
+* **Propósito:** Transformar la documentación institucional dispersa en manuales PDF de gran volumen en un corpus técnico estructurado en Markdown de alta fidelidad, sirviendo como insumo base tanto para la base de conocimiento RAG como para la síntesis conversacional.
+* **Aspectos Técnicos Destacados:**
+  - **Catálogo de 13 Documentos Oficiales Mapeados:** Cobertura de las áreas de *Pagos y Cobranzas*, *Campus Virtual y Aprendizaje*, *Matrícula y Registros*, *Biblioteca Virtual* y *Normativa y Trámites*.
+  - **Particionado en Memoria con `pypdf`:** División de documentos en lotes de páginas (6 páginas por bloque) sin escritura temporal en disco, optimizando I/O y uso de memoria.
+  - **Transcripción Guiada por IA (`GeminiTranscriber`):** Empleo del SDK `google-genai` bajo un *System Prompt* estricto que preserva jerarquías de títulos (`##`, `###`), transcribe tablas acompañadas de bloques analíticos (`> **Interpretación de la tabla:**`) y detalla pantallas de sistemas (`> **Interpretación de la imagen/interfaz:**`).
+  - **Resiliencia y Fallback:** Backoff exponencial ante saturación de cuota (`429`) y conmutación automática de respaldo a `gemini-3.5-flash-lite` ante errores temporales de servicio (`503`).
+
+#### 2. 🧪 [Fase 2: Fábrica de Datos Sintéticos ShareGPT para Fine-Tuning USS](https://github.com/jhangmez/codigo_para_sintesis_dataset_sharegpt)
+* **Propósito:** Sintetizar pares conversacionales realistas, pedagógicos y balanceados que emulan las consultas habituales de la comunidad universitaria, garantizando la identidad de **SipánGPT** y preparando los datos para el ajuste fino de modelos de lenguaje abiertos (como **Gemma 4**).
+* **Aspectos Técnicos Destacados:**
+  - **Segmentación Semántica Atómica:** Procesamiento de 267 secciones temáticas delimitadas (~500 a 1,500 palabras) a partir del Markdown de la Fase 1.
+  - **Matriz de Cuotas Exacta (400 diálogos):**
+    - *Campus Virtual y Aprendizaje:* **130** (91 monoturno / 39 multiturno)
+    - *Matrícula y Registros:* **110** (77 monoturno / 33 multiturno)
+    - *Pagos y Cobranzas:* **70** (49 monoturno / 21 multiturno)
+    - *Normativa y Trámites:* **55** (39 monoturno / 16 multiturno)
+    - *Biblioteca Virtual:* **35** (24 monoturno / 11 multiturno)
+    - Proporción global: **70% Monoturno (280)** vs. **30% Multiturno (120)**.
+  - **Diversidad Lingüística en 3 Arquetipos:**
+    - `frustrado_informal`: Estudiantes que consultan con expresiones cotidianas y modismos peruanos (*"oe"*, *"pucha"*, *"se colgó el campus"*).
+    - `formal_protocolar`: Redacción académica con cortesía institucional formal.
+    - `docente`: Consultas especializadas sobre actas de notas, enlaces Zoom, sílabos y gestión docente en el campus.
+  - **Garantía Estructural (Zero Parsing Errors):** Uso de **Structured Outputs de Gemini** y esquemas Pydantic para asegurar que cada diálogo cumpla con la especificación de ShareGPT sin fallas de sintaxis JSON.
+  - **Compatibilidad Nativa con Unsloth & Gemma 4 (Fase 3):** Estructura dual (`conversations` y `messages`) que permite cargar directamente los archivos `.jsonl` en notebooks de Google Colab o Kaggle mediante Unsloth para fine-tuning sin scripts de transformación previa.
+
+---
+
 ## 📚 Referencias Académicas y Marco Teórico
 
 La arquitectura de recuperación e indexación jerárquica de **SipánGPT** (**Sipán-STAIR**) se fundamenta teórica y metodológicamente en las investigaciones más recientes sobre recuperación consciente de la estructura documental para modelos de lenguaje (*Large Language Models*):
