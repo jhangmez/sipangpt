@@ -5,10 +5,11 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-RUN npm ci
+# Usamos npm install para que resuelva las dependencias nativas de Linux automáticamente
+RUN npm install
 
 # ==========================================
 # Etapa 2: Compilación (Build)
