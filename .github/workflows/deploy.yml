@@ -1,11 +1,10 @@
 name: Deploy SipanGPT Production
 
-# Se gatilla SOLO al crear y subir un Tag tipo v1.0.0
 on:
   push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch: # Permite gatillar el despliegue manualmente desde la web de GitHub si lo deseas
+    branches: ['feature/V2', 'main']
+    tags: ['v*.*.*']
+  workflow_dispatch: # Permite ejecutar el despliegue manualmente desde la web de GitHub
 
 jobs:
   deploy:
@@ -27,7 +26,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 3. Compilar y Subir Imagen Docker etiquetada con el Tag
+      - name: 3. Compilar y Subir Imagen Docker
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -37,7 +36,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/sipangpt:latest
             ghcr.io/${{ github.repository_owner }}/sipangpt:${{ github.ref_name }}
 
-      - name: 4. Desplegar en VPS y Actualizar Base de Datos de Producción
+      - name: 4. Desplegar en VPS por SSH y Actualizar Base de Datos
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
