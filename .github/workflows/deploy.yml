@@ -1,0 +1,52 @@
+name: Deploy SipanGPT Production
+
+# Se gatilla SOLO al crear y subir un Tag tipo v1.0.0
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: # Permite gatillar el despliegue manualmente desde la web de GitHub si lo deseas
+
+jobs:
+  deploy:
+    name: Build & Deploy to VPS
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 1. Checkout del código
+        uses: actions/checkout@v4
+
+      - name: 2. Autenticarse en GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 3. Compilar y Subir Imagen Docker etiquetada con el Tag
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/sipangpt:latest
+            ghcr.io/${{ github.repository_owner }}/sipangpt:${{ github.ref_name }}
+
+      - name: 4. Desplegar en VPS y Actualizar Base de Datos de Producción
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/sipangpt
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker compose exec -T app npx prisma db push
+            docker image prune -f
