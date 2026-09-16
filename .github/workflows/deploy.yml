@@ -4,7 +4,7 @@ on:
   push:
     branches: ['feature/V2', 'main']
     tags: ['v*.*.*']
-  workflow_dispatch: # Permite ejecutar el despliegue manualmente desde la web de GitHub
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -26,17 +26,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 3. Compilar y Subir Imagen Docker
+      - name: 3. Generar etiquetas de Docker válidas (Metadata)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/sipangpt
+          tags: |
+            type=raw,value=latest
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,format=short
+
+      - name: 4. Compilar y Subir Imagen Docker
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/sipangpt:latest
-            ghcr.io/${{ github.repository_owner }}/sipangpt:${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-      - name: 4. Desplegar en VPS por SSH y Actualizar Base de Datos
+      - name: 5. Desplegar en VPS por SSH y Actualizar Base de Datos
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
