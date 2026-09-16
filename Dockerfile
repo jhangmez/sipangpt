@@ -8,7 +8,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Usamos npm install para que resuelva las dependencias nativas de Linux automáticamente
 RUN npm install
 
 # ==========================================
@@ -22,7 +21,12 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+
+# Placeholders requeridos por prisma.config.ts y Next.js en tiempo de compilación
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV DATABASE_URL_UNPOOLED="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV AUTH_SECRET="dummy_secret_para_build_32_caracteres_minimo"
 
 RUN npx prisma generate
 RUN npm run build
