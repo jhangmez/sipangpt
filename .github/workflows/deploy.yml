@@ -57,5 +57,15 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
-            docker compose exec -T app npx prisma db push
+
+            # 1. Esperar hasta que PostgreSQL esté listo para aceptar conexiones
+            echo "Esperando a que la base de datos esté lista..."
+            docker compose exec -T db-prod sh -c "until pg_isready -U postgres; do sleep 1; done"
+
+            # 2. Asegurar que la extensión pgvector esté activa
+            docker compose exec -T db-prod psql -U postgres -d sipangpt_prod -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+            # 3. Aplicar las tablas del esquema Prisma automáticamente
+            docker compose exec -T -u 0 app npx prisma db push --accept-data-loss
+
             docker image prune -f
