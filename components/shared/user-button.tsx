@@ -19,14 +19,13 @@ interface UserButtonProps {
 export function UserButton({ user }: UserButtonProps) {
   if (!user) {
     return (
-      <Button
-        onClick={() => signIn('google')}
-        size='sm'
-        className='gap-2 font-medium font-exo'
+      <Link
+        href='/login'
+        className={cn(buttonVariants({ size: 'sm' }), 'gap-2 font-medium font-exo')}
       >
         <LogIn className='w-4 h-4' />
         Iniciar Sesión
-      </Button>
+      </Link>
     )
   }
 

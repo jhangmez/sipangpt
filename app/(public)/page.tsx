@@ -86,6 +86,20 @@ export default async function HomePage() {
           </p>
         </div>
       </div>
+
+      {/* Nota de Transparencia de Proyecto de Tesis */}
+      <div className='mt-12 p-4 rounded-xl border border-border/40 bg-muted/30 text-xs text-muted-foreground max-w-2xl mx-auto text-center space-y-1.5 font-exo'>
+        <p>
+          SipánGPT es un proyecto académico de tesis desarrollado de forma independiente. No está afiliado ni administrado oficialmente por la Universidad Señor de Sipán.
+        </p>
+        <p>
+          Las imágenes y marcas institucionales pertenecen a sus respectivos titulares. Revisa nuestros{' '}
+          <Link href='/terms' className='text-primary underline font-semibold hover:text-primary/80'>
+            Términos de Uso, Política de Privacidad y Auditoría
+          </Link>
+          .
+        </p>
+      </div>
     </main>
   )
 }
