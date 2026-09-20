@@ -101,8 +101,8 @@ export async function recordTokenUsageLog({
         latencyMs: latencyMs && !isNaN(latencyMs) ? Math.round(latencyMs) : null,
         messageId: messageId || null,
         metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
-        ...(userId ? { user: { connect: { id: userId } } } : {}),
-        ...(conversationId ? { conversation: { connect: { id: conversationId } } } : {}),
+        userId: userId || null,
+        conversationId: conversationId || null,
       },
     })
 

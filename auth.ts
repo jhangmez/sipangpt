@@ -3,7 +3,6 @@ import Google from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma, Role } from '@/lib/prisma'
 import { isInitialAdminEmail } from '@/constants/admin'
-import { SESSION_LIMIT_PER_ROLE, DEFAULT_MAX_SESSIONS } from '@/constants'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -107,45 +106,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.firstName = token.firstName as string | null | undefined
         session.user.lastName = token.lastName as string | null | undefined
         ;(session.user as { sessionToken?: string }).sessionToken = token.sessionToken as string
-
-        // Control de límite de sesiones activas en base de datos
-        try {
-          const maxSessions =
-            SESSION_LIMIT_PER_ROLE[session.user.role as keyof typeof SESSION_LIMIT_PER_ROLE] ||
-            DEFAULT_MAX_SESSIONS
-          const userSessions = await prisma.session.findMany({
-            where: {
-              userId,
-              expires: { gt: new Date() },
-            },
-            orderBy: { updatedAt: 'asc' },
-          })
-
-          if (userSessions.length > maxSessions) {
-            const sessionsToDelete = userSessions.slice(0, userSessions.length - maxSessions)
-            if (sessionsToDelete.length > 0) {
-              await prisma.session.deleteMany({
-                where: {
-                  sessionToken: {
-                    in: sessionsToDelete.map((s) => s.sessionToken),
-                  },
-                },
-              })
-            }
-          }
-
-          const activeCount = await prisma.session.count({
-            where: {
-              userId,
-              expires: { gt: new Date() },
-            },
-          })
-
-          ;(session.user as { activeSessionsCount?: number }).activeSessionsCount = activeCount
-          ;(session.user as { maxAllowedSessions?: number }).maxAllowedSessions = maxSessions
-        } catch (err) {
-          console.error('[AUTH_SESSION_LIMIT_ERROR]', err)
-        }
       }
       return session
     },

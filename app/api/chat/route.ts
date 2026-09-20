@@ -8,6 +8,7 @@ import {
   type UIMessage,
 } from 'ai'
 import { auth } from '@/auth'
+import { validateInternalAuth } from '@/lib/auth/internal-auth'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { searchKnowledgeBase } from '@/lib/ai/rag'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
@@ -58,13 +59,19 @@ export async function POST(req: Request) {
     '127.0.0.1'
   const userAgent = req.headers.get('user-agent') || 'Browser'
 
-  // 1. Verificación de sesión de usuario autenticado
-  const session = await auth()
+  // 1. Verificación de sesión de usuario autenticado (Dual: Internal API Key para pruebas/servicios o Cookie OAuth)
+  const internalSession = await validateInternalAuth(req)
+  const session = internalSession || (await auth())
   if (!session?.user?.id) {
-    return new Response(JSON.stringify({ error: 'No autorizado. Inicie sesión.' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(
+      JSON.stringify({
+        error: 'No autorizado. Inicie sesión o proporcione una clave interna en x-api-key o Authorization: Bearer.',
+      }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    )
   }
 
   let body: ChatRequestBody
@@ -398,6 +405,13 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
           userId: session.user.id,
           title: (userText || 'Consulta SipánGPT').slice(0, 60),
         },
+      }).catch(async () => {
+        // Fallback defensivo si el userId no existe o falla temporalmente
+        return prisma.conversation.create({
+          data: {
+            title: (userText || 'Consulta SipánGPT').slice(0, 60),
+          },
+        })
       })
       activeConvId = newConv.id
     } else {
@@ -414,7 +428,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
     if (!isRegeneration) {
       const clientUserMessageId =
         body.id ||
-        rawMessages.find((m) => m.role === 'user')?.id ||
+        lastUserMsg?.id ||
         undefined
 
       // Validar si el parentId recibido existe en la base de datos para evitar violación de FK
@@ -437,19 +451,37 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
         ? `${userText}${attachmentsLabel}`
         : attachmentsLabel.trim() || '[Mensaje]'
 
-      const userMsg = await prisma.message.create({
-        data: {
-          id: clientUserMessageId,
-          conversationId: activeConvId,
-          role: 'USER',
-          content: finalUserContent,
-          isVoiceInput,
-          parentId: safeUserParentId,
-        },
-      }).catch(async (err) => {
-        console.warn('[USER_MSG_CREATE_RETRY]', err)
-        // Si el ID del cliente tuviera colisión, generar con CUID por defecto
-        return prisma.message.create({
+      let userMsg: Message | null = null
+      if (clientUserMessageId) {
+        userMsg = await prisma.message.upsert({
+          where: { id: clientUserMessageId },
+          update: {
+            content: finalUserContent,
+            isVoiceInput,
+            parentId: safeUserParentId,
+          },
+          create: {
+            id: clientUserMessageId,
+            conversationId: activeConvId,
+            role: 'USER',
+            content: finalUserContent,
+            isVoiceInput,
+            parentId: safeUserParentId,
+          },
+        }).catch(async () => {
+          // Si el ID del cliente tuviera colisión foránea o conflicto cross-conversation, generar con CUID
+          return prisma.message.create({
+            data: {
+              conversationId: activeConvId,
+              role: 'USER',
+              content: finalUserContent,
+              isVoiceInput,
+              parentId: safeUserParentId,
+            },
+          }).catch(() => null)
+        })
+      } else {
+        userMsg = await prisma.message.create({
           data: {
             conversationId: activeConvId,
             role: 'USER',
@@ -458,7 +490,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
             parentId: safeUserParentId,
           },
         }).catch(() => null)
-      })
+      }
       createdUserMsgId = userMsg?.id || null
     }
 
@@ -512,56 +544,49 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
           // Persistir mensaje del asistente con métricas de tokens y desglose de latencia
           const clientAssistantMessageId = body.assistantId || undefined
           let assistantMsg: Message | null = null
+
+          const assistantPayload = {
+            conversationId: activeConvId,
+            role: 'ASSISTANT' as const,
+            content: text,
+            modelUsed: modelCode,
+            embeddingModel: DEFAULT_EMBEDDING_MODEL,
+            promptTokens: usage?.inputTokens || 0,
+            totalTokens: usage?.totalTokens || 0,
+            latencyMs: totalDurationMs,
+            retrievalLatencyMs,
+            generationLatencyMs,
+            resolutionStatus,
+            categoryId: docCategoryId,
+            detectedIntent: rewrittenQuery?.detectedIntent || null,
+            isRegeneration,
+            regeneratedFromId: regeneratedFromId || null,
+            parentId: assistantParentId,
+          }
+
           try {
-            assistantMsg = await prisma.message.create({
-              data: {
-                id: clientAssistantMessageId,
-                conversationId: activeConvId,
-                role: 'ASSISTANT',
-                content: text,
-                modelUsed: modelCode,
-                embeddingModel: DEFAULT_EMBEDDING_MODEL,
-                promptTokens: usage?.inputTokens || 0,
-                totalTokens: usage?.totalTokens || 0,
-                latencyMs: totalDurationMs,
-                retrievalLatencyMs,
-                generationLatencyMs,
-                resolutionStatus,
-                categoryId: docCategoryId,
-                detectedIntent: rewrittenQuery?.detectedIntent || null,
-                isRegeneration,
-                regeneratedFromId: regeneratedFromId || null,
-                parentId: assistantParentId,
-              },
-            }).catch(async (err) => {
-              console.warn('[ASSISTANT_MSG_CREATE_RETRY]', err)
-              // Si el ID del cliente tuviera colisión, generar con CUID por defecto
-              return prisma.message.create({
-                data: {
-                  conversationId: activeConvId,
-                  role: 'ASSISTANT',
-                  content: text,
-                  modelUsed: modelCode,
-                  embeddingModel: DEFAULT_EMBEDDING_MODEL,
-                  promptTokens: usage?.inputTokens || 0,
-                  totalTokens: usage?.totalTokens || 0,
-                  latencyMs: totalDurationMs,
-                  retrievalLatencyMs,
-                  generationLatencyMs,
-                  resolutionStatus,
-                  categoryId: docCategoryId,
-                  detectedIntent: rewrittenQuery?.detectedIntent || null,
-                  isRegeneration,
-                  regeneratedFromId: regeneratedFromId || null,
-                  parentId: assistantParentId,
+            if (clientAssistantMessageId) {
+              assistantMsg = await prisma.message.upsert({
+                where: { id: clientAssistantMessageId },
+                update: assistantPayload,
+                create: {
+                  id: clientAssistantMessageId,
+                  ...assistantPayload,
                 },
+              }).catch(async () => {
+                return prisma.message.create({
+                  data: assistantPayload,
+                }).catch(() => null)
+              })
+            } else {
+              assistantMsg = await prisma.message.create({
+                data: assistantPayload,
               }).catch(() => null)
-            })
+            }
           } catch (createErr) {
             // Fallback si la instancia en caliente aún no refrescó los campos nuevos
             assistantMsg = await prisma.message.create({
               data: {
-                id: clientAssistantMessageId,
                 conversationId: activeConvId,
                 role: 'ASSISTANT',
                 content: text,
