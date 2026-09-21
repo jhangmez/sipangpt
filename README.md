@@ -311,9 +311,9 @@ sipangpt/
 
 ---
 
-## 🧬 Ecosistema del Proyecto de Tesis: Pipeline de Datos y Fine-Tuning
+## 🧬 Ecosistema del Proyecto de Tesis: Pipeline de Datos, Fine-Tuning y Benchmark
 
-**SipánGPT** no es únicamente una interfaz web conversacional; constituye el componente aplicativo central de una investigación y desarrollo de tesis para la **Universidad Señor de Sipán (USS)**. Para dotar al asistente de respuestas fiables, tanto a nivel de recuperación contextual (**RAG Sipán-STAIR**) como en la especialización de modelos mediante ajuste fino (*Fine-Tuning*), el proyecto se articula en un flujo integral dividido en tres fases principales respaldadas por repositorios complementarios:
+**SipánGPT** no es únicamente una interfaz web conversacional; constituye el componente aplicativo central de una investigación y desarrollo de tesis para la **Universidad Nacional Pedro Ruiz Gallo (UNPRG)** aplicada a la **Universidad Señor de Sipán (USS)**. Para dotar al asistente de respuestas fiables, tanto a nivel de recuperación contextual (**RAG Sipán-STAIR**) como en la especialización de modelos mediante ajuste fino (*Fine-Tuning*), el proyecto se articula en un flujo integral respaldado por repositorios complementarios que abarcan desde la preparación de datos hasta la evaluación científica comparativa:
 
 ```mermaid
 flowchart LR
@@ -334,14 +334,21 @@ flowchart LR
         G --> I["Plataforma Conversacional Web (Next.js 16)"]
         H --> I
     end
+
+    subgraph EVAL ["📊 EVALUACIÓN: Benchmark Científico"]
+        H -. Gemma-4 LoRA .-> J["Suite de Benchmark Comparativo"]
+        G -. Sipán-STAIR .-> J
+        J --> K["Evaluación de Tesis UNPRG (LLM-as-a-Judge)"]
+    end
 ```
 
 ### 📦 Repositorios Complementarios del Proyecto
 
-| Fase | Repositorio Oficial | Rol y Contribución al Proyecto | Tecnologías Clave |
+| Fase / Rol | Repositorio Oficial | Rol y Contribución al Proyecto | Tecnologías Clave |
 | :--- | :--- | :--- | :--- |
 | **Fase 1** | [**`codigo_para_generar_dataset_finetuning`**](https://github.com/jhangmez/codigo_para_generar_dataset_finetuning) | **Pipeline de Ingesta y Transcripción Técnica de Documentación USS:** Descarga automatizada condicional de 13 reglamentos y manuales institucionales vía `.url`, particionado PDF en memoria (`pypdf`) y transcripción estructurada a Markdown de alta fidelidad con **Google Gemini**, interpretando tablas analíticas y secuencias de interfaz gráfica. | Python 3.10+, `google-genai`, `pypdf`, `requests`, `pydantic` |
 | **Fase 2** | [**`codigo_para_sintesis_dataset_sharegpt`**](https://github.com/jhangmez/codigo_para_sintesis_dataset_sharegpt) | **Fábrica de Datos Sintéticos ShareGPT para Fine-Tuning:** Generación determinista y controlada por cuotas de un dataset de **400 conversaciones balanceadas** (70% monoturno / 30% multiturno) con 3 arquetipos lingüísticos peruanos y formato dual nativo listo para entrenar modelos con **Unsloth** y **Gemma 4**. | Python 3.10+, Gemini Structured Outputs, Pydantic, Unsloth ShareGPT |
+| **Evaluación & Benchmark** | [**`codigo_para_evaluar_sipangpt_benchmark`**](https://github.com/jhangmez/codigo_para_evaluar_sipangpt_benchmark) | **Suite de Evaluación Comparativa de Rigor Científico:** Suite automatizada y reproducible para el informe de tesis (UNPRG) que evalúa cuantitativa y cualitativamente a **Gemma-4 Fine-Tuned (LoRA)** vs. **Sipán-STAIR (RAG)** bajo la metodología *LLM-as-a-Judge* (NeurIPS 2023) sobre 50 casos del banco de pruebas oficial. | Python 3.11+, Pydantic v2, Strict Typing, Benchmark: NeurIPS 2023, Evaluator: Jev System One |
 
 ---
 
@@ -372,6 +379,27 @@ flowchart LR
     - `docente`: Consultas especializadas sobre actas de notas, enlaces Zoom, sílabos y gestión docente en el campus.
   - **Garantía Estructural (Zero Parsing Errors):** Uso de **Structured Outputs de Gemini** y esquemas Pydantic para asegurar que cada diálogo cumpla con la especificación de ShareGPT sin fallas de sintaxis JSON.
   - **Compatibilidad Nativa con Unsloth & Gemma 4 (Fase 3):** Estructura dual (`conversations` y `messages`) que permite cargar directamente los archivos `.jsonl` en notebooks de Google Colab o Kaggle mediante Unsloth para fine-tuning sin scripts de transformación previa.
+
+#### 3. 📊 [Evaluación & Benchmark: Suite de Evaluación Comparativa de Rigor Científico](https://github.com/jhangmez/codigo_para_evaluar_sipangpt_benchmark)
+
+<p align="left">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue.svg" alt="Python 3.11+"></a>
+  <a href="https://docs.pydantic.dev/"><img src="https://img.shields.io/badge/Pydantic-v2-green.svg" alt="Pydantic v2"></a>
+  <a href="https://mypy.readthedocs.io/"><img src="https://img.shields.io/badge/Code%20Style-Strict%20Typing-brightgreen.svg" alt="Code Style: Strict Typing"></a>
+  <a href="https://arxiv.org/abs/2306.05685"><img src="https://img.shields.io/badge/Benchmark-NeurIPS%202023-orange.svg" alt="Benchmark: NeurIPS 2023"></a>
+  <a href="https://ai-gateway.vercel.sh"><img src="https://img.shields.io/badge/Evaluator-Jev%20System%20One-8A2BE2.svg" alt="Evaluator: Jev System One"></a>
+</p>
+
+* **Repositorio Oficial:** [**`codigo_para_evaluar_sipangpt_benchmark`**](https://github.com/jhangmez/codigo_para_evaluar_sipangpt_benchmark)
+* **Título:** Suite de Evaluación Comparativa de Rigor Científico: Gemma-4 Fine-Tuned vs. Sipán-STAIR (RAG)
+* **Descripción:**
+  Este repositorio contiene la suite de evaluación automatizada, científica y reproducible desarrollada para el informe de tesis de la **Universidad Nacional Pedro Ruiz Gallo (UNPRG)**. El objetivo principal es evaluar cuantitativa y cualitativamente el desempeño de dos aproximaciones tecnológicas para asistentes virtuales académicos en la **Universidad Señor de Sipán (USS)**:
+  - **Gemma-4 Fine-Tuned (LoRA):** Modelo de lenguaje adaptado localmente mediante cuantización GGUF Q4_K_M ejecutado en Apple Silicon.
+  - **Sipán-STAIR (RAG Architecture):** Sistema de Generación Aumentada por Recuperación con citación contextual, reranking y verificación fáctica sobre Next.js y PostgreSQL.
+* **Aspectos Técnicos Destacados:**
+  - **Metodología Reference-Guided LLM-as-a-Judge (NeurIPS 2023):** Implementación del estándar riguroso de evaluación basado en Zheng et al. (UC Berkeley / LMSYS) con Gemini 3.5 Flash a temperatura 0.0 y contratos estrictos Pydantic v2 para clasificar respuestas en Correcta ($1.0\text{ pt}$), Parcial ($0.5\text{ pt}$) e Incorrecta / Alucinación ($0.0\text{ pt}$).
+  - **Banco de Pruebas Oficial:** 50 casos de prueba balanceados (70% monoturno / 30% multiturno) extraídos de [ussipan/sipangpt-V2](https://huggingface.co/datasets/ussipan/sipangpt-V2) en Hugging Face, abarcando los 5 módulos temáticos de la USS.
+  - **Resultados Cuantitativos:** La arquitectura **Sipán-STAIR (RAG)** alcanzó un **55.00% de exactitud global** frente al **14.00% de Gemma-4 Fine-Tuned (LoRA)** (+41.00%), logrando reducir las alucinaciones fácticas de 78.0% a 34.0% mediante el anclaje y citación de la normativa universitaria.
 
 ---
 
