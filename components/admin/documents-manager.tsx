@@ -170,6 +170,15 @@ export function DocumentsManager({
   const [showPipelineInfo, setShowPipelineInfo] = React.useState(false)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
 
+  // Paginación de Documentos
+  const [docPage, setDocPage] = React.useState(1)
+  const [docPageSize, setDocPageSize] = React.useState<number>(10)
+
+  // Reset de página al cambiar el listado de documentos
+  React.useEffect(() => {
+    setDocPage(1)
+  }, [documents.length])
+
   // Función para refrescar el estado de los documentos desde la base de datos
   const handleRefreshDocuments = React.useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true)
@@ -545,6 +554,13 @@ export function DocumentsManager({
     startIndex + chunkPageSize
   )
 
+  // Computed: paginación de la lista de documentos
+  const totalDocuments = documents.length
+  const totalDocPages = Math.max(1, Math.ceil(totalDocuments / docPageSize))
+  const safeDocPage = Math.min(Math.max(1, docPage), totalDocPages)
+  const docStartIndex = (safeDocPage - 1) * docPageSize
+  const paginatedDocuments = documents.slice(docStartIndex, docStartIndex + docPageSize)
+
   return (
     <div className='space-y-6 font-exo'>
       {/* Cabecera Principal */}
@@ -723,8 +739,9 @@ export function DocumentsManager({
                 </EmptyContent>
               </Empty>
             ) : (
-              <div className='space-y-3'>
-                {documents.map((doc) => {
+              <>
+                <div className='space-y-3'>
+                {paginatedDocuments.map((doc) => {
                   const isIndexed = doc.status === 'INDEXED'
                   const isProcessing = doc.status === 'PROCESSING'
                   const isDeindexed = doc.status === 'DEINDEXED'
@@ -970,6 +987,89 @@ export function DocumentsManager({
                   )
                 })}
               </div>
+
+              {/* Barra de Control de Paginación de Documentos */}
+              {totalDocPages > 1 && (
+                <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/70 p-3.5 rounded-2xl shadow-2xs flex-wrap'>
+                  <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                    <span>Mostrando</span>
+                    <span className='font-semibold text-foreground'>
+                      {docStartIndex + 1} –{' '}
+                      {Math.min(docStartIndex + docPageSize, totalDocuments)}
+                    </span>
+                    <span>de</span>
+                    <span className='font-semibold text-foreground font-mono'>
+                      {totalDocuments}
+                    </span>
+                    <span>documento(s)</span>
+                  </div>
+
+                  <div className='flex items-center gap-3 flex-wrap justify-between sm:justify-end'>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-xs text-muted-foreground whitespace-nowrap'>
+                        Mostrar:
+                      </span>
+                      <NativeSelect
+                        value={String(docPageSize)}
+                        onChange={(e) => setDocPageSize(Number(e.target.value))}
+                        className='w-28 text-xs py-1 h-8'
+                      >
+                        <NativeSelectOption value='5'>5 / pág</NativeSelectOption>
+                        <NativeSelectOption value='10'>10 / pág</NativeSelectOption>
+                        <NativeSelectOption value='20'>20 / pág</NativeSelectOption>
+                        <NativeSelectOption value='50'>50 / pág</NativeSelectOption>
+                      </NativeSelect>
+                    </div>
+
+                    <div className='flex items-center gap-1'>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeDocPage === 1}
+                        onClick={() => setDocPage(1)}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Primera página'
+                      >
+                        <ChevronsLeft className='size-3.5' />
+                      </Button>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeDocPage === 1}
+                        onClick={() => setDocPage((p) => Math.max(1, p - 1))}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Página anterior'
+                      >
+                        <ChevronLeft className='size-3.5' />
+                      </Button>
+                      <span className='text-xs font-medium px-2 text-foreground select-none'>
+                        {safeDocPage} / {totalDocPages}
+                      </span>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeDocPage === totalDocPages}
+                        onClick={() => setDocPage((p) => Math.min(totalDocPages, p + 1))}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Página siguiente'
+                      >
+                        <ChevronRight className='size-3.5' />
+                      </Button>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeDocPage === totalDocPages}
+                        onClick={() => setDocPage(totalDocPages)}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Última página'
+                      >
+                        <ChevronsRight className='size-3.5' />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </div>
         </div>
