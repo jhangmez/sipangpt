@@ -301,7 +301,7 @@ export async function POST(req: Request) {
       isRAGEnabled && queryForSearch
         ? await searchKnowledgeBase(
             queryForSearch,
-            3,
+            4,
             minSimScore,
             rewrittenQuery?.inferredCategory,
             ragContext
@@ -316,8 +316,8 @@ export async function POST(req: Request) {
     let systemPrompt = buildSystemPromptWithSources(sources)
 
     if (!isWebSearchEnabled) {
-      systemPrompt += `\n\n[POLÍTICA DE BÚSQUEDA WEB: DESHABILITADA POR EL ADMINISTRADOR]
-Tienes TERMINANTEMENTE PROHIBIDO inventar o buscar información en internet fuera de los reglamentos oficiales de la USS. Si la información no se encuentra en los documentos citados, debes responder con honestidad indicando que no dispones de dicha información en la base normativa actual y orientar al estudiante a los canales oficiales (informes@uss.edu.pe o Campus Virtual).`
+      systemPrompt += `\n\n[POLÍTICA DE INFORMACIÓN INSTITUCIONAL USS]
+Prioriza siempre la información reglamentaria oficial de la USS provista. Cuando los fragmentos oficiales contengan la respuesta, fundamenta tus explicaciones en ellos citando el reglamento o manual correspondiente. Si la consulta involucra procedimientos operativos estándar en plataformas institucionales (como Aula Virtual, Moodle o Campus Virtual) que complementan la normativa, brinda la orientación procedimental clara, estructurada y paso a paso con amabilidad institucional, orientando al usuario a validar en los canales oficiales de atención (informes@uss.edu.pe o Campus Virtual) ante gestiones sensibles.`
     }
 
     if (!isMapsSearchEnabled) {
@@ -515,7 +515,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
       model: selectedModel,
       instructions: systemPrompt,
       messages: prunedMessages,
-      maxOutputTokens: 600,
+      maxOutputTokens: 2048,
       temperature: 0.3,
       onFinish: async ({ text, usage }) => {
         try {

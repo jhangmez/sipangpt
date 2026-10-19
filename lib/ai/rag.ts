@@ -40,6 +40,14 @@ export interface SearchKnowledgeBaseContext {
  * activos para identificar las ramas normativas (Capítulos y Artículos) más relevantes,
  * descartando cientos de fragmentos ajenos antes de la búsqueda vectorial.
  */
+function normalizeSearchText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
 export async function routeQueryToToCBranches(
   query: string,
   keywords: string[],
@@ -47,8 +55,13 @@ export async function routeQueryToToCBranches(
 ): Promise<ToCRouteMatch[]> {
   try {
     const cleanQuery = query.toLowerCase()
-    const queryWords = new Set(
-      keywords.concat(extractCleanKeywords(cleanQuery))
+    const rawWords = keywords.concat(extractCleanKeywords(cleanQuery))
+    const normKeywords = Array.from(
+      new Set(
+        rawWords
+          .map((w) => normalizeSearchText(w))
+          .filter((w) => w.length >= 3 && !SPANISH_STOP_WORDS.has(w))
+      )
     )
 
     // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84", "art. 17-A", "art 24°")
@@ -58,8 +71,6 @@ export async function routeQueryToToCBranches(
       : null
 
     // Consultar reglamentos indexados con árbol ToC registrado
-    // Si hay categoryFilter activo, incluir también documentos generales (categoryId: null)
-    // y normativas transversales universales (Estatutos, Normativa General)
     const docsWithToc = await prisma.document.findMany({
       where: {
         status: 'INDEXED',
@@ -92,6 +103,18 @@ export async function routeQueryToToCBranches(
       const tree = doc.tocTree as unknown as DocumentTocTree
       if (!Array.isArray(tree)) continue
 
+      // Afinidad base del título del documento con la consulta (ej: "cobranza", "matricula", "grados")
+      const normDocTitle = normalizeSearchText(doc.title)
+      let docBaseScore = 0
+      for (const word of normKeywords) {
+        if (
+          normDocTitle.includes(word) ||
+          (word.length >= 5 && normDocTitle.includes(word.slice(0, 5)))
+        ) {
+          docBaseScore += 0.20
+        }
+      }
+
       for (const rootNode of tree) {
         // Puede ser TocSectionItem o TocChapterItem
         const isSection = 'chapters' in rootNode || !('articles' in rootNode)
@@ -103,12 +126,15 @@ export async function routeQueryToToCBranches(
 
         for (const chapter of chapters) {
           const chapTitle = chapter.title
-          const chapLower = chapTitle.toLowerCase()
+          const normChap = normalizeSearchText(chapTitle)
 
-          // Evaluar afinidad del capítulo con las palabras clave (excluyendo stop words)
-          let chapScore = 0
-          for (const word of queryWords) {
-            if (!SPANISH_STOP_WORDS.has(word) && chapLower.includes(word)) {
+          // Evaluar afinidad del capítulo con las palabras clave (con soporte de raíces semánticas)
+          let chapScore = docBaseScore
+          for (const word of normKeywords) {
+            if (
+              normChap.includes(word) ||
+              (word.length >= 5 && normChap.includes(word.slice(0, 5)))
+            ) {
               chapScore += 0.25
             }
           }
@@ -117,12 +143,12 @@ export async function routeQueryToToCBranches(
           if (Array.isArray(chapter.articles)) {
             for (const article of chapter.articles) {
               const artTitle = article.title
-              const artLower = artTitle.toLowerCase()
+              const normArt = normalizeSearchText(artTitle)
               const artNum = article.articleNumber
 
               let artScore = chapScore
 
-              // Coincidencia exacta de número de artículo (insensible a mayúsculas para sufijos como 17-A vs 17-a)
+              // Coincidencia exacta de número de artículo
               if (
                 directArtNum &&
                 artNum &&
@@ -131,14 +157,18 @@ export async function routeQueryToToCBranches(
                 artScore += 0.70
               }
 
-              // Coincidencias de palabras clave en el título del artículo (excluyendo stop words)
-              for (const word of queryWords) {
-                if (!SPANISH_STOP_WORDS.has(word) && artLower.includes(word)) {
+              // Coincidencias de palabras clave o raíces en el título del artículo
+              for (const word of normKeywords) {
+                if (
+                  normArt.includes(word) ||
+                  (word.length >= 5 && normArt.includes(word.slice(0, 5)))
+                ) {
                   artScore += 0.35
                 }
               }
 
-              if (artScore >= 0.35) {
+              // Umbral flexible para no descartar ramas relevantes
+              if (artScore >= 0.20) {
                 const breadcrumb = isSection
                   ? `${doc.title} > ${sectionTitle} > ${chapTitle} > ${artTitle}`
                   : `${doc.title} > ${chapTitle} > ${artTitle}`
@@ -156,7 +186,7 @@ export async function routeQueryToToCBranches(
           }
 
           // Si el capítulo completo tiene afinidad pero ningún artículo superó el corte individual
-          if (chapScore >= 0.40) {
+          if (chapScore >= 0.25) {
             const breadcrumb = isSection
               ? `${doc.title} > ${sectionTitle} > ${chapTitle}`
               : `${doc.title} > ${chapTitle}`
@@ -173,8 +203,8 @@ export async function routeQueryToToCBranches(
       }
     }
 
-    // Ordenar ramas por mayor afinidad y retornar las mejores candidatas
-    return matches.sort((a, b) => b.score - a.score).slice(0, 5)
+    // Ordenar ramas por mayor afinidad y retornar las mejores candidatas (ampliado a 6)
+    return matches.sort((a, b) => b.score - a.score).slice(0, 6)
   } catch (err) {
     console.warn('[STAIR_TOC_ROUTING_WARN] Fallo al enrutar ramas ToC:', err)
     return []
@@ -190,7 +220,7 @@ export async function routeQueryToToCBranches(
  */
 export async function searchKnowledgeBase(
   query: string,
-  topK: number = 3,
+  topK: number = 4,
   minScore: number = 0.50,
   categoryFilter?: string | null,
   context?: SearchKnowledgeBaseContext
@@ -243,6 +273,13 @@ export async function searchKnowledgeBase(
             documentId: branch.documentId,
             content: { contains: branch.articleTitle, mode: 'insensitive' as const },
           })
+          const artNumMatch = branch.articleTitle.match(/(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i)
+          if (artNumMatch) {
+            tocConditions.push({
+              documentId: branch.documentId,
+              content: { contains: artNumMatch[0], mode: 'insensitive' as const },
+            })
+          }
         }
         if (branch.branchTitle) {
           tocConditions.push({
@@ -258,7 +295,7 @@ export async function searchKnowledgeBase(
             document: { status: 'INDEXED' },
             OR: tocConditions,
           },
-          take: 30,
+          take: 40,
           include: chunkInclude,
         })
 
@@ -426,10 +463,17 @@ export async function searchKnowledgeBase(
         }
       })
 
-      // Ordenar por mayor similitud y filtrar por umbral configurado
-      const validResults = scoredResults
+      // Ordenar por mayor similitud y filtrar por umbral configurado con red de seguridad
+      let validResults = scoredResults
         .filter((r) => r.relevance >= minScore)
         .sort((a, b) => b.relevance - a.relevance)
+
+      // Si el umbral estricto no arrojó resultados pero hay candidatos evaluados, recuperar los más afines (>= 0.35)
+      if (validResults.length === 0 && scoredResults.length > 0) {
+        validResults = scoredResults
+          .filter((r) => r.relevance >= 0.35)
+          .sort((a, b) => b.relevance - a.relevance)
+      }
 
       return validResults.slice(0, topK)
     } catch (embErr) {
