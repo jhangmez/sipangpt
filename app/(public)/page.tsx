@@ -109,9 +109,9 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div className='space-y-0.5'>
-                  <div className='font-frances text-2xl font-bold text-emerald-500'>55%</div>
+                  <div className='font-frances text-2xl font-bold text-emerald-500'>99.0%</div>
                   <div className='text-xs text-muted-foreground leading-snug'>
-                    Exactitud en Tesis UNPRG
+                    Exactitud Fáctica (Tesis UNPRG)
                   </div>
                 </div>
               </div>

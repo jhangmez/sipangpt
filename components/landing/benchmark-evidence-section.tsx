@@ -3,15 +3,13 @@
 import * as React from 'react'
 import {
   Award,
-  BarChart3,
   CheckCircle,
   ExternalLink,
-  Flame,
   Scale,
   Sparkles,
   TrendingUp,
   FileCheck2,
-  ShieldAlert
+  ShieldCheck
 } from 'lucide-react'
 
 export function BenchmarkEvidenceSection() {
@@ -23,7 +21,7 @@ export function BenchmarkEvidenceSection() {
           <div className='max-w-2xl space-y-3'>
             <div className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary font-exo'>
               <Award className='w-3.5 h-3.5' />
-              <span>Evaluación de Tesis UNPRG • Estándar NeurIPS 2023</span>
+              <span>Evaluación de Tesis UNPRG • Estándar NeurIPS 2023 (Cuarta Tanda)</span>
             </div>
 
             <h2 className='font-frances text-3xl sm:text-4xl font-bold tracking-tight text-foreground'>
@@ -59,38 +57,38 @@ export function BenchmarkEvidenceSection() {
           </div>
         </div>
 
-        {/* Tarjetas de Métricas Científicas */}
+        {/* Tarjetas de Métricas Científicas Oficiales (Cuarta Tanda) */}
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 font-exo'>
           <div className='rounded-2xl border border-border/70 bg-card p-5 space-y-2 shadow-xs'>
             <div className='flex items-center justify-between text-muted-foreground text-xs'>
-              <span>Ventaja de Exactitud</span>
+              <span>Exactitud Fáctica RAG</span>
               <TrendingUp className='w-4 h-4 text-primary' />
             </div>
-            <div className='font-frances text-3xl font-bold text-primary'>+41.00%</div>
+            <div className='font-frances text-3xl font-bold text-primary'>99.00%</div>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Superioridad de Sipán-STAIR frente a modelos Fine-Tuned puros sin recuperación.
+              49 respuestas correctas y 1 parcial sobre 50 casos evaluados en la cuarta tanda.
             </p>
           </div>
 
           <div className='rounded-2xl border border-border/70 bg-card p-5 space-y-2 shadow-xs'>
             <div className='flex items-center justify-between text-muted-foreground text-xs'>
-              <span>Control de Alucinación</span>
+              <span>Alucinaciones en RAG</span>
               <CheckCircle className='w-4 h-4 text-emerald-500' />
             </div>
-            <div className='font-frances text-3xl font-bold text-foreground'>34.0%</div>
+            <div className='font-frances text-3xl font-bold text-emerald-500'>0.0%</div>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Reducción dramática del riesgo de inventar artículos o requisitos inexistentes.
+              Cero respuestas incorrectas gracias a la citación y anclaje normativo directo.
             </p>
           </div>
 
           <div className='rounded-2xl border border-border/70 bg-card p-5 space-y-2 shadow-xs'>
             <div className='flex items-center justify-between text-muted-foreground text-xs'>
-              <span>Banco de Pruebas</span>
-              <FileCheck2 className='w-4 h-4 text-primary' />
+              <span>Ventaja vs Fine-Tuning</span>
+              <ShieldCheck className='w-4 h-4 text-primary' />
             </div>
-            <div className='font-frances text-3xl font-bold text-foreground'>50 Casos</div>
+            <div className='font-frances text-3xl font-bold text-foreground'>+94.00%</div>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              70% monoturno y 30% multiturno abarcando los 5 módulos temáticos de la USS.
+              Frente a Gemma-4 LoRA (5.00% de exactitud y 92% de alucinaciones sin RAG).
             </p>
           </div>
 
@@ -99,9 +97,9 @@ export function BenchmarkEvidenceSection() {
               <span>Juez de Evaluación</span>
               <Scale className='w-4 h-4 text-primary' />
             </div>
-            <div className='font-frances text-3xl font-bold text-foreground'>T = 0.0</div>
+            <div className='font-frances text-3xl font-bold text-foreground'>Gemini 3.8</div>
             <p className='text-xs text-muted-foreground leading-relaxed'>
-              Gemini Flash a temperatura cero con esquemas estrictos Pydantic v2 (NeurIPS).
+              Auditoría imparcial con razonamiento integrado y contratos estrictos Pydantic v2.
             </p>
           </div>
         </div>
@@ -109,7 +107,7 @@ export function BenchmarkEvidenceSection() {
         {/* Comparador Visual de Barras */}
         <div className='rounded-2xl border border-border/80 bg-card p-6 sm:p-8 space-y-6 font-exo shadow-sm'>
           <h3 className='font-frances font-bold text-lg sm:text-xl text-foreground text-left'>
-            Exactitud Global por Enfoque Tecnológico (LLM-as-a-Judge)
+            Exactitud Global por Enfoque Tecnológico (Cuarta Tanda Oficial)
           </h3>
 
           <div className='space-y-6'>
@@ -118,19 +116,19 @@ export function BenchmarkEvidenceSection() {
               <div className='flex justify-between items-center text-sm font-medium'>
                 <span className='flex items-center gap-2 text-foreground font-semibold'>
                   <span className='w-2.5 h-2.5 rounded-full bg-primary' />
-                  Sipán-STAIR (Arquitectura RAG Jerárquica + Next.js + Neon)
+                  Sipán-STAIR (RAG con Gemini 3.8 Flash + Next.js + Neon)
                 </span>
-                <span className='font-frances font-bold text-primary text-base'>55.00% Exactitud</span>
+                <span className='font-frances font-bold text-primary text-base'>99.00% Exactitud</span>
               </div>
               <div className='h-4 w-full bg-muted rounded-full overflow-hidden p-0.5 border border-border/60'>
                 <div
                   className='h-full bg-primary rounded-full transition-all duration-1000'
-                  style={{ width: '55%' }}
+                  style={{ width: '99%' }}
                 />
               </div>
               <div className='text-[11px] text-muted-foreground flex items-center justify-between'>
-                <span>Respuestas fundamentadas con citas verificables directas al PDF</span>
-                <span className='text-emerald-500 font-semibold'>Calificación Más Alta</span>
+                <span>49 Correctas (1.0 pt), 1 Parcial (0.5 pt), 0 Alucinaciones</span>
+                <span className='text-emerald-500 font-semibold'>Cero Alucinaciones Fácticas</span>
               </div>
             </div>
 
@@ -139,29 +137,29 @@ export function BenchmarkEvidenceSection() {
               <div className='flex justify-between items-center text-sm font-medium'>
                 <span className='flex items-center gap-2 text-muted-foreground'>
                   <span className='w-2.5 h-2.5 rounded-full bg-muted-foreground/60' />
-                  Gemma-4 Fine-Tuned (Ajuste Fino LoRA GGUF Q4_K_M)
+                  Gemma-4 Fine-Tuned (Ajuste Fino LoRA GGUF Remoto en ai-desa.sipangpt.com)
                 </span>
-                <span className='font-frances font-bold text-muted-foreground text-base'>14.00% Exactitud</span>
+                <span className='font-frances font-bold text-muted-foreground text-base'>5.00% Exactitud</span>
               </div>
               <div className='h-4 w-full bg-muted rounded-full overflow-hidden p-0.5 border border-border/60'>
                 <div
                   className='h-full bg-muted-foreground/50 rounded-full transition-all duration-1000'
-                  style={{ width: '14%' }}
+                  style={{ width: '5%' }}
                 />
               </div>
               <div className='text-[11px] text-muted-foreground flex items-center justify-between'>
-                <span>Presenta 78% de alucinaciones en artículos específicos sin anclaje RAG</span>
-                <span className='text-destructive font-medium'>Alucinación Frecuente</span>
+                <span>46 Alucinaciones (92.0% de error en enlaces y trámites sin anclaje documental)</span>
+                <span className='text-destructive font-medium'>Incompetencia Fáctica sin RAG</span>
               </div>
             </div>
           </div>
 
           <div className='pt-4 border-t border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground'>
             <p>
-              Basado en el protocolo de evaluación de Zheng et al. (UC Berkeley / LMSYS, NeurIPS 2023)
+              Protocolo de evaluación Reference-Guided de Zheng et al. (UC Berkeley / LMSYS, NeurIPS 2023)
               publicado en arXiv:2306.05685.
             </p>
-            <span className='font-mono text-[11px] text-primary shrink-0'>50 / 50 Evaluaciones Completadas</span>
+            <span className='font-mono text-[11px] text-primary shrink-0'>50 / 50 Casos USS Evaluados</span>
           </div>
         </div>
       </div>

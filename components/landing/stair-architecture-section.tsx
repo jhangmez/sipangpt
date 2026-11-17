@@ -164,10 +164,10 @@ export function StairArchitectureSection() {
               <span
                 className={cn(
                   'font-bold text-sm',
-                  activeTab === 'stair' ? 'text-primary' : 'text-destructive'
+                  activeTab === 'stair' ? 'text-emerald-500 font-bold' : 'text-destructive font-bold'
                 )}
               >
-                {activeTab === 'stair' ? '34.0% (Controlado)' : '78.0% (Crítico)'}
+                {activeTab === 'stair' ? '0.0% (Cero Alucinaciones)' : '92.0% (Crítico sin RAG)'}
               </span>
             </div>
           </div>

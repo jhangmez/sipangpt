@@ -508,7 +508,7 @@ flowchart LR
 * **Aspectos Técnicos Destacados:**
   - **Metodología Reference-Guided LLM-as-a-Judge (NeurIPS 2023):** Implementación del estándar riguroso de evaluación basado en Zheng et al. (UC Berkeley / LMSYS) con Gemini 3.5 Flash a temperatura 0.0 y contratos estrictos Pydantic v2 para clasificar respuestas en Correcta ($1.0\text{ pt}$), Parcial ($0.5\text{ pt}$) e Incorrecta / Alucinación ($0.0\text{ pt}$).
   - **Banco de Pruebas Oficial:** 50 casos de prueba balanceados (70% monoturno / 30% multiturno) extraídos de [ussipan/sipangpt-V2](https://huggingface.co/datasets/ussipan/sipangpt-V2) en Hugging Face, abarcando los 5 módulos temáticos de la USS.
-  - **Resultados Cuantitativos:** La arquitectura **Sipán-STAIR (RAG)** alcanzó un **55.00% de exactitud global** frente al **14.00% de Gemma-4 Fine-Tuned (LoRA)** (+41.00%), logrando reducir las alucinaciones fácticas de 78.0% a 34.0% mediante el anclaje y citación de la normativa universitaria.
+  - **Resultados Cuantitativos (Cuarta Tanda Oficial):** La arquitectura **Sipán-STAIR (RAG)** alcanzó un **99.00% de exactitud global fáctica** (49 respuestas correctas y 1 parcial) frente al **5.00% de Gemma-4 Fine-Tuned (LoRA)** (+94.00%), logrando **cero alucinaciones fácticas (0.0% de error en RAG)** frente al 92.0% de alucinaciones del modelo puramente generativo sin recuperación.
 
 ---
 

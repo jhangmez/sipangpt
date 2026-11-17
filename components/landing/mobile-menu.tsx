@@ -7,11 +7,10 @@ import {
   X,
   BookOpen,
   GitBranch,
-  Users2,
   Award,
-  MessageSquare,
   LogIn,
-  Bot
+  Bot,
+  MessageSquare
 } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -42,7 +41,7 @@ export function MobileMenu({ isLoggedIn }: MobileMenuProps) {
         <div className='fixed inset-x-0 top-16 z-50 border-b border-border/80 bg-background/95 backdrop-blur-xl p-5 shadow-2xl font-exo animate-in slide-in-from-top-2 duration-200'>
           <div className='flex flex-col space-y-3'>
             <div className='text-[11px] font-bold uppercase tracking-wider text-muted-foreground pb-1 border-b border-border/40'>
-              Navegación del Asistente
+              Navegación
             </div>
 
             <Link
@@ -69,16 +68,7 @@ export function MobileMenu({ isLoggedIn }: MobileMenuProps) {
               className='flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors'
             >
               <GitBranch className='w-4 h-4 text-primary' />
-              <span>Arquitectura STAIR</span>
-            </Link>
-
-            <Link
-              href='/#arquetipos'
-              onClick={closeMenu}
-              className='flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors'
-            >
-              <Users2 className='w-4 h-4 text-primary' />
-              <span>Roles Universitarios</span>
+              <span>Metodología STAIR</span>
             </Link>
 
             <Link
@@ -90,30 +80,30 @@ export function MobileMenu({ isLoggedIn }: MobileMenuProps) {
               <span>Benchmark UNPRG</span>
             </Link>
 
-            <div className='pt-3 border-t border-border/50 flex flex-col gap-2'>
-              <Link
-                href='/chat'
-                onClick={closeMenu}
-                className={cn(
-                  buttonVariants({ variant: 'default' }),
-                  'w-full justify-center gap-2 font-semibold shadow-xs'
-                )}
-              >
-                <MessageSquare className='w-4 h-4' />
-                <span>{isLoggedIn ? 'Ir al Chat' : 'Probar Chatbot'}</span>
-              </Link>
-
-              {!isLoggedIn && (
+            <div className='pt-3 border-t border-border/50'>
+              {isLoggedIn ? (
+                <Link
+                  href='/chat'
+                  onClick={closeMenu}
+                  className={cn(
+                    buttonVariants({ variant: 'default' }),
+                    'w-full justify-center gap-2 font-semibold shadow-xs'
+                  )}
+                >
+                  <MessageSquare className='w-4 h-4' />
+                  <span>Ir al Chat</span>
+                </Link>
+              ) : (
                 <Link
                   href='/login'
                   onClick={closeMenu}
                   className={cn(
-                    buttonVariants({ variant: 'outline' }),
-                    'w-full justify-center gap-2'
+                    buttonVariants({ variant: 'default' }),
+                    'w-full justify-center gap-2 font-semibold shadow-xs'
                   )}
                 >
                   <LogIn className='w-4 h-4' />
-                  <span>Acceso Institucional</span>
+                  <span>Iniciar Sesión</span>
                 </Link>
               )}
             </div>
