@@ -50,7 +50,11 @@ import {
   Sliders,
   Clock,
   User as UserIcon,
-  Tag
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react'
 import type { ModelProvider, ModelStatus } from '@/lib/prisma'
 import type { TokenUsageStats, TokenUsageLogWithUser } from '@/types/admin'
@@ -176,6 +180,23 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
   // Estado para Analítica de Tokens y Logs
   const [tokenStats, setTokenStats] = useState<TokenUsageStats | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
+
+  // Paginación del Catálogo de Modelos
+  const [modelPage, setModelPage] = useState(1)
+  const [modelPageSize, setModelPageSize] = useState<number>(6)
+
+  useEffect(() => {
+    setModelPage(1)
+  }, [models.length])
+
+  // Paginación de Logs de Consumo
+  const [logPage, setLogPage] = useState(1)
+  const [logPageSize, setLogPageSize] = useState<number>(10)
+
+  const logsList = tokenStats?.recentLogs || []
+  useEffect(() => {
+    setLogPage(1)
+  }, [logsList.length])
 
   // Cargar analíticas cuando se cambia a la pestaña de logs
   useEffect(() => {
@@ -418,6 +439,26 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
     }
   }
 
+  // Computed: Paginación del Catálogo de Modelos
+  const totalModels = models.length
+  const totalModelPages = Math.max(1, Math.ceil(totalModels / modelPageSize))
+  const safeModelPage = Math.min(Math.max(1, modelPage), totalModelPages)
+  const modelStartIndex = (safeModelPage - 1) * modelPageSize
+  const paginatedModels = models.slice(
+    modelStartIndex,
+    modelStartIndex + modelPageSize
+  )
+
+  // Computed: Paginación de Logs de Consumo
+  const totalLogs = logsList.length
+  const totalLogPages = Math.max(1, Math.ceil(totalLogs / logPageSize))
+  const safeLogPage = Math.min(Math.max(1, logPage), totalLogPages)
+  const logStartIndex = (safeLogPage - 1) * logPageSize
+  const paginatedLogs = logsList.slice(
+    logStartIndex,
+    logStartIndex + logPageSize
+  )
+
   return (
     <div className='space-y-5 font-exo w-full'>
       {/* Cabecera Principal */}
@@ -477,22 +518,23 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       {/* PESTAÑA 1: CATÁLOGO DE MODELOS */}
       {/* ========================================================================= */}
       {activeTab === 'models' && (
-        <div className='grid grid-cols-1 gap-4 w-full'>
-          {models.length === 0 ? (
-            <Empty className='rounded-3xl border border-dashed border-border/80 bg-card/40 p-8'>
-              <EmptyHeader>
-                <EmptyMedia variant='icon'>
-                  <Cpu className='size-8 text-muted-foreground' />
-                </EmptyMedia>
-                <EmptyTitle>Sin modelos registrados</EmptyTitle>
-                <EmptyDescription>
-                  No hay modelos de IA en el catálogo. Registra uno nuevo para
-                  comenzar.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            models.map((model) => (
+        <div className='space-y-4 w-full'>
+          <div className='grid grid-cols-1 gap-4 w-full'>
+            {models.length === 0 ? (
+              <Empty className='rounded-3xl border border-dashed border-border/80 bg-card/40 p-8'>
+                <EmptyHeader>
+                  <EmptyMedia variant='icon'>
+                    <Cpu className='size-8 text-muted-foreground' />
+                  </EmptyMedia>
+                  <EmptyTitle>Sin modelos registrados</EmptyTitle>
+                  <EmptyDescription>
+                    No hay modelos de IA en el catálogo. Registra uno nuevo para
+                    comenzar.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              paginatedModels.map((model) => (
               <div
                 key={model.id}
                 className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-4 hover:border-primary/40 transition-colors w-full'
@@ -695,7 +737,97 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
             ))
           )}
         </div>
-      )}
+
+        {/* Barra de Control de Paginación de Modelos */}
+        {totalModels > 0 && (
+          <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/70 p-3.5 rounded-2xl shadow-2xs flex-wrap'>
+            <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+              <span>Mostrando</span>
+              <span className='font-semibold text-foreground'>
+                {modelStartIndex + 1} –{' '}
+                {Math.min(modelStartIndex + modelPageSize, totalModels)}
+              </span>
+              <span>de</span>
+              <span className='font-semibold text-foreground font-mono'>
+                {totalModels}
+              </span>
+              <span>modelo(s)</span>
+            </div>
+
+            <div className='flex items-center gap-3 flex-wrap justify-between sm:justify-end'>
+              <div className='flex items-center gap-2'>
+                <span className='text-xs text-muted-foreground whitespace-nowrap'>
+                  Mostrar:
+                </span>
+                <NativeSelect
+                  value={String(modelPageSize)}
+                  onChange={(e) => {
+                    setModelPageSize(Number(e.target.value))
+                    setModelPage(1)
+                  }}
+                  className='w-28 text-xs py-1 h-8'
+                >
+                  <NativeSelectOption value='4'>4 / pág</NativeSelectOption>
+                  <NativeSelectOption value='6'>6 / pág</NativeSelectOption>
+                  <NativeSelectOption value='12'>12 / pág</NativeSelectOption>
+                  <NativeSelectOption value='24'>24 / pág</NativeSelectOption>
+                </NativeSelect>
+              </div>
+
+              <div className='flex items-center gap-1'>
+                <Button
+                  size='icon-xs'
+                  variant='outline'
+                  disabled={safeModelPage === 1}
+                  onClick={() => setModelPage(1)}
+                  className='rounded-lg cursor-pointer h-7 w-7'
+                  title='Primera página'
+                >
+                  <ChevronsLeft className='size-3.5' />
+                </Button>
+                <Button
+                  size='icon-xs'
+                  variant='outline'
+                  disabled={safeModelPage === 1}
+                  onClick={() => setModelPage((p) => Math.max(1, p - 1))}
+                  className='rounded-lg cursor-pointer h-7 w-7'
+                  title='Página anterior'
+                >
+                  <ChevronLeft className='size-3.5' />
+                </Button>
+
+                <span className='text-xs font-medium px-2 text-foreground select-none'>
+                  {safeModelPage} / {totalModelPages}
+                </span>
+
+                <Button
+                  size='icon-xs'
+                  variant='outline'
+                  disabled={safeModelPage === totalModelPages}
+                  onClick={() =>
+                    setModelPage((p) => Math.min(totalModelPages, p + 1))
+                  }
+                  className='rounded-lg cursor-pointer h-7 w-7'
+                  title='Página siguiente'
+                >
+                  <ChevronRight className='size-3.5' />
+                </Button>
+                <Button
+                  size='icon-xs'
+                  variant='outline'
+                  disabled={safeModelPage === totalModelPages}
+                  onClick={() => setModelPage(totalModelPages)}
+                  className='rounded-lg cursor-pointer h-7 w-7'
+                  title='Última página'
+                >
+                  <ChevronsRight className='size-3.5' />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
 
       {/* ========================================================================= */}
       {/* PESTAÑA 2: REGISTRO DE TOKENS Y COSTOS (LOGS) */}
@@ -820,8 +952,9 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                 </EmptyHeader>
               </Empty>
             ) : (
-              <div className='overflow-x-auto'>
-                <table className='w-full text-left text-xs'>
+              <>
+                <div className='overflow-x-auto'>
+                  <table className='w-full text-left text-xs'>
                   <thead className='bg-muted/30 border-b border-border/50 text-muted-foreground font-semibold'>
                     <tr>
                       <th className='p-3 rounded-l-xl'>Fecha / Hora</th>
@@ -835,7 +968,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                     </tr>
                   </thead>
                   <tbody className='divide-y divide-border/40'>
-                    {tokenStats.recentLogs.map((log: TokenUsageLogWithUser) => {
+                    {paginatedLogs.map((log: TokenUsageLogWithUser) => {
                       const dateStr = new Date(log.createdAt).toLocaleString(
                         'es-PE',
                         {
@@ -881,7 +1014,97 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                   </tbody>
                 </table>
               </div>
-            )}
+
+              {/* Barra de Control de Paginación de Logs */}
+              {totalLogs > 0 && (
+                <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20 border border-border/70 p-3.5 rounded-2xl shadow-2xs flex-wrap'>
+                  <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                    <span>Mostrando</span>
+                    <span className='font-semibold text-foreground'>
+                      {logStartIndex + 1} –{' '}
+                      {Math.min(logStartIndex + logPageSize, totalLogs)}
+                    </span>
+                    <span>de</span>
+                    <span className='font-semibold text-foreground font-mono'>
+                      {totalLogs}
+                    </span>
+                    <span>registro(s)</span>
+                  </div>
+
+                  <div className='flex items-center gap-3 flex-wrap justify-between sm:justify-end'>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-xs text-muted-foreground whitespace-nowrap'>
+                        Mostrar:
+                      </span>
+                      <NativeSelect
+                        value={String(logPageSize)}
+                        onChange={(e) => {
+                          setLogPageSize(Number(e.target.value))
+                          setLogPage(1)
+                        }}
+                        className='w-28 text-xs py-1 h-8'
+                      >
+                        <NativeSelectOption value='10'>10 / pág</NativeSelectOption>
+                        <NativeSelectOption value='20'>20 / pág</NativeSelectOption>
+                        <NativeSelectOption value='30'>30 / pág</NativeSelectOption>
+                        <NativeSelectOption value='50'>50 / pág</NativeSelectOption>
+                      </NativeSelect>
+                    </div>
+
+                    <div className='flex items-center gap-1'>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeLogPage === 1}
+                        onClick={() => setLogPage(1)}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Primera página'
+                      >
+                        <ChevronsLeft className='size-3.5' />
+                      </Button>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeLogPage === 1}
+                        onClick={() => setLogPage((p) => Math.max(1, p - 1))}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Página anterior'
+                      >
+                        <ChevronLeft className='size-3.5' />
+                      </Button>
+
+                      <span className='text-xs font-medium px-2 text-foreground select-none'>
+                        {safeLogPage} / {totalLogPages}
+                      </span>
+
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeLogPage === totalLogPages}
+                        onClick={() =>
+                          setLogPage((p) => Math.min(totalLogPages, p + 1))
+                        }
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Página siguiente'
+                      >
+                        <ChevronRight className='size-3.5' />
+                      </Button>
+                      <Button
+                        size='icon-xs'
+                        variant='outline'
+                        disabled={safeLogPage === totalLogPages}
+                        onClick={() => setLogPage(totalLogPages)}
+                        className='rounded-lg cursor-pointer h-7 w-7'
+                        title='Última página'
+                      >
+                        <ChevronsRight className='size-3.5' />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           </div>
         </div>
       )}
