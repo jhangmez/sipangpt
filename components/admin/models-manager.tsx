@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import {
   updateModelStatusAction,
@@ -54,7 +54,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Search,
+  RotateCcw,
+  X,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react'
 import type { ModelProvider, ModelStatus } from '@/lib/prisma'
 import type { TokenUsageStats, TokenUsageLogWithUser } from '@/types/admin'
@@ -181,13 +186,22 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
   const [tokenStats, setTokenStats] = useState<TokenUsageStats | null>(null)
   const [isLoadingStats, setIsLoadingStats] = useState(false)
 
+  // Filtros y Búsqueda del Catálogo de Modelos
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all')
+  const [filterProvider, setFilterProvider] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'ONLINE' | 'DEGRADED' | 'OFFLINE'>('all')
+  const [sortBy, setSortBy] = useState<
+    'default' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'latency_asc' | 'tokens_desc'
+  >('default')
+
   // Paginación del Catálogo de Modelos
   const [modelPage, setModelPage] = useState(1)
   const [modelPageSize, setModelPageSize] = useState<number>(6)
 
   useEffect(() => {
     setModelPage(1)
-  }, [models.length])
+  }, [searchQuery, filterActive, filterProvider, filterStatus, sortBy, models.length])
 
   // Paginación de Logs de Consumo
   const [logPage, setLogPage] = useState(1)
@@ -439,12 +453,95 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
     }
   }
 
-  // Computed: Paginación del Catálogo de Modelos
-  const totalModels = models.length
+  // Proveedores presentes en el catálogo
+  const availableProviders = useMemo(() => {
+    const set = new Set<string>()
+    models.forEach((m) => set.add(m.provider))
+    return Array.from(set).sort()
+  }, [models])
+
+  // Filtrado y ordenamiento en memoria del catálogo
+  const filteredModels = useMemo(() => {
+    return models
+      .filter((model) => {
+        // 1. Búsqueda por texto (nombre, código, proveedor o descripción)
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim()
+          const matchName = model.name.toLowerCase().includes(q)
+          const matchCode = model.modelCode.toLowerCase().includes(q)
+          const matchProvider = model.provider.toLowerCase().includes(q)
+          const matchDesc = (model.description || '').toLowerCase().includes(q)
+          if (!matchName && !matchCode && !matchProvider && !matchDesc) {
+            return false
+          }
+        }
+
+        // 2. Filtro Activos / Inactivos
+        if (filterActive === 'active' && !model.isActive) return false
+        if (filterActive === 'inactive' && model.isActive) return false
+
+        // 3. Filtro Proveedor
+        if (filterProvider !== 'all' && model.provider !== filterProvider) {
+          return false
+        }
+
+        // 4. Filtro Estado Operativo (Salud)
+        if (filterStatus !== 'all' && model.status !== filterStatus) {
+          return false
+        }
+
+        return true
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'price_asc': {
+            const priceA = (a.inputPricePerMillion || 0) + (a.outputPricePerMillion || 0)
+            const priceB = (b.inputPricePerMillion || 0) + (b.outputPricePerMillion || 0)
+            return priceA - priceB
+          }
+          case 'price_desc': {
+            const priceA = (a.inputPricePerMillion || 0) + (a.outputPricePerMillion || 0)
+            const priceB = (b.inputPricePerMillion || 0) + (b.outputPricePerMillion || 0)
+            return priceB - priceA
+          }
+          case 'name_asc':
+            return a.name.localeCompare(b.name)
+          case 'name_desc':
+            return b.name.localeCompare(a.name)
+          case 'latency_asc':
+            return (a.latencyMs ?? 999999) - (b.latencyMs ?? 999999)
+          case 'tokens_desc':
+            return (b.totalTokensUsed || 0) - (a.totalTokensUsed || 0)
+          case 'default':
+          default:
+            if (a.isDefault && !b.isDefault) return -1
+            if (!a.isDefault && b.isDefault) return 1
+            return a.order - b.order
+        }
+      })
+  }, [models, searchQuery, filterActive, filterProvider, filterStatus, sortBy])
+
+  const isAnyFilterActive =
+    searchQuery.trim() !== '' ||
+    filterActive !== 'all' ||
+    filterProvider !== 'all' ||
+    filterStatus !== 'all' ||
+    sortBy !== 'default'
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setFilterActive('all')
+    setFilterProvider('all')
+    setFilterStatus('all')
+    setSortBy('default')
+  }
+
+  // Computed: Paginación del Catálogo de Modelos (sobre filtrados)
+  const totalModels = filteredModels.length
   const totalModelPages = Math.max(1, Math.ceil(totalModels / modelPageSize))
   const safeModelPage = Math.min(Math.max(1, modelPage), totalModelPages)
   const modelStartIndex = (safeModelPage - 1) * modelPageSize
-  const paginatedModels = models.slice(
+  const paginatedModels = filteredModels.slice(
     modelStartIndex,
     modelStartIndex + modelPageSize
   )
@@ -519,6 +616,140 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       {/* ========================================================================= */}
       {activeTab === 'models' && (
         <div className='space-y-4 w-full'>
+          {/* Barra Superior de Búsqueda, Filtros y Ordenamiento */}
+          <div className='rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs space-y-3.5'>
+            <div className='flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3'>
+              {/* Buscador Textual */}
+              <div className='relative flex-1 min-w-[240px]'>
+                <Search className='absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none' />
+                <input
+                  type='text'
+                  placeholder='Buscar por nombre, código, proveedor o descripción...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className='w-full h-9 rounded-xl border border-border/70 bg-background/80 pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
+                />
+                {searchQuery && (
+                  <button
+                    type='button'
+                    onClick={() => setSearchQuery('')}
+                    className='absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5'
+                    title='Limpiar búsqueda'
+                  >
+                    <X className='size-3.5' />
+                  </button>
+                )}
+              </div>
+
+              {/* Controles de Filtros y Ordenamiento */}
+              <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 items-center flex-wrap'>
+                {/* 1. Filtro Activo / Inactivo */}
+                <NativeSelect
+                  value={filterActive}
+                  onChange={(e) =>
+                    setFilterActive(
+                      e.target.value as 'all' | 'active' | 'inactive'
+                    )
+                  }
+                  className='text-xs py-1 h-9'
+                  title='Filtrar por estado activo o inactivo'
+                >
+                  <NativeSelectOption value='all'>Estado: Todos</NativeSelectOption>
+                  <NativeSelectOption value='active'>✓ Solo Activos</NativeSelectOption>
+                  <NativeSelectOption value='inactive'>✕ Solo Inactivos</NativeSelectOption>
+                </NativeSelect>
+
+                {/* 2. Filtro Proveedor */}
+                <NativeSelect
+                  value={filterProvider}
+                  onChange={(e) => setFilterProvider(e.target.value)}
+                  className='text-xs py-1 h-9'
+                  title='Filtrar por proveedor de IA'
+                >
+                  <NativeSelectOption value='all'>Proveedor: Todos</NativeSelectOption>
+                  {availableProviders.map((prov) => (
+                    <NativeSelectOption key={prov} value={prov}>
+                      {prov}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+
+                {/* 3. Filtro Salud Operativa */}
+                <NativeSelect
+                  value={filterStatus}
+                  onChange={(e) =>
+                    setFilterStatus(
+                      e.target.value as 'all' | 'ONLINE' | 'DEGRADED' | 'OFFLINE'
+                    )
+                  }
+                  className='text-xs py-1 h-9'
+                  title='Filtrar por salud del servicio'
+                >
+                  <NativeSelectOption value='all'>Salud: Todas</NativeSelectOption>
+                  <NativeSelectOption value='ONLINE'>🟢 Online</NativeSelectOption>
+                  <NativeSelectOption value='DEGRADED'>🟡 Degraded</NativeSelectOption>
+                  <NativeSelectOption value='OFFLINE'>🔴 Offline</NativeSelectOption>
+                </NativeSelect>
+
+                {/* 4. Ordenamiento */}
+                <NativeSelect
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className='text-xs py-1 h-9'
+                  title='Ordenar catálogo de modelos'
+                >
+                  <NativeSelectOption value='default'>
+                    Ordenar: Recomendado
+                  </NativeSelectOption>
+                  <NativeSelectOption value='price_asc'>
+                    Precio: Más Barato ↑
+                  </NativeSelectOption>
+                  <NativeSelectOption value='price_desc'>
+                    Precio: Más Caro ↓
+                  </NativeSelectOption>
+                  <NativeSelectOption value='name_asc'>
+                    Nombre: A → Z
+                  </NativeSelectOption>
+                  <NativeSelectOption value='name_desc'>
+                    Nombre: Z → A
+                  </NativeSelectOption>
+                  <NativeSelectOption value='latency_asc'>
+                    Latencia: Más Rápida
+                  </NativeSelectOption>
+                  <NativeSelectOption value='tokens_desc'>
+                    Tokens: Mayor Consumo
+                  </NativeSelectOption>
+                </NativeSelect>
+              </div>
+            </div>
+
+            {/* Fila Informativa y Limpieza de Filtros */}
+            <div className='flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap gap-2'>
+              <div className='flex items-center gap-2 flex-wrap'>
+                <span>
+                  Mostrando <strong className='text-foreground'>{totalModels}</strong> de{' '}
+                  <strong className='text-foreground'>{models.length}</strong> modelos
+                </span>
+                {isAnyFilterActive && (
+                  <span className='rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-semibold'>
+                    Filtros activos
+                  </span>
+                )}
+              </div>
+
+              {isAnyFilterActive && (
+                <Button
+                  size='xs'
+                  variant='ghost'
+                  onClick={handleResetFilters}
+                  className='text-xs text-muted-foreground hover:text-foreground gap-1.5 h-7 px-2 cursor-pointer'
+                >
+                  <RotateCcw className='size-3' /> Limpiar filtros
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className='grid grid-cols-1 gap-4 w-full'>
             {models.length === 0 ? (
               <Empty className='rounded-3xl border border-dashed border-border/80 bg-card/40 p-8'>
@@ -532,6 +763,28 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                     comenzar.
                   </EmptyDescription>
                 </EmptyHeader>
+              </Empty>
+            ) : filteredModels.length === 0 ? (
+              <Empty className='rounded-3xl border border-dashed border-border/80 bg-card/40 p-8'>
+                <EmptyHeader>
+                  <EmptyMedia variant='icon'>
+                    <Search className='size-8 text-muted-foreground' />
+                  </EmptyMedia>
+                  <EmptyTitle>Sin coincidencias</EmptyTitle>
+                  <EmptyDescription>
+                    No se encontraron modelos con los filtros seleccionados o el término de búsqueda ingresado.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <div className='flex justify-center pt-2'>
+                  <Button
+                    size='xs'
+                    variant='outline'
+                    onClick={handleResetFilters}
+                    className='rounded-xl text-xs gap-1.5 cursor-pointer'
+                  >
+                    <RotateCcw className='size-3.5' /> Restablecer filtros
+                  </Button>
+                </div>
               </Empty>
             ) : (
               paginatedModels.map((model) => (
@@ -751,7 +1004,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
               <span className='font-semibold text-foreground font-mono'>
                 {totalModels}
               </span>
-              <span>modelo(s)</span>
+              <span>{isAnyFilterActive ? 'modelo(s) filtrado(s)' : 'modelo(s)'}</span>
             </div>
 
             <div className='flex items-center gap-3 flex-wrap justify-between sm:justify-end'>
