@@ -9,7 +9,9 @@ import {
   createAIModelAction,
   updateAIModelPricingAction,
   deleteAIModelAction,
-  getTokenUsageStatsAction
+  getTokenUsageStatsAction,
+  checkModelHealthAction,
+  checkAllModelsHealthAction
 } from '@/lib/actions/admin-models'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -59,7 +61,9 @@ import {
   RotateCcw,
   X,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  RefreshCw,
+  Wifi
 } from 'lucide-react'
 import type { ModelProvider, ModelStatus } from '@/lib/prisma'
 import type { TokenUsageStats, TokenUsageLogWithUser } from '@/types/admin'
@@ -168,7 +172,12 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
   const [editMaxTokensStr, setEditMaxTokensStr] = useState<string>('2048')
   const [editTemperatureStr, setEditTemperatureStr] = useState<string>('0,3')
   const [editDescription, setEditDescription] = useState<string>('')
+  const [editEndpointUrl, setEditEndpointUrl] = useState<string>('')
   const [isSavingPricing, setIsSavingPricing] = useState(false)
+
+  // Estado para comprobación de conectividad en vivo
+  const [testingModelId, setTestingModelId] = useState<string | null>(null)
+  const [isTestingAll, setIsTestingAll] = useState(false)
 
   // Estado para AlertDialog de Eliminación
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -292,6 +301,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
     setEditMaxTokensStr(String(model.maxTokens ?? 2048))
     setEditTemperatureStr(String(model.temperature ?? 0.3).replace('.', ','))
     setEditDescription(model.description || '')
+    setEditEndpointUrl(model.endpointUrl || '')
   }
 
   // Guardar cambios de precios y parámetros
@@ -311,7 +321,8 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
         outputPricePerMillion: outputPrice,
         maxTokens,
         temperature,
-        description: editDescription
+        description: editDescription,
+        endpointUrl: editEndpointUrl
       })
 
       setModels((prev) =>
@@ -324,7 +335,8 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                 outputPricePerMillion: outputPrice,
                 maxTokens,
                 temperature,
-                description: editDescription
+                description: editDescription,
+                endpointUrl: editEndpointUrl.trim() || null
               }
             : m
         )
@@ -335,6 +347,69 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
       toast.error(getErrorMessage(err) || 'Error al guardar cambios.')
     } finally {
       setIsSavingPricing(false)
+    }
+  }
+
+  // Comprobar conectividad en tiempo real de un modelo individual
+  const handleTestConnectivity = async (modelId: string) => {
+    setTestingModelId(modelId)
+    try {
+      const res = await checkModelHealthAction(modelId)
+      setModels((prev) =>
+        prev.map((m) =>
+          m.id === modelId
+            ? {
+                ...m,
+                status: res.status,
+                latencyMs: res.latencyMs
+              }
+            : m
+        )
+      )
+
+      if (res.status === 'ONLINE') {
+        toast.success(res.message)
+      } else if (res.status === 'DEGRADED') {
+        toast.warning(res.message, { description: res.details })
+      } else {
+        toast.error(res.message, { description: res.details })
+      }
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al comprobar conectividad.')
+    } finally {
+      setTestingModelId(null)
+    }
+  }
+
+  // Comprobar conectividad en tiempo real de toda la flota de modelos
+  const handleTestAllConnectivity = async () => {
+    setIsTestingAll(true)
+    try {
+      const res = await checkAllModelsHealthAction()
+      if (res.results) {
+        const resultMap = new Map(res.results.map((r) => [r.id, r]))
+        setModels((prev) =>
+          prev.map((m) => {
+            const checked = resultMap.get(m.id)
+            if (checked) {
+              return {
+                ...m,
+                status: checked.status,
+                latencyMs: checked.latencyMs
+              }
+            }
+            return m
+          })
+        )
+      }
+
+      toast.success('Auditoría de flota finalizada', {
+        description: `${res.onlineCount} modelo(s) Online, ${res.offlineCount} Offline de ${res.totalTested} comprobados.`
+      })
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || 'Error al auditar flota de modelos.')
+    } finally {
+      setIsTestingAll(false)
     }
   }
 
@@ -573,6 +648,21 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
         </div>
 
         <div className='flex items-center gap-2 flex-wrap w-full md:w-auto justify-start md:justify-end'>
+          <Button
+            variant='outline'
+            disabled={isTestingAll}
+            onClick={handleTestAllConnectivity}
+            className='gap-2 rounded-2xl cursor-pointer text-xs font-semibold h-10 px-4 w-full sm:w-auto border-border/70 hover:bg-muted/30'
+            title='Comprobar en tiempo real la conectividad de todos los modelos'
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${
+                isTestingAll ? 'animate-spin text-primary' : 'text-muted-foreground'
+              }`}
+            />
+            {isTestingAll ? 'Verificando flota...' : 'Comprobar Estado de Flota'}
+          </Button>
+
           <Button
             onClick={() => setIsCreateOpen(true)}
             className='gap-2 rounded-2xl cursor-pointer text-xs font-semibold h-10 px-4 w-full sm:w-auto'
@@ -823,6 +913,14 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                       {model.description ||
                         'Modelo de procesamiento de lenguaje natural y razonamiento.'}
                     </p>
+                    {model.endpointUrl && (
+                      <div className='flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground pt-0.5'>
+                        <span className='font-semibold text-foreground/80'>Túnel / Endpoint:</span>
+                        <span className='rounded bg-muted/60 px-1.5 py-0.5 truncate max-w-sm' title={model.endpointUrl}>
+                          {model.endpointUrl}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Acciones Rápidas */}
@@ -925,26 +1023,26 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
 
                 {/* Estado de Salud y Latencia */}
                 <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-xs'>
-                  <div className='flex items-center gap-3'>
+                  <div className='flex items-center gap-3 flex-wrap'>
                     <span className='text-muted-foreground'>
                       Estado de Salud:
                     </span>
                     {model.status === 'ONLINE' && (
                       <span className='inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400'>
                         <span className='size-2 rounded-full bg-emerald-500 animate-pulse' />
-                        🟢 Estable ({model.latencyMs || 150}ms)
+                        🟢 Estable ({model.latencyMs ? `${model.latencyMs}ms` : 'Activo'})
                       </span>
                     )}
                     {model.status === 'DEGRADED' && (
                       <span className='inline-flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400'>
                         <span className='size-2 rounded-full bg-amber-500' />
-                        🟡 Inestable / Ping Alto ({model.latencyMs || 850}ms)
+                        🟡 Inestable / Ping Alto ({model.latencyMs ? `${model.latencyMs}ms` : 'Lento'})
                       </span>
                     )}
                     {model.status === 'OFFLINE' && (
                       <span className='inline-flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400'>
                         <span className='size-2 rounded-full bg-rose-500' />
-                        🔴 Offline
+                        🔴 Offline / Desconectado
                       </span>
                     )}
                     {model.status === 'DISABLED' && (
@@ -952,17 +1050,39 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                         ⚪ Desactivado
                       </span>
                     )}
+
+                    {/* Botón de Ping / Probar Conexión en Vivo */}
+                    <Button
+                      size='xs'
+                      variant='outline'
+                      disabled={testingModelId === model.id}
+                      onClick={() => handleTestConnectivity(model.id)}
+                      className='gap-1.5 text-[11px] rounded-xl font-semibold border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer h-7'
+                      title='Probar conexión real y medir latencia hacia el endpoint o túnel'
+                    >
+                      <Activity
+                        className={`size-3 ${
+                          testingModelId === model.id ? 'animate-spin' : ''
+                        }`}
+                      />
+                      {testingModelId === model.id
+                        ? 'Comprobando...'
+                        : 'Probar Conexión'}
+                    </Button>
                   </div>
 
-                  {/* Forzar Estado */}
+                  {/* Forzar Estado Manual */}
                   <div className='flex items-center gap-1.5'>
+                    <span className='text-[10px] text-muted-foreground mr-1'>
+                      Forzar:
+                    </span>
                     <button
                       type='button'
                       onClick={() =>
                         handleUpdateStatus(model.id, 'ONLINE', 120)
                       }
                       className='rounded-lg border border-border/60 px-2 py-1 text-[10px] font-semibold text-emerald-600 hover:bg-emerald-500/10 cursor-pointer'
-                      title='Marcar como Estable'
+                      title='Marcar manualmente como Online'
                     >
                       🟢 Online
                     </button>
@@ -972,7 +1092,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                         handleUpdateStatus(model.id, 'DEGRADED', 950)
                       }
                       className='rounded-lg border border-border/60 px-2 py-1 text-[10px] font-semibold text-amber-600 hover:bg-amber-500/10 cursor-pointer'
-                      title='Marcar como Inestable'
+                      title='Marcar manualmente como Inestable'
                     >
                       🟡 Degraded
                     </button>
@@ -980,7 +1100,7 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                       type='button'
                       onClick={() => handleUpdateStatus(model.id, 'OFFLINE')}
                       className='rounded-lg border border-border/60 px-2 py-1 text-[10px] font-semibold text-rose-600 hover:bg-rose-500/10 cursor-pointer'
-                      title='Marcar como Offline'
+                      title='Marcar manualmente como Offline'
                     >
                       🔴 Offline
                     </button>
@@ -1692,6 +1812,22 @@ export function ModelsManager({ initialModels }: ModelsManagerProps) {
                 onChange={(e) => setEditDescription(e.target.value)}
                 className='w-full rounded-xl border border-border/80 bg-background p-3 text-xs focus:border-primary focus:outline-hidden resize-none'
               />
+            </div>
+
+            <div className='space-y-1.5'>
+              <label className='text-xs font-semibold text-foreground'>
+                Endpoint URL / Túnel Cloudflare (Opcional)
+              </label>
+              <input
+                type='text'
+                placeholder='Ej: https://tunel-m4.trycloudflare.com o http://localhost:11434'
+                value={editEndpointUrl}
+                onChange={(e) => setEditEndpointUrl(e.target.value)}
+                className='w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs font-mono focus:border-primary focus:outline-hidden'
+              />
+              <p className='text-[10px] text-muted-foreground'>
+                Dirección exacta del servidor Mac Mini M4 o túnel de Cloudflare para las comprobaciones de ping en vivo y peticiones de inferencia.
+              </p>
             </div>
 
             <div className='flex items-center justify-end gap-2 pt-2 border-t border-border/40'>

@@ -4,6 +4,7 @@ import { prisma, ModelStatus, Role, ModelProvider, TokenUsageConcept, type AIMod
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import { CACHE_PATHS } from '@/constants'
+import { testModelConnectivity } from '@/lib/ai/health-check'
 
 /**
  * Server Action para actualizar el estado de salud y latencia de un modelo
@@ -166,6 +167,7 @@ export async function updateAIModelPricingAction(
     maxTokens?: number
     temperature?: number
     description?: string
+    endpointUrl?: string
   }
 ) {
   await requireRole(Role.ADMIN)
@@ -186,6 +188,8 @@ export async function updateAIModelPricingAction(
       maxTokens: maxTokens,
       temperature: temperature,
       description: data.description !== undefined ? data.description.trim() : undefined,
+      endpointUrl:
+        data.endpointUrl !== undefined ? data.endpointUrl.trim() || null : undefined,
     },
   })
 
@@ -199,6 +203,113 @@ export async function updateAIModelPricingAction(
       inputPricePerMillion: inputPrice,
       outputPricePerMillion: outputPrice,
     },
+  }
+}
+
+/**
+ * Server Action para comprobar la conectividad en vivo de un modelo (Ping / Health Check)
+ */
+export async function checkModelHealthAction(modelId: string) {
+  await requireRole(Role.ADMIN)
+
+  const model = await prisma.aIModelConfig.findUnique({
+    where: { id: modelId },
+  })
+
+  if (!model) {
+    throw new Error('Modelo no encontrado.')
+  }
+
+  const result = await testModelConnectivity({
+    id: model.id,
+    provider: model.provider,
+    modelCode: model.modelCode,
+    endpointUrl: model.endpointUrl,
+  })
+
+  // Actualizar en base de datos el estado real medido
+  await prisma.aIModelConfig.update({
+    where: { id: modelId },
+    data: {
+      status: result.status,
+      latencyMs: result.latencyMs,
+    },
+  })
+
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
+
+  return {
+    success: true,
+    modelId,
+    status: result.status,
+    latencyMs: result.latencyMs,
+    message: result.message,
+    details: result.details,
+  }
+}
+
+/**
+ * Server Action para comprobar la conectividad en vivo de toda la flota de modelos
+ */
+export async function checkAllModelsHealthAction() {
+  await requireRole(Role.ADMIN)
+
+  const models = await prisma.aIModelConfig.findMany({
+    where: { isActive: true },
+  })
+
+  const settled = await Promise.allSettled(
+    models.map(async (m) => {
+      const res = await testModelConnectivity({
+        id: m.id,
+        provider: m.provider,
+        modelCode: m.modelCode,
+        endpointUrl: m.endpointUrl,
+      })
+
+      await prisma.aIModelConfig.update({
+        where: { id: m.id },
+        data: {
+          status: res.status,
+          latencyMs: res.latencyMs,
+        },
+      })
+
+      return {
+        id: m.id,
+        name: m.name,
+        status: res.status,
+        latencyMs: res.latencyMs,
+        message: res.message,
+      }
+    })
+  )
+
+  revalidatePath(CACHE_PATHS.ADMIN_MODELS)
+  revalidatePath(CACHE_PATHS.CHAT)
+
+  const results = settled.map((r, idx) =>
+    r.status === 'fulfilled'
+      ? r.value
+      : {
+          id: models[idx].id,
+          name: models[idx].name,
+          status: ModelStatus.OFFLINE,
+          latencyMs: null,
+          message: 'Error al ejecutar prueba de conectividad.',
+        }
+  )
+
+  const onlineCount = results.filter((r) => r.status === ModelStatus.ONLINE).length
+  const offlineCount = results.filter((r) => r.status === ModelStatus.OFFLINE).length
+
+  return {
+    success: true,
+    totalTested: models.length,
+    onlineCount,
+    offlineCount,
+    results,
   }
 }
 

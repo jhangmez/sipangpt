@@ -18,7 +18,11 @@ export const openai = createOpenAI({
 // Ollama / Local Provider (Mac Mini M4 vía Tunnel o Localhost)
 export function getOllamaProvider(baseURL?: string | null) {
   return createOllama({
-    baseURL: baseURL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/api',
+    baseURL:
+      baseURL ||
+      process.env.OLLAMA_BASE_URL ||
+      process.env.NEXT_PUBLIC_OLLAMA_URL ||
+      'http://localhost:11434/api',
   })
 }
 
