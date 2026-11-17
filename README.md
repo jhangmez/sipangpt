@@ -4,12 +4,14 @@
 
 ![SipánGPT Portada y Chat Interface](./public/imagenes/IMAGEN_SIPANGPT_CHAT_25082026.png)
 
-[![Next.js](https://img.shields.io/badge/Next.js_16_(Turbopack)-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js_16.3_(Turbopack)-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK_7.x-000000?style=for-the-badge&logo=vercel)](https://ai-sdk.dev/)
-[![Google Gemini](https://img.shields.io/badge/Google_Gemini_3.1-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
-[![Prisma](https://img.shields.io/badge/Prisma_7-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
-[![Neon Database](https://img.shields.io/badge/Neon_PostgreSQL-00E599?style=for-the-badge&logo=postgresql)](https://neon.tech/)
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini_3.1_%26_3.6-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
+[![Prisma](https://img.shields.io/badge/Prisma_7.9-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
+[![Neon Database](https://img.shields.io/badge/Neon_PostgreSQL_(pgvector)-00E599?style=for-the-badge&logo=postgresql)](https://neon.tech/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Docker](https://img.shields.io/badge/Docker_22_Alpine-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
+[![GitHub Actions](https://img.shields.io/badge/CI%2FCD_GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions)](https://github.com/features/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript_5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
 </div>
@@ -18,30 +20,32 @@
 
 ## 🌟 Descripción General
 
-**SipánGPT** es una plataforma integral de asistencia conversacional con Inteligencia Artificial Generativa diseñada a la medida para la **Universidad Señor de Sipán (USS)**. Permite a estudiantes, docentes y postulantes resolver consultas sobre procesos de matrícula, trámites de grados y títulos, directivas académicas, mallas curriculares y servicios institucionales con respuestas oficiales, citadas y sustentadas en la normativa universitaria.
+**SipánGPT** es una plataforma integral de asistencia conversacional con Inteligencia Artificial Generativa diseñada a la medida para la **Universidad Señor de Sipán (USS)**. Permite a estudiantes, docentes, postulantes y personal administrativo resolver consultas sobre procesos de matrícula, trámites de grados y títulos, directivas académicas, calendarios de pagos, convalidaciones y servicios universitarios con respuestas oficiales, fidedignas y fundamentadas en la normativa institucional vigente.
 
-La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation) de Alta Fidelidad** conectada a una base vectorial en PostgreSQL (Neon), renderizado matemático y de diagramas, soporte para modelos en la nube y locales (Mac Mini M4 vía Cloudflare Tunnel), personalización mediante **Memorias de Usuario**, gobernanza activa de políticas administrativas en el chat y auditoría de costos en tiempo real.
+La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation) de Alta Fidelidad** basada en el paradigma **STAIR** (*Structure-Aware Indexing and Retrieval*), conectada a una base de datos vectorial en PostgreSQL (Neon) con extensión `pgvector`. Incluye renderizado avanzado de fórmulas matemáticas y diagramas, soporte para modelos en la nube y locales (Mac Mini M4 vía Cloudflare Tunnel), personalización mediante **Memorias de Usuario**, un **Inspector Forense de Conversaciones**, gobernanza activa de políticas administrativas, auditoría de costos por token en tiempo real, soporte para pruebas de carga mediante **API Key interna**, y un pipeline automatizado de despliegue continuo con **Docker y GitHub Actions**.
 
 ---
 
 ## 🚀 Características Principales
 
 ### 1. 💬 Experiencia de Chat Conversacional Avanzada
-- **Streaming de Texto en Tiempo Real:** Implementado con **Vercel AI SDK 7.x** (`streamText`, `toUIMessageStream`) y decodificación reactiva de paquetes SSE (`text-delta`, `reasoning-delta`).
-- **Persistencia y Continuidad de Conversaciones:** Creación de conversaciones por adelantado, sincronización dinámica de URLs (`/chat/[id]`), regeneración y branching de respuestas alternativas.
+- **Streaming de Texto en Tiempo Real:** Implementado con **Vercel AI SDK 7.x** (`streamText`, `createUIMessageStreamResponse`, `toUIMessageStream`) y decodificación reactiva de paquetes SSE (`text-delta`, `reasoning-delta`).
+- **Ventana de Generación Ampliada:** Salida de hasta **2,048 tokens por respuesta** (`maxOutputTokens: 2048`), garantizando respuestas exhaustivas en procedimientos administrativos extensos sin cortes abruptos.
+- **Límite Preventivo por Conversación:** Control automático que limita a un máximo de **20 consultas de usuario por chat** para prevenir la degradación de contexto y orientar al usuario a iniciar una nueva sesión focalizada.
+- **Persistencia y Continuidad de Sesión:** Creación de conversaciones por adelantado, sincronización dinámica de URLs (`/chat/[id]`), regeneración y branching de respuestas alternativas con trazabilidad de mensajes padre/hijo.
 - **Renderizador Markdown Shadcn de Alta Precisión (`shadcn-markdown`):**
   - 📐 **Fórmulas Matemáticas:** Renderizado LaTeX inline (`$E=mc^2$`) y en bloque con KaTeX.
   - 💻 **Bloques de Código:** Resaltador de sintaxis Prism (`vscDarkPlus`), formateo JSON automático y botón interactivo para **Copiar Código**.
-  - 📊 **Diagramas de Flujo Mermaid:** Renderizador SVG de diagramas de flujo (`graph TD`) integrado.
-  - 📑 **Tablas GFM Responsivas:** Formateo automático de tablas con scroll horizontal adaptativo.
-- **Sistema de Feedback y Calificación:** Puntuación de mensajes (1 a 5 estrellas) con modales de cuestionario para auditoría de calidad.
-- **Entrada de Voz y Adjuntos Multimodales:** Grabación y transcripción de notas de voz, y análisis visual de capturas y documentos PDF.
+  - 📊 **Diagramas de Flujo Mermaid:** Renderizador SVG dinámico para diagramas de flujo y secuencias (`flowchart`, `graph TD`).
+  - 📑 **Tablas GFM Responsivas:** Formateo adaptativo con desplazamiento horizontal suave.
+- **Sistema de Feedback y Calificación:** Puntuación de mensajes (1 a 5 estrellas) con modales interactivos de auditoría de calidad académica.
+- **Entrada de Voz y Adjuntos Multimodales:** Grabación de notas de voz con transcripción automática y análisis visual de capturas o documentos PDF.
 - **Transparencia en la Interfaz de Usuario:** Notificaciones y alertas contextuales directas del servidor (modo mantenimiento, límite de caracteres o cuota de tokens alcanzada).
 
 ---
 
 ### 2. 🏛️ Arquitectura "Sipán-STAIR" (Structure-Aware Indexing and Retrieval) & Pipeline RAG
-Para la recuperación de normativas universitarias y reglamentos oficiales de la USS, SipánGPT implementa la metodología de **STAIR** (*Structure-Aware Indexing and Retrieval*), adaptada para superar las limitaciones de los sistemas RAG convencionales basados en ventanas ciegas de texto:
+Para la recuperación de normativas universitarias y reglamentos oficiales de la USS, SipánGPT implementa la metodología **STAIR** (*Structure-Aware Indexing and Retrieval*), adaptada para superar las limitaciones de los sistemas RAG convencionales basados en ventanas ciegas de texto:
 
 ```mermaid
 graph TD
@@ -58,32 +62,36 @@ graph TD
 
     subgraph CONSULTA ["🧑‍🎓 7. Recuperación en Dos Etapas (Two-Stage ToC Retrieval)"]
         Q["❓ Consulta del Estudiante"] --> R1["🌳 Etapa 1: Poda de Árbol ToC en Memoria (routeQueryToToCBranches)"]
-        R1 --> R2["🎯 Etapa 2: Búsqueda Vectorial Semántica en Hojas (Leaf Retrieval)"]
+        R1 --> R2["🎯 Etapa 2: Búsqueda Vectorial Semántica en Hojas (Leaf Retrieval - Top 4)"]
         R2 --> CIT["📌 8. Generación con Cita Jerárquica y Enlace Oficial (publicUrl)"]
     end
 ```
 
-#### Pilares Metodológicos de Sipán-STAIR:
+#### Pilares Metodológicos y Mejoras Recientes de Sipán-STAIR:
 1. **🌳 Extracción y Persistencia del Árbol ToC (`Document.tocTree`):**
    - Construye una representación jerárquica canónica de la norma (`Secciones > Capítulos > Artículos`).
    - Almacenado como estructura `JSONB` en PostgreSQL para permitir podas de árbol en memoria ultrarrápidas (< 5ms).
 2. **✂️ Chunking Estructural por Artículos Completos (`splitTextIntoStructuralChunks`):**
-   - En lugar de cortar el texto arbitrariamente cada 650 caracteres a mitad de una frase o artículo, delimita el fragmento respetando las fronteras normativas del reglamento.
+   - Delimita el fragmento respetando las fronteras normativas del reglamento, evitando cortes a mitad de artículos o párrafos.
    - Si un artículo es muy extenso (> 3,000 caracteres), se segmenta internamente preservando el contexto padre.
    - **Inyección de Breadcrumbs Contextuales:** Cada fragmento incluye en su cabecera y metadatos la ruta jerárquica completa (ej: `[Reglamento General de Matrícula USS > Capítulo II > Artículo 17: Matrícula Extemporánea]`).
-3. **🎯 Recuperación en Dos Etapas (*Two-Stage ToC Retrieval*):**
-   - **Etapa 1 (Poda de Árbol / ToC Routing):** Evalúa la consulta del estudiante contra los títulos de capítulos y artículos del índice ToC en memoria.
-     - **Detección Flexible de Artículos:** Expresión regular con límite de palabra insensible a puntos (`/\b(?:art[íi]culo|art\.?)\s*([0-9]+)/i`) para interpretar tanto `"art 15"` como `"art. 15"` o `"artículo 15"`.
-     - **Filtro de Stop Words en Español:** Excluye preposiciones y artículos comunes (`del`, `los`, `con`, `para`) para evitar sesgos de puntuación.
-   - **Etapa 2 (Leaf Retrieval):** Búsqueda semántica con similitud de coseno (`gemini-embedding-2`) dirigida hacia las ramas podadas, combinada con red de seguridad (*safety net*) de fragmentos recientes.
-4. **📌 Citas Oficiales con Enlace Institucional:**
-   - La IA fundamenta cada respuesta citando expresamente la norma, capítulo y artículo correspondiente, acompañándolo con la insignia de ruta y el enlace directo (`publicUrl`) para abrir el reglamento oficial original.
+3. **🎯 Enrutamiento ToC Flexible y Resiliente (Etapa 1):**
+   - **Detección Flexible de Artículos:** Expresión regular robusta con soporte para prefijos y sufijos alfanuméricos (`/\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i`), reconociendo variantes como `"art 15"`, `"art. 15"`, `"artículo 15"`, `"art. 17-A"` y limpiando símbolos de grado (`º`, `°`).
+   - **Filtro de Stop Words en Español:** Excluye preposiciones y artículos frecuentes (`del`, `los`, `con`, `para`, `sobre`, `hacia`) definidos en `constants/stopwords.ts` para evitar sesgos de puntuación.
+   - **Taxonomía Universitaria Homologada:** Alineación de temas con códigos de categorías (`MATRICULA`, `PAGOS`, `GRADOS`, etc.) y soporte para categorías de ámbito universal (`UNIVERSAL_CATEGORY_CODES`).
+4. **🎯 Recuperación Vectorial de Alta Fidelidad (Etapa 2 - Leaf Retrieval):**
+   - Búsqueda semántica combinada con similitud de coseno (`gemini-embedding-2`) sobre las ramas podadas, ampliando el conjunto de fuentes a **Top 4 fragmentos (`top_k: 4`)**.
+   - **Filtro Estricto de Estado:** Exclusión garantizada de documentos desindexados (`status: DEINDEXED`).
+   - **Bonificación de Rama Coincidente (+0.05):** Incremento de relevancia cuando un fragmento coincide estructuralmente con el capítulo o artículo detectado.
+   - **Red de Seguridad (Safety Net):** Si la consulta no supera el umbral estricto configurado, el sistema recurre a los fragmentos más afines ($\ge 0.35$) o a un ranking léxico de respaldo, garantizando cero fallos silenciosos.
+5. **📌 Citas Oficiales con Enlace Institucional Directo:**
+   - Cada respuesta cita con precisión la norma, capítulo y artículo correspondiente, enlazando directamente al documento oficial (`publicUrl` o `fileUrl`) para auditoría del estudiante.
 
 ---
 
 ### 3. 🧠 Personalización Contextual con Memorias de Usuario (`UserMemory`)
-- Los estudiantes pueden gestionar en `/configuraciones/memorias` hechos y preferencias sobre su trayectoria académica (ej. *"Estudio Ingeniería de Sistemas en Sede Chiclayo"*, *"Curso el 6to ciclo"*).
-- **Inyección Automática en el Chat:** En cada consulta, el sistema recupera las memorias activas del usuario (`isActive: true`) y las inyecta en el prompt del sistema (`[MEMORIA DEL ESTUDIANTE]`), adaptando respuestas y normativas al contexto del alumno sin necesidad de que deba reiterarlo en cada mensaje.
+- Los estudiantes y docentes pueden gestionar en `/configuraciones/memorias` hechos y preferencias sobre su perfil académico (ej. *"Estudio Ingeniería de Sistemas en Sede Chiclayo"*, *"Curso el 6to ciclo"*).
+- **Inyección Automática en el Prompt:** En cada consulta, el sistema recupera las memorias activas del usuario (`isActive: true`) y las inyecta en el prompt del sistema (`[MEMORIA DEL ESTUDIANTE]`), adaptando respuestas y normativas al contexto del alumno sin necesidad de reiterarlo en cada mensaje.
 
 ---
 
@@ -102,41 +110,89 @@ El administrador regula la plataforma desde `/admin/settings`, aplicándose de f
 
 ---
 
-### 5. 📑 Ingesta Dual, Visualización y Edición de Documentos (`/admin/documents`)
+### 5. 📑 Ingesta Dual, Paginación y Edición de Documentos (`/admin/documents`)
 - **Ingesta Dual de Documentos (Archivos Locales & Enlaces Web Oficiales):**
   - **📂 Modo Archivos Locales:** Carga rápida multiarchivo mediante UploadThing y componentes `Attachment` de Shadcn UI (PDF, TXT y Markdown hasta 16 MB).
-  - **🔗 Modo Importar desde Enlace / URL:** Ingesta directa ingresando la URL pública de un reglamento institucional (ej. portal de transparencia de la USS, repositorio institucional o directivas SUNEDU).
-  - **Preservación de `publicUrl`:** El enlace proporcionado se guarda permanentemente como la URL pública oficial institucional del documento y se utiliza en las citas del chat para que los estudiantes contrasten la fuente original con un solo clic.
-  - **Copia de Respaldo Persistente:** Almacenamiento seguro del binario en la CDN vía `UTApi`.
+  - **🔗 Modo Importar desde Enlace / URL:** Ingesta directa ingresando la URL pública de un reglamento institucional (ej. portal de transparencia de la USS o repositorio institucional).
+  - **Preservación de `publicUrl`:** El enlace proporcionado se guarda permanentemente como la URL pública oficial del documento y se utiliza en las citas del chat para abrir la fuente original.
 - **Motor OCR de Alta Capacidad para Documentos Extensos:**
   - **65,536 Tokens de Salida:** Capacidad ampliada en 8x para transcribir íntegramente compendios densos de 80 a 120 páginas en una sola pasada.
-  - **Bucle de Continuación Multi-Turno Automática:** Ante compendios masivos (> 150 páginas), si la API reporta `finishReason: MAX_TOKENS`, el sistema envía solicitudes consecutivas de continuación hasta alcanzar `finishReason: STOP`, garantizando **0% de pérdida de artículos, tablas o caracteres**.
-- **Visualizador Avanzado con Pestaña de Índice ToC (STAIR):**
-  - Vista previa en modal y Sheet lateral interactivo (`DocumentPreviewSheet`).
-  - Pestaña **"Índice ToC (STAIR)"** que permite navegar el árbol jerárquico de Capítulos y Artículos y saltar directamente al fragmento semántico correspondiente en la pestaña de Chunks.
+  - **Bucle de Continuación Multi-Turno Automática:** Ante compendios masivos (> 150 páginas), si la API reporta `finishReason: MAX_TOKENS`, el sistema envía solicitudes consecutivas de continuación hasta alcanzar `finishReason: STOP`, garantizando **0% de pérdida de artículos o tablas**.
+- **Paginación Interactiva de Documentos:**
+  - Control de visualización por páginas (10, 20 o 50 reglamentos por página) con navegación primera/anterior/siguiente/última y salto rápido de página.
+- **Visualizador Avanzado con Pestaña ToC y Visor PDF Embebido:**
+  - Panel lateral interactivo (`DocumentPreviewSheet`) con visualización del árbol jerárquico ToC, inspección de fragmentos y visualizador PDF embebido mediante `<iframe>` sobre `fileUrl`.
 - **Editor de Chunks RAG con Preservación de Metadatos:**
   - Buscador textual interno dentro de los fragmentos del documento.
   - Edición en línea de texto y metadatos jerárquicos preservando datos contextuales previos (`prevMeta`).
   - Creación manual de nuevos fragmentos heredando categoría y año de vigencia.
   - Contador de citas realizadas por la IA por cada fragmento.
-- **Control de Estados RAG:** Alternar entre estados `INDEXED` (Activo para consultas) y `DEINDEXED` (Pausado temporalmente).
-- **Modales de Alerta Reutilizables (`AlertDialog`):** Confirmaciones de seguridad para eliminar documentos, fragmentos o desindexar.
+- **Limpieza Automática en Storage al Eliminar:**
+  - Al borrar un reglamento desde el panel de administración, el sistema elimina los registros en PostgreSQL y ejecuta la eliminación remota del archivo binario en la CDN de **UploadThing** vía `UTApi.deleteFiles`.
 
 ---
 
-### 6. 🤖 Auditoría de Tokens, Costos y Monitor de Modelos (`/admin/models`)
-- **Modelos en la Nube y Locales:** Gemini 3.1 Flash-Lite, Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 2.5 Pro, GPT-4o Mini, GPT-4o, Claude 3.5 Sonnet, Groq Llama 3.3 y Mac Mini M4 local vía Cloudflare Tunnel.
+### 6. 🔍 Inspector Forense de Conversaciones y Analítica (`/admin/conversations`)
+Módulo especializado para la auditoría técnica y pedagógica de las consultas de los estudiantes:
+- **Trazabilidad Completa de Inferencia y Latencias:**
+  - Desglose de **Latencia Total (`latencyMs`)**, **Latencia de Recuperación RAG (`retrievalLatencyMs`)** y **Latencia de Generación LLM (`generationLatencyMs`)**.
+  - Conteo exacto de tokens de entrada (`promptTokens`) y tokens totales consumidos.
+- **Auditoría de Citas y Fuentes Oficiales:**
+  - Inspección de cada fragmento citado en la respuesta, visualizando el título del documento, enlace oficial (`sourceUrl`), número de página, score de similitud y el texto exacto recuperado (`snippetText`).
+- **Estados Analíticos de Resolución (`ResolutionStatus`):**
+  - Clasificación automática de cada respuesta: `RESOLVED_WITH_SOURCES` (éxito RAG con citas), `RESOLVED_GENERAL` (saludo/general sin RAG), `NO_CONTEXT_FOUND` (gap de conocimiento sin documentos afines), `UNRESOLVED_BY_FALLBACK` (frase de contingencia) y estados de feedback (`POSITIVE_FEEDBACK`, `NEGATIVE_FEEDBACK`).
+- **Historial de Regeneraciones y Árbol de Mensajes:** Visualización de versiones alternativas generadas por el asistente y navegación en árbol (`parentId`).
+
+---
+
+### 7. 🤖 Auditoría de Tokens, Costos y Monitor de Modelos (`/admin/models`)
+- **Catálogo Multimodelo en la Nube y Locales:** Gemini 3.1 Flash-Lite (por defecto), Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 3.1 Pro Preview, Gemini 2.5 Pro, GPT-4o Mini, Claude 3.5 Sonnet, Groq Llama 3.3 70B y servidor local Mac Mini M4 vía Cloudflare Tunnel.
 - **🪙 Auditoría Completa de Consumo por Concepto (`TokenUsageLog`):**
   - `CHAT_COMPLETION`: Respuestas conversacionales del asistente.
   - `DOCUMENT_OCR_TRANSCRIPTION`: Transcripción multimodal de PDFs a Markdown.
   - `RAG_EMBEDDING`: Generación de vectores de consulta e ingesta documental masiva (`generateEmbeddingWithUsage`).
-  - `QUERY_ANALYSIS`: Normalización de intenciones del estudiante con Gemini Flash Lite.
+  - `QUERY_ANALYSIS`: Clasificación semántica de intención y enrutamiento con Gemini Flash-Lite.
 - **Resiliencia Numérica y Relacional en Base de Datos:**
   - Sanitización estricta contra valores `NaN` o indefinidos en conteos de tokens y cálculo de costos en USD.
   - Inserciones relacionales seguras en Prisma Client 7 compatibles con conexiones opcionales de usuario y conversación.
-- **Tarifas y Precios Referenciales (USD / 1M Tokens):** Configuración de precios por millón de tokens de entrada (Prompt) y salida (Completion) para estimación de costos en tiempo real.
-- **Métricas y Vistas Acumuladas:** Contador de inferencias (`totalInferences`), tokens totales consumidos y costo estimado acumulado por cada modelo (`AIModelConfig`).
+- **Tarifas y Precios Referenciales (USD / 1M Tokens):** Precios configurables por millón de tokens de entrada (Prompt) y salida (Completion) para estimación de costos en tiempo real.
 - **Monitor de Salud en Tiempo Real:** Estados `ONLINE`, `DEGRADED`, `OFFLINE` y `DISABLED`.
+
+---
+
+### 8. ⚡ Suite de Pruebas de Carga y Rendimiento (Performance Testing)
+Para evaluar la plataforma bajo condiciones extremas de concurrencia y estrés:
+- **Autenticación Dual sin Cookies (Pre-Shared Internal API Key):**
+  - Admite peticiones autenticadas vía cabeceras HTTP:
+    ```http
+    x-api-key: <INTERNAL_API_KEY>
+    ```
+    o
+    ```http
+    Authorization: Bearer <INTERNAL_API_KEY>
+    ```
+  - Vinculación automática a un usuario de pruebas sintético (`benchmark-agent@sipangpt.local`) con rol `ADMIN` que puede operar aun durante el modo mantenimiento.
+- **Prevención de Colisiones de IDs y Errores P2002:**
+  - Manejo resiliente de inserciones en `Message` mediante `upsert` seguro y fallback automático a IDs generados por CUID cuando se envían cargas concurrentes.
+- **Resiliencia del Pool de Conexiones Neon PostgreSQL:**
+  - Reutilización del pool de conexiones PostgreSQL en `globalThis.pool` con control de clientes inactivos (`pool.on('error')`) y límite configurable (`PG_POOL_MAX`).
+  - Documentación detallada con ejemplos en cURL, Python y scripts de estrés en [`docs/PERFORMANCE_TESTING.md`](./docs/PERFORMANCE_TESTING.md).
+
+---
+
+### 9. 📜 Portal Legal y Autenticación Centralizada
+- **Página de Términos y Privacidad (`/terms`):** Marco regulatorio integral que detalla el tratamiento de datos personales, políticas de privacidad, alcance académico de la IA y descargos de responsabilidad institucional.
+- **Página de Acceso Centralizada (`/login`):** Interfaz full-screen optimizada con soporte para Google OAuth, autenticación con credenciales y redirección inteligente según roles (`ADMIN` / `USER`).
+- **Footer Institucional:** Pie de página con accesos directos a políticas, estado del sistema, repositorio oficial y créditos institucionales.
+
+---
+
+### 10. 🐳 Despliegue en Producción y DevOps (Docker & CI/CD)
+- **Contenedorización Optimizada:** Dockerfile multi-etapa sobre `node:22-alpine` estructurado en etapas `deps`, `builder` y `runner`, con compilación standalone de Next.js (`output: 'standalone'`).
+- **Pipeline de Despliegue Continuo (GitHub Actions):**
+  - Flujo automatizado en `.github/workflows/deploy.yml` que se activa en ramas principales (`feature/V2`, `main`) y tags de versión (`v*.*.*`).
+  - Compilación y publicación automática de imágenes en **GitHub Container Registry (GHCR)** (`ghcr.io/jhangmez/sipangpt`).
+  - Despliegue automático vía SSH en servidor VPS: descarga de contenedor, verificación de salud de la base de datos con `pg_isready`, creación automática de la extensión `pgvector` (`CREATE EXTENSION IF NOT EXISTS vector;`) y sincronización del esquema con Prisma.
 
 ---
 
@@ -144,16 +200,18 @@ El administrador regula la plataforma desde `/admin/settings`, aplicándose de f
 
 | Capa | Tecnologías |
 | :--- | :--- |
-| **Framework Fullstack** | [Next.js 16 (App Router, Turbopack, Server Actions, RSC)](https://nextjs.org/) |
+| **Framework Fullstack** | [Next.js 16.3 (App Router, Turbopack, Server Actions, Standalone)](https://nextjs.org/) |
+| **Entorno de Ejecución**| [Node.js 22 LTS](https://nodejs.org/) (Alpine Linux en contenedor) |
 | **Lenguaje** | [TypeScript 5.x](https://www.typescriptlang.org/) |
 | **Diseño y Estilos** | [Tailwind CSS v4](https://tailwindcss.com/), Base UI, [Shadcn UI](https://ui.shadcn.com/) |
 | **Tipografías** | **Exo 2** (`--font-exo`) y **Fraunces** (`--font-frances`) locales variables |
-| **Motor de IA** | [Vercel AI SDK 7.x](https://ai-sdk.dev/), [Google Generative AI](https://ai.google.dev/) |
-| **Base de Datos & ORM** | [Neon Serverless PostgreSQL](https://neon.tech/), [Prisma ORM 7](https://www.prisma.io/) (`@prisma/adapter-pg`) |
-| **Almacenamiento de Archivos** | [UploadThing](https://uploadthing.com/) |
-| **Autenticación** | NextAuth.js (Google OAuth, credenciales y control de roles) |
+| **Motor de IA & Streaming** | [Vercel AI SDK 7.x](https://ai-sdk.dev/), [Google Generative AI](https://ai.google.dev/) (Gemini 3.1 / 3.6 / 2.5) |
+| **Base de Datos & ORM** | [Neon Serverless PostgreSQL](https://neon.tech/) con `pgvector`, [Prisma ORM 7.9](https://www.prisma.io/) (`@prisma/adapter-pg`, `@prisma/client`) |
+| **Almacenamiento CDN** | [UploadThing](https://uploadthing.com/) (`@uploadthing/react`, `UTApi`) |
+| **Autenticación** | NextAuth.js v5 Beta (`@auth/prisma-adapter`, Google OAuth, JWT, Roles) |
 | **Renderizado Markdown** | `react-markdown`, `remark-gfm`, `remark-math`, `rehype-katex`, `react-syntax-highlighter`, KaTeX |
-| **Iconografía y Notificaciones**| [Lucide Icons](https://lucide.dev/), [Sonner Toast](https://sonner.emilkowal.ski/) |
+| **Contenedores & CI/CD** | [Docker](https://www.docker.com/), Docker Compose, [GitHub Actions](https://github.com/features/actions), GHCR |
+| **Notificaciones** | [Sonner Toast](https://sonner.emilkowal.ski/), [Lucide Icons](https://lucide.dev/) |
 
 ---
 
@@ -171,32 +229,52 @@ npm install
 ```
 
 ### 3. Configurar variables de entorno (`.env`)
-Crea un archivo `.env` en la raíz del proyecto tomando como base los siguientes valores:
+Crea un archivo `.env` en la raíz del proyecto tomando como referencia las siguientes variables:
 
 ```env
-# Conexión a Base de Datos (Neon PostgreSQL)
-DATABASE_URL="postgresql://usuario:password@ep-soft-unit.aws.neon.tech/neondb?sslmode=require"
+# ==========================================
+# Base de Datos (Neon PostgreSQL + pgvector)
+# ==========================================
+DATABASE_URL="postgresql://usuario:password@ep-pooler.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL_UNPOOLED="postgresql://usuario:password@ep-direct.aws.neon.tech/neondb?sslmode=require"
+PG_POOL_MAX=20
 
-# NextAuth.js
+# ==========================================
+# Autenticación (NextAuth.js v5)
+# ==========================================
+AUTH_SECRET="tu_secreto_super_seguro_minimo_32_caracteres"
+AUTH_GOOGLE_ID="tu_google_client_id.apps.googleusercontent.com"
+AUTH_GOOGLE_SECRET="GOCSPX-tu_google_client_secret"
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="tu_nextauth_secret_seguro"
 
-# Proveedores de IA
+# ==========================================
+# Clave Interna para Pruebas de Carga
+# ==========================================
+INTERNAL_API_KEY="tu_clave_secreta_para_pruebas_y_servicios"
+
+# ==========================================
+# Proveedores de Inteligencia Artificial
+# ==========================================
 GEMINI_API_KEY="AQ.Ab8RN6IrCLVIkDq_..."
 OPENAI_API_KEY="sk-proj-..."
 ANTHROPIC_API_KEY="sk-ant-..."
 GROQ_API_KEY="gsk_..."
 
-# Mac Mini M4 Local vía Cloudflare Tunnel (Opcional)
+# Servidor Local Mac Mini M4 vía Cloudflare Tunnel (Opcional)
 LOCAL_MAC_BASE_URL="https://tu-tunel.cloudflare.com/v1"
 
-# UploadThing Storage
+# ==========================================
+# Almacenamiento CDN (UploadThing)
+# ==========================================
 UPLOADTHING_TOKEN="tu_uploadthing_token"
 ```
 
 ### 4. Sincronizar y generar la base de datos
 ```bash
+# Aplicar migraciones en desarrollo
 npx prisma migrate dev
+
+# Generar cliente de Prisma
 npx prisma generate
 ```
 
@@ -212,32 +290,45 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ```text
 sipangpt/
+├── .github/                            # Flujos de trabajo automatizados
+│   └── workflows/
+│       └── deploy.yml                  # Pipeline CI/CD para GHCR y despliegue en VPS
+│
 ├── app/                                # Next.js 16 App Router
-│   ├── (auth)/                         # Rutas de autenticación (login, registro)
+│   ├── (public)/                       # Vistas públicas institucionales
+│   │   ├── terms/                      # Términos, condiciones y privacidad USS
+│   │   ├── posts/                      # Novedades y publicaciones institucionales
+│   │   ├── invitacion/                 # Aceptación de invitaciones administrativas
+│   │   ├── unauthorized/               # Pantalla de acceso no autorizado
+│   │   └── page.tsx                    # Landing Page institucional USS
+│   ├── login/                          # Página de autenticación centralizada
+│   │   ├── layout.tsx
+│   │   └── page.tsx                    # Login con Google OAuth y credenciales
 │   ├── (protected)/                    # Rutas protegidas por sesión y roles
-│   │   ├── admin/                      # Módulos del Panel de Administración
-│   │   │   ├── administradores/        # Gestión de administradores e invitaciones
-│   │   │   ├── categories/             # Gestión de categorías temáticas
-│   │   │   ├── dashboard/              # Métricas, inferencias y gráficos
-│   │   │   ├── documents/              # Ingesta RAG, editor de Chunks y visualizador
-│   │   │   ├── models/                 # Monitor de modelos y configuración
-│   │   │   ├── posts/                  # Novedades y publicaciones institucionales USS
-│   │   │   ├── questions/              # Preguntas sugeridas dinámicas
-│   │   │   └── settings/               # Políticas de búsqueda, RAG, Web, Maps y Slider
-│   │   ├── configuraciones/            # Preferencias de usuario, perfil y consumo
-│   │   │   ├── consumo/                # Monitoreo de cuota diaria y tokens de usuario
-│   │   │   ├── memorias/               # Gestión de recuerdos y hechos personalizados
-│   │   │   ├── sesiones/               # Dispositivos y sesiones activas concurrentes
-│   │   │   └── usuario/                # Datos personales y cambio de contraseña
 │   │   ├── chat/                       # Interfaz conversacional principal
 │   │   │   ├── page.tsx                # Chat nuevo con preguntas sugeridas
-│   │   │   └── [id]/page.tsx           # Chat histórico y persistencia de conversación
+│   │   │   └── [id]/page.tsx           # Chat histórico y persistencia dinámica
+│   │   ├── configuraciones/            # Preferencias de usuario, perfil y consumo
+│   │   │   ├── consumo/                # Monitoreo de cuota diaria y tokens consumidos
+│   │   │   ├── memorias/               # Gestión de recuerdos y hechos personalizados
+│   │   │   ├── sesiones/               # Dispositivos y sesiones concurrentes
+│   │   │   └── usuario/                # Datos personales y cambio de clave
+│   │   └── admin/                      # Módulos del Panel de Administración
+│   │       ├── administradores/        # Gestión de administradores e invitaciones
+│   │       ├── categories/             # Taxonomía de temas académicos USS
+│   │       ├── conversations/          # Inspector forense de chats, latencias y fuentes
+│   │       ├── dashboard/              # Métricas, inferencias y gráficos de uso
+│   │       ├── documents/              # Ingesta RAG, editor de Chunks y paginación
+│   │       ├── models/                 # Monitor de modelos, salud y costos USD
+│   │       ├── posts/                  # Gestión de comunicados institucionales
+│   │       ├── questions/              # Preguntas sugeridas dinámicas
+│   │       └── settings/               # Políticas de gobernanza, RAG, Web y Slider
 │   ├── api/                            # API Routes & Webhooks
-│   │   ├── auth/                       # Endpoints de NextAuth
-│   │   ├── chat/                       # Route handler de streaming SSE y RAG (AI SDK 7.x)
-│   │   ├── feedback/                   # Calificaciones de respuestas
-│   │   ├── sesiones/                   # Revocación de sesiones
-│   │   └── uploadthing/                # Endpoint de subida de archivos
+│   │   ├── auth/                       # Endpoints de NextAuth.js
+│   │   ├── chat/                       # Streaming SSE, RAG STAIR y clave interna
+│   │   ├── feedback/                   # Calificaciones de respuestas (1-5 estrellas)
+│   │   ├── sesiones/                   # Revocación de sesiones activas
+│   │   └── uploadthing/                # Endpoint y callbacks de subida UploadThing
 │   ├── fonts.ts                        # Configuración de tipografías locales (Exo 2, Fraunces)
 │   ├── globals.css                     # Estilos globales y mapeo Tailwind CSS v4
 │   └── layout.tsx                      # Layout raíz con proveedores de tema y sesión
@@ -245,50 +336,67 @@ sipangpt/
 ├── components/                         # Componentes de React
 │   ├── admin/                          # Componentes del módulo de administración
 │   │   ├── confirm-alert-dialog.tsx    # Modal reutilizable de confirmación destructiva
-│   │   ├── document-preview-sheet.tsx  # Sheet interactivo con visor de árbol ToC (STAIR) y chunks
-│   │   ├── document-upload-zone.tsx    # Ingesta dual: archivos locales y enlaces web oficiales
-│   │   ├── documents-manager.tsx       # Gestor RAG, editor de Chunks y visualizador PDF
-│   │   ├── models-manager.tsx          # Panel de estado y parámetros de modelos
-│   │   └── settings-manager.tsx        # Panel de políticas de grounding y Slider RAG
+│   │   ├── conversations-inspector.tsx # Inspector forense de mensajes, latencias y citas
+│   │   ├── document-preview-sheet.tsx  # Sheet interactivo con visor ToC, chunks e iframe PDF
+│   │   ├── document-upload-zone.tsx    # Ingesta dual: archivos locales y enlaces web
+│   │   ├── documents-manager.tsx       # Gestor RAG, paginación, editor de chunks y estados
+│   │   ├── models-manager.tsx          # Panel de estado, salud y tarifas de modelos
+│   │   └── settings-manager.tsx        # Panel de políticas de gobernanza y Slider RAG
 │   ├── chat/                           # Componentes del módulo de chat
 │   │   ├── chat-empty-state.tsx        # Bienvenida y tarjetas de preguntas sugeridas
 │   │   ├── chat-header.tsx             # Cabecera con selector de modelo responsive
 │   │   ├── chat-input.tsx              # Input de consulta con voz, adjuntos y atajos
 │   │   ├── chat-interface.tsx          # Contenedor orquestador del chat y streaming
-│   │   ├── chat-loading-item.tsx       # Placeholder animado de generación del asistente
+│   │   ├── chat-loading-item.tsx       # Placeholder animado de inferencia del asistente
 │   │   ├── chat-message-item.tsx       # Mensajes con MarkdownRenderer y citas RAG
 │   │   ├── chat-side-panel.tsx         # Panel lateral de comunicados USS y fuentes citadas
-│   │   └── model-selector.tsx          # Selector de modelos con soporte móvil (Drawer/Modal)
+│   │   └── model-selector.tsx          # Selector de modelos (Drawer móvil / Popover desktop)
 │   ├── configuraciones/                # Componentes del perfil de usuario
-│   │   ├── memories-manager.tsx        # Gestor de memorias y preferencias personales
+│   │   ├── memories-manager.tsx        # Gestor de memorias y hechos personalizados
 │   │   └── user-profile-form.tsx       # Formulario de datos de usuario
+│   ├── landing/                        # Componentes de la landing page
+│   │   ├── header.tsx                  # Cabecera de la página de inicio
+│   │   └── footer.tsx                  # Pie de página con avisos legales y enlaces
 │   ├── shared/                         # Componentes compartidos y sidebars
-│   └── ui/                             # Componentes base Shadcn UI (Slider, Dialog, Attachment, etc.)
+│   │   ├── admin-sidebar.tsx           # Barra lateral del panel administrativo
+│   │   ├── app-sidebar.tsx             # Barra lateral principal del chat y navegación
+│   │   └── settings-sidebar.tsx        # Barra lateral de configuración de usuario
+│   └── ui/                             # Catálogo Shadcn UI (Card, Slider, Dialog, Attachment, etc.)
 │
-├── constants/                          # Constantes y textos institucionales centralizados
+├── constants/                          # Constantes institucionales centralizadas
 │   ├── admin.ts                        # Correos de administradores iniciales
-│   ├── models.ts                       # Catálogo de modelos de IA, embeddings y proveedores
+│   ├── internal-auth.ts                # Claves de cabecera y usuario de benchmark
+│   ├── models.ts                       # Catálogo de modelos de IA, embeddings y precios
 │   ├── prompts.ts                      # Prompts del sistema SipánGPT e inyectores RAG
 │   ├── questions.ts                    # Preguntas iniciales sugeridas
 │   ├── routes.ts                       # Rutas canónicas públicas, protegidas y admin
+│   ├── stopwords.ts                    # Lista de stop words en español para enrutamiento ToC
+│   ├── topic-categories.ts             # Taxonomía temática universitaria
 │   └── index.ts                        # Archivo barril de constantes
 │
-├── lib/                                # Lógica de negocio y utilidades
+├── docs/                               # Documentación técnica adicional
+│   └── PERFORMANCE_TESTING.md          # Guía completa de pruebas de carga, k6 y cURL
+│
+├── lib/                                # Lógica de negocio, base de datos y utilidades
 │   ├── actions/                        # Server Actions de Next.js
-│   │   ├── admin-documents.ts          # Ingesta URL, chunks, metadatos y reindexación
-│   │   ├── admin-models.ts             # Acciones de monitoreo de modelos
-│   │   ├── admin-settings.ts           # Acciones de políticas de búsqueda e IA
+│   │   ├── admin-conversations.ts      # Acciones del inspector de conversaciones
+│   │   ├── admin-documents.ts          # Ingesta URL, chunks, metadatos y eliminación CDN
+│   │   ├── admin-models.ts             # Acciones de monitoreo de modelos y precios
+│   │   ├── admin-settings.ts           # Acciones de políticas de gobernanza
 │   │   └── user-settings.ts            # Acciones de memorias, perfil y consumo
 │   ├── ai/                             # Módulo de Inteligencia Artificial
-│   │   ├── document-processor.ts       # Chunking STAIR, OCR multimodal 65k tokens y continuación
+│   │   ├── document-processor.ts       # Chunking STAIR, OCR multimodal 65k y continuación
 │   │   ├── embeddings.ts               # Embeddings vectoriales con cómputo de tokens seguro
-│   │   ├── providers.ts                # Inicializador de proveedores AI SDK
+│   │   ├── providers.ts                # Inicializador de proveedores Vercel AI SDK
 │   │   ├── query-rewriter.ts           # Pre-RAG NLU, expansión y detección de intenciones
-│   │   ├── rag.ts                      # Two-Stage ToC Retrieval y búsqueda híbrida resiliente
+│   │   ├── rag.ts                      # Two-Stage ToC Retrieval, top-4 y búsqueda resiliente
 │   │   ├── resolution-detector.ts      # Detección analítica del estado de resolución
-│   │   ├── toc-extractor.ts            # Extracción canónica de ToC Tree y segmentación por artículos
+│   │   ├── toc-extractor.ts            # Extractor canónico de ToC Tree y división por artículos
 │   │   └── token-tracker.ts            # Auditoría y estimación de costos en USD
-│   ├── prisma.ts                       # Instancia singleton de PrismaClient con Adapter PG
+│   ├── auth/                           # Módulo de autenticación interna y sincronización
+│   │   ├── internal-auth.ts            # Validación de API Key interna para pruebas de carga
+│   │   └── multi-tab-sync.ts           # Sincronización de sesión entre pestañas
+│   ├── prisma.ts                       # Singleton PrismaClient con Adapter PG y pool reutilizable
 │   ├── session.ts                      # Validación de sesión y roles (`requireRole`)
 │   ├── timeago.ts                      # Formateador de tiempo relativo en español
 │   ├── uploadthing.ts                  # Clientes y handlers de UploadThing
@@ -296,15 +404,16 @@ sipangpt/
 │
 ├── prisma/                             # Esquema y migraciones de base de datos
 │   ├── migrations/                     # Historial de migraciones SQL versionadas
-│   └── schema.prisma                   # Esquema Prisma con modelos y enums
+│   └── schema.prisma                   # Esquema Prisma con modelos, enums e índices
 │
 ├── public/                             # Recursos estáticos (avatares, fuentes, imágenes)
 ├── types/                              # Definiciones de tipos TypeScript
 │   ├── admin.ts                        # Tipos de administración y documentos
-│   ├── chat.ts                         # Tipos de mensajería y fuentes
+│   ├── chat.ts                         # Tipos de mensajería, fuentes y streaming
 │   ├── stair.ts                        # Tipos de la arquitectura Sipán-STAIR (ToC Tree)
-│   └── index.ts                        # Exportaciones consolidadas
-├── AGENTS.md                           # Protocolos de arquitectura, base de datos y UI
+│   └── index.ts                        # Exportaciones de tipos consolidadas
+├── Dockerfile                          # Contenedor multi-etapa Node 22 Alpine para producción
+├── next.config.ts                      # Configuración Next.js (output: standalone)
 ├── package.json                        # Dependencias y scripts del proyecto
 └── tsconfig.json                       # Configuración de TypeScript
 ```
@@ -453,10 +562,9 @@ V. Kumar, M. Pulivarthi, V. Kumar, J. Sen, R. A. Bhat, and S. Joshi, "STAIR (STr
 
 ---
 
-## SipánGPT
+## 👨‍💻 Autor y Créditos
 
-<div style="display: flex; align-items: center; height: fit-content;">
-  <img src="https://avatars.githubusercontent.com/u/60937214?v=4" width="40" style="margin-right: 10px;"/>
-  <span>Hecho con ❤️ por Jhan Gómez P.</span>
+<div style="display: flex; align-items: center; gap: 12px; height: fit-content; margin-top: 10px;">
+  <img src="https://avatars.githubusercontent.com/u/60937214?v=4" width="46" style="border-radius: 50%;"/>
+  <span><strong>Desarrollado con ❤️ y rigor científico por Jhan Gómez Padilla</strong><br/>Proyecto de Tesis de Ingeniería de Sistemas — Universidad Nacional Pedro Ruiz Gallo (UNPRG) & Universidad Señor de Sipán (USS)</span>
 </div>
-
