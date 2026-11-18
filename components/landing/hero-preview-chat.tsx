@@ -19,6 +19,32 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+/**
+ * Helper para renderizar negritas (**texto**) y código (`código`) en texto preformateado
+ * garantizando que se muestre como HTML real y nunca como asteriscos planos.
+ */
+function renderMarkdownText(text?: string | null): React.ReactNode {
+  if (!text) return null
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={idx} className='font-semibold text-foreground'>
+          {part.slice(2, -2)}
+        </strong>
+      )
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={idx} className='rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-primary'>
+          {part.slice(1, -1)}
+        </code>
+      )
+    }
+    return part
+  })
+}
+
 interface DemoScenario {
   id: string
   label: string
@@ -35,7 +61,7 @@ interface DemoScenario {
     url: string
   }>
   metrics: {
-    latencyMs: number
+    latencyText: string
     similarity: number
     model: string
   }
@@ -70,7 +96,7 @@ const DEMO_SCENARIOS: DemoScenario[] = [
       }
     ],
     metrics: {
-      latencyMs: 185,
+      latencyText: '2.4s (Streaming)',
       similarity: 0.94,
       model: 'Gemini 3.1 Flash-Lite'
     }
@@ -103,7 +129,7 @@ const DEMO_SCENARIOS: DemoScenario[] = [
       }
     ],
     metrics: {
-      latencyMs: 198,
+      latencyText: '1.9s (Streaming)',
       similarity: 0.96,
       model: 'Gemini 3.1 Flash-Lite'
     }
@@ -132,7 +158,7 @@ const DEMO_SCENARIOS: DemoScenario[] = [
       }
     ],
     metrics: {
-      latencyMs: 220,
+      latencyText: '3.1s (Streaming)',
       similarity: 0.92,
       model: 'Gemini 3.1 Flash-Lite'
     }
@@ -160,7 +186,7 @@ const DEMO_SCENARIOS: DemoScenario[] = [
       }
     ],
     metrics: {
-      latencyMs: 175,
+      latencyText: '2.2s (Streaming)',
       similarity: 0.95,
       model: 'Gemini 3.1 Flash-Lite'
     }
@@ -268,21 +294,21 @@ export function HeroPreviewChat() {
                 ) : (
                   <>
                     <p className='text-muted-foreground text-xs font-medium'>
-                      {activeScenario.assistantResponse.lead}
+                      {renderMarkdownText(activeScenario.assistantResponse.lead)}
                     </p>
 
                     <ul className='space-y-2 text-foreground/90 text-xs sm:text-[13px]'>
                       {activeScenario.assistantResponse.points.map((pt, idx) => (
                         <li key={idx} className='flex items-start gap-2 leading-relaxed'>
                           <CheckCircle2 className='w-3.5 h-3.5 text-primary shrink-0 mt-0.5' />
-                          <span>{pt}</span>
+                          <span>{renderMarkdownText(pt)}</span>
                         </li>
                       ))}
                     </ul>
 
                     {activeScenario.assistantResponse.conclusion && (
                       <p className='text-xs text-muted-foreground pt-1 border-t border-border/40'>
-                        {activeScenario.assistantResponse.conclusion}
+                        {renderMarkdownText(activeScenario.assistantResponse.conclusion)}
                       </p>
                     )}
 
@@ -316,7 +342,7 @@ export function HeroPreviewChat() {
                       <div className='flex items-center gap-3'>
                         <span className='flex items-center gap-1'>
                           <Clock className='w-3 h-3' />
-                          {activeScenario.metrics.latencyMs}ms
+                          {activeScenario.metrics.latencyText}
                         </span>
                         <span>Similitud: {(activeScenario.metrics.similarity * 100).toFixed(0)}%</span>
                       </div>

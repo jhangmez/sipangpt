@@ -97,21 +97,21 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div className='space-y-0.5'>
-                  <div className='font-frances text-2xl font-bold text-primary'>100%</div>
-                  <div className='text-xs text-muted-foreground leading-snug'>
-                    Citas con enlace oficial
-                  </div>
-                </div>
-                <div className='space-y-0.5'>
-                  <div className='font-frances text-2xl font-bold text-foreground'>&lt; 250ms</div>
-                  <div className='text-xs text-muted-foreground leading-snug'>
-                    Latencia promedio SSE
-                  </div>
-                </div>
-                <div className='space-y-0.5'>
-                  <div className='font-frances text-2xl font-bold text-emerald-500'>99.0%</div>
+                  <div className='font-frances text-2xl font-bold text-primary'>99.0%</div>
                   <div className='text-xs text-muted-foreground leading-snug'>
                     Exactitud Fáctica (Tesis UNPRG)
+                  </div>
+                </div>
+                <div className='space-y-0.5'>
+                  <div className='font-frances text-2xl font-bold text-emerald-500'>0.0%</div>
+                  <div className='text-xs text-muted-foreground leading-snug'>
+                    Alucinaciones (Cuarta Tanda)
+                  </div>
+                </div>
+                <div className='space-y-0.5'>
+                  <div className='font-frances text-2xl font-bold text-foreground'>100%</div>
+                  <div className='text-xs text-muted-foreground leading-snug'>
+                    Citas con enlace oficial
                   </div>
                 </div>
               </div>

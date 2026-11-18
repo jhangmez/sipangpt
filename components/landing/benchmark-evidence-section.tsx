@@ -9,7 +9,8 @@ import {
   Sparkles,
   TrendingUp,
   FileCheck2,
-  ShieldCheck
+  ShieldCheck,
+  Clock
 } from 'lucide-react'
 
 export function BenchmarkEvidenceSection() {
@@ -151,6 +152,35 @@ export function BenchmarkEvidenceSection() {
                 <span>46 Alucinaciones (92.0% de error en enlaces y trámites sin anclaje documental)</span>
                 <span className='text-destructive font-medium'>Incompetencia Fáctica sin RAG</span>
               </div>
+            </div>
+          </div>
+
+          {/* Comportamiento Temporal y Latencias Oficiales (Capítulo V Tesis) */}
+          <div className='pt-4 border-t border-border/50 grid grid-cols-1 md:grid-cols-2 gap-4 text-left'>
+            <div className='p-4 rounded-xl bg-muted/40 border border-border/60 space-y-1.5'>
+              <div className='flex items-center justify-between text-xs font-semibold text-foreground'>
+                <span className='flex items-center gap-1.5'>
+                  <Clock className='w-3.5 h-3.5 text-primary' />
+                  Streaming en Producción (Tanda 2)
+                </span>
+                <span className='font-mono font-bold text-primary text-sm'>~7.47 s</span>
+              </div>
+              <p className='text-[11px] text-muted-foreground leading-relaxed'>
+                En condiciones de alta velocidad y precarga, Sipán-STAIR fue <strong>38.5% más rápido</strong> que la inferencia completa local de Gemma-4 (12.15s), emitiendo los primeros tokens de respuesta desde el segundo 1.5.
+              </p>
+            </div>
+
+            <div className='p-4 rounded-xl bg-muted/40 border border-border/60 space-y-1.5'>
+              <div className='flex items-center justify-between text-xs font-semibold text-foreground'>
+                <span className='flex items-center gap-1.5'>
+                  <Clock className='w-3.5 h-3.5 text-foreground' />
+                  Auditoría Rigurosa con Thinking (Cuarta Tanda)
+                </span>
+                <span className='font-mono font-bold text-foreground text-sm'>~45.00 s</span>
+              </div>
+              <p className='text-[11px] text-muted-foreground leading-relaxed'>
+                En evaluación científica profunda con <em>thinking process</em> de Gemini 3.8 Flash, el tiempo se invierte en contrastar cada artículo normativo, garantizando <strong>cero alucinaciones fácticas (0.0%)</strong>.
+              </p>
             </div>
           </div>
 
