@@ -50,36 +50,39 @@ export async function Navbar() {
           </Link>
         </nav>
 
-        {/* Acciones del Lado Derecho (Sin redundancias) */}
-        <div className='flex items-center gap-3 shrink-0'>
-          <ThemeToggle />
-
-          {/* Botón único de acción según estado de sesión */}
+        {/* Acciones del Lado Derecho (2 elementos claros cuando hay sesión) */}
+        <div className='flex items-center gap-2.5 shrink-0'>
           {user ? (
-            <div className='flex items-center gap-2.5'>
+            <>
+              {/* Botón 1: Ir al Chat */}
               <Link
                 href='/chat'
                 className={cn(
                   buttonVariants({ variant: 'default', size: 'sm' }),
-                  'gap-1.5 font-exo font-semibold text-xs px-3.5 h-9 rounded-lg shadow-xs'
+                  'gap-1.5 font-exo font-semibold text-xs px-3.5 h-9 rounded-xl shadow-xs hover:shadow-sm transition-all'
                 )}
               >
                 <MessageSquare className='w-3.5 h-3.5' />
                 <span>Ir al Chat</span>
               </Link>
+
+              {/* Botón 2: Avatar con flecha y Dropdown con perfil, tema y logout */}
               <UserButton user={user} />
-            </div>
+            </>
           ) : (
-            <Link
-              href='/login'
-              className={cn(
-                buttonVariants({ variant: 'default', size: 'sm' }),
-                'gap-1.5 font-exo font-semibold text-xs px-4 h-9 rounded-lg shadow-xs hover:shadow-sm transition-all'
-              )}
-            >
-              <LogIn className='w-3.5 h-3.5' />
-              <span>Iniciar Sesión</span>
-            </Link>
+            <div className='flex items-center gap-2'>
+              <ThemeToggle />
+              <Link
+                href='/login'
+                className={cn(
+                  buttonVariants({ variant: 'default', size: 'sm' }),
+                  'gap-1.5 font-exo font-semibold text-xs px-4 h-9 rounded-xl shadow-xs hover:shadow-sm transition-all'
+                )}
+              >
+                <LogIn className='w-3.5 h-3.5' />
+                <span>Iniciar Sesión</span>
+              </Link>
+            </div>
           )}
 
           {/* Menú Móvil */}

@@ -20,13 +20,21 @@ export default function Footer() {
                 href='https://www.linkedin.com/in/jhangmez'
                 target='_blank'
                 rel='noopener noreferrer'
-                className='font-semibold text-foreground underline underline-offset-2 hover:text-primary transition-colors'
+                className='font-bold text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text inline-block cursor-pointer underline underline-offset-2'
               >
                 Jhan Gómez P. (@jhangmez)
               </a>.
             </p>
             <p className='text-xs text-muted-foreground/80'>
-              Este proyecto es independiente y <strong>no está afiliado, patrocinado ni administrado oficialmente por la Universidad Señor de Sipán</strong>.
+              Este proyecto es independiente y <strong>no está afiliado, patrocinado ni administrado oficialmente por la{' '}
+              <a
+                href='https://www.uss.edu.pe'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='underline underline-offset-2 hover:text-primary transition-colors'
+              >
+                Universidad Señor de Sipán
+              </a></strong>.
             </p>
           </div>
 
@@ -85,12 +93,33 @@ export default function Footer() {
         {/* Barra inferior */}
         <div className='pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs'>
           <p>
-            © {new Date().getFullYear()} SipánGPT. Todos los derechos de imágenes y marcas registradas pertenecen a la Universidad Señor de Sipán.
+            © {new Date().getFullYear()}{' '}
+            <span className='font-frances font-bold text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text inline-block cursor-default'>
+              SipánGPT
+            </span>
+            . Todos los derechos de imagen y de marca registrados pertenecen a{' '}
+            <a
+              href='https://www.uss.edu.pe'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='font-medium text-foreground underline underline-offset-2 hover:text-primary transition-colors'
+            >
+              Universidad Señor de Sipán
+            </a>
+            .
           </p>
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-1.5'>
             <span>Hecho con</span>
-            <Heart className='w-3.5 h-3.5 text-red-500 fill-red-500 inline' />
-            <span>por Jhan Gómez P.</span>
+            <Heart className='w-3.5 h-3.5 text-red-500 fill-red-500 inline animate-pulse' />
+            <span>por</span>
+            <a
+              href='https://www.linkedin.com/in/jhangomez'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='font-bold text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text inline-block cursor-pointer underline-offset-2 hover:underline'
+            >
+              Jhan Gómez P.
+            </a>
           </div>
         </div>
       </div>
