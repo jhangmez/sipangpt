@@ -147,6 +147,11 @@ Módulo especializado para la auditoría técnica y pedagógica de las consultas
 
 ### 7. 🤖 Auditoría de Tokens, Costos y Monitor de Modelos (`/admin/models`)
 - **Catálogo Multimodelo en la Nube y Locales:** Gemini 3.1 Flash-Lite (por defecto), Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 3.1 Pro Preview, Gemini 2.5 Pro, GPT-4o Mini, Claude 3.5 Sonnet, Groq Llama 3.3 70B y servidor local Mac Mini M4 vía Cloudflare Tunnel.
+- **Paginación y Filtros Interactivos:**
+  - Paginación dinámica configurable para el catálogo de modelos y el historial de registros de tokens (`TokenUsageLog`).
+  - Filtros avanzados por estado operativo (Activos / Inactivos), búsqueda reactiva por nombre de modelo y ordenamiento multidimensional (precios más altos/bajos de entrada y salida).
+- **Telemetría y Validación Real de Estado de Salud:**
+  - Diagnóstico dinámico de conectividad y latencia real (`ping`) para proveedores en la nube y servidores locales (Mac Mini M4 vía Cloudflare Tunnel), garantizando métricas operativas fidedignas sin estados estáticos ficticios.
 - **🪙 Auditoría Completa de Consumo por Concepto (`TokenUsageLog`):**
   - `CHAT_COMPLETION`: Respuestas conversacionales del asistente.
   - `DOCUMENT_OCR_TRANSCRIPTION`: Transcripción multimodal de PDFs a Markdown.
@@ -180,10 +185,14 @@ Para evaluar la plataforma bajo condiciones extremas de concurrencia y estrés:
 
 ---
 
-### 9. 📜 Portal Legal y Autenticación Centralizada
+### 9. 📜 Portal Legal, Landing Institucional y Navegación Dinámica
+- **Header y Barra de Navegación Minimalista (`components/shared/navbar.tsx`):**
+  - **Experiencia de 2 Botones en Sesión:** Cuando el usuario está autenticado, la barra superior se reduce a dos elementos limpios: botón destacado *"Ir al Chat"* y el botón de perfil (*Avatar + ChevronDown*).
+  - **Menú de Usuario Desplegable (`UserButton`):** Agrupa la identidad del usuario en la parte superior (nombre, correo institucional con copiado al portapapeles, rol `ADMIN`), accesos rápidos al chatbot y panel de control, alternador de modo noche/claro y cierre de sesión seguro.
+  - **Alternador de Tema Inteligente (`ThemeToggle`):** Ubicado visiblemente a la izquierda de "Iniciar Sesión" para visitantes sin sesión, y ocultado dinámicamente de la barra principal para integrarse dentro del menú de usuario al autenticarse.
 - **Página de Términos y Privacidad (`/terms`):** Marco regulatorio integral que detalla el tratamiento de datos personales, políticas de privacidad, alcance académico de la IA y descargos de responsabilidad institucional.
 - **Página de Acceso Centralizada (`/login`):** Interfaz full-screen optimizada con soporte para Google OAuth, autenticación con credenciales y redirección inteligente según roles (`ADMIN` / `USER`).
-- **Footer Institucional:** Pie de página con accesos directos a políticas, estado del sistema, repositorio oficial y créditos institucionales.
+- **Footer Institucional Interactivo (`components/landing/footer.tsx`):** Pie de página con efectos animados ondulantes (`@keyframes wave`) sobre la marca `SipánGPT` y créditos de autoría, enlaces oficiales al portal de la [Universidad Señor de Sipán](https://www.uss.edu.pe) y perfil profesional de [Jhan Gómez](https://www.linkedin.com/in/jhangomez).
 
 ---
 
@@ -354,13 +363,23 @@ sipangpt/
 │   ├── configuraciones/                # Componentes del perfil de usuario
 │   │   ├── memories-manager.tsx        # Gestor de memorias y hechos personalizados
 │   │   └── user-profile-form.tsx       # Formulario de datos de usuario
-│   ├── landing/                        # Componentes de la landing page
+│   ├── landing/                        # Componentes modulares de la landing page
+│   │   ├── archetype-selector-section.tsx # Selector interactivo de arquetipos estudiantiles
+│   │   ├── benchmark-evidence-section.tsx # Evidencia y métricas del Benchmark UNPRG
+│   │   ├── final-cta-section.tsx       # Llamado a la acción final institucional
+│   │   ├── footer.tsx                  # Pie de página con enlaces y animaciones
 │   │   ├── header.tsx                  # Cabecera de la página de inicio
-│   │   └── footer.tsx                  # Pie de página con avisos legales y enlaces
-│   ├── shared/                         # Componentes compartidos y sidebars
+│   │   ├── hero-preview-chat.tsx       # Simulador interactivo del chat en el Hero
+│   │   ├── indexed-documents-strip.tsx # Carrusel de los 13 reglamentos USS
+│   │   ├── mobile-menu.tsx             # Menú de navegación responsive para móviles
+│   │   └── stair-architecture-section.tsx # Visualizador de la arquitectura STAIR
+│   ├── shared/                         # Componentes compartidos y navegación
 │   │   ├── admin-sidebar.tsx           # Barra lateral del panel administrativo
 │   │   ├── app-sidebar.tsx             # Barra lateral principal del chat y navegación
-│   │   └── settings-sidebar.tsx        # Barra lateral de configuración de usuario
+│   │   ├── navbar.tsx                  # Header principal institucional
+│   │   ├── settings-sidebar.tsx        # Barra lateral de configuración de usuario
+│   │   ├── theme-toggle.tsx            # Alternador de modo oscuro/claro
+│   │   └── user-button.tsx             # Dropdown de perfil, sesión y tema
 │   └── ui/                             # Catálogo Shadcn UI (Card, Slider, Dialog, Attachment, etc.)
 │
 ├── constants/                          # Constantes institucionales centralizadas

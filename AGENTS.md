@@ -238,3 +238,47 @@ import {
 | **Textarea**         | `components/ui/textarea.tsx`         | Área de texto multilínea para comentarios de feedback y notas.                                                                               |
 | **Toast**            | `components/ui/toast.tsx`            | Sistema de notificaciones toast (integrado con `sonner`).                                                                                    |
 | **Tooltip**          | `components/ui/tooltip.tsx`          | Ayudas visuales al pasar el cursor o hacer focus.                                                                                            |
+
+---
+
+# 🧭 Protocolo de Navegación, Header y Menú de Usuario
+
+Para garantizar una experiencia visual minimalista y libre de saturación en la barra superior (`components/shared/navbar.tsx`):
+
+### 📌 Reglas de Estado de Sesión en el Header:
+
+1. **Cuando NO hay sesión activa (`!user`):**
+   - Se muestra el botón de alternar tema día/noche (`ThemeToggle`) **a la izquierda** del botón de acción principal ("Iniciar Sesión").
+   - El botón principal redirige a `/login` con icono `LogIn`.
+
+2. **Cuando SÍ hay sesión activa (`user`):**
+   - El botón suelto de alternar tema (`ThemeToggle`) **NUNCA** debe mostrarse en la barra del header.
+   - La barra derecha debe contener **exactamente dos elementos principales**:
+     - **Botón 1:** "Ir al Chat" (`Link` a `/chat` con estilo de botón primario e icono `MessageSquare`).
+     - **Botón 2:** Menú de Usuario (`UserButton` en `components/shared/user-button.tsx`) compuesto por el **Avatar + Chevron Abajo (`ChevronDown`)**.
+
+3. **Estructura Interna del Dropdown de Usuario (`UserButton`):**
+   - **Encabezado superior:** Muestra el avatar, nombre del usuario, correo institucional (con opción de copiar al portapapeles con feedback de toast) e insignia `ADMIN` si corresponde.
+   - **Navegación contextual:** Enlace a "Ir al Chatbot" (`/chat`) y "Panel de Administrador" (`/admin/dashboard` para administradores).
+   - **Control de Tema:** Selector integrado de "Modo Noche / Modo Claro" gobernado por `useTheme` de `next-themes`.
+   - **Cierre de sesión:** Opción con color destructivo (`text-destructive`) que invoca `performSafeLogout('/')`.
+
+---
+
+# ✨ Animaciones de Identidad y Efecto Ondulante (`@keyframes wave`)
+
+Para destacar la identidad visual institucional sin sobrecargar la interfaz:
+
+1. **Efecto Shimmer Ondulante:**
+   Definido en `app/globals.css` mediante `@keyframes wave`. Utilizado para resaltar la marca `SipánGPT`, el descargo de responsabilidad experimental y créditos académicos:
+
+   ```tsx
+   <span className='font-frances font-bold text-primary transition-all duration-300 hover:animate-[wave_2s_linear_infinite] hover:text-transparent hover:bg-gradient-to-r hover:from-primary hover:via-primary/40 hover:to-primary hover:bg-[length:200%_100%] hover:bg-clip-text inline-block'>
+     SipánGPT
+   </span>
+   ```
+
+2. **Enlaces Institucionales y Autoría:**
+   - Todo crédito al autor debe referenciar a su perfil profesional oficial (`https://www.linkedin.com/in/jhangomez`) y aplicar el efecto hover interactivo.
+   - Toda mención legal a la universidad debe enlazar de forma segura al portal oficial (`https://www.uss.edu.pe`, `target='_blank'`, `rel='noopener noreferrer'`).
+
