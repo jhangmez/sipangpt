@@ -138,7 +138,7 @@ export function SettingsManager({ initialSettings }: SettingsManagerProps) {
                 <p className='text-xs text-muted-foreground leading-relaxed'>
                   Permite al asistente buscar semánticamente dentro de los
                   reglamentos, mallas curriculares y resoluciones oficiales
-                  indexadas en la base de datos Neon.
+                  indexadas en la base de datos vectorial PostgreSQL.
                 </p>
               </div>
             </div>

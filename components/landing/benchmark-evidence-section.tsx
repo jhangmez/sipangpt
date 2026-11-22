@@ -117,7 +117,7 @@ export function BenchmarkEvidenceSection() {
               <div className='flex justify-between items-center text-sm font-medium'>
                 <span className='flex items-center gap-2 text-foreground font-semibold'>
                   <span className='w-2.5 h-2.5 rounded-full bg-primary' />
-                  Sipán-STAIR (RAG con Gemini 3.8 Flash + Next.js + Neon)
+                  Sipán-STAIR (RAG con Gemini 3.8 Flash + Next.js + PostgreSQL)
                 </span>
                 <span className='font-frances font-bold text-primary text-base'>99.00% Exactitud</span>
               </div>

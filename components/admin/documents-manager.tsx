@@ -1900,7 +1900,7 @@ export function DocumentsManager({
               </div>
               <div className='space-y-0.5'>
                 <p className='font-bold text-foreground'>
-                  Indexación Activa en PostgreSQL Neon & Citación en Chat
+                  Indexación Activa en PostgreSQL (pgvector) & Citación en Chat
                 </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
                   El documento pasa a estado <strong>INDEXED</strong>. Cuando un

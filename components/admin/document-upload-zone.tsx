@@ -429,7 +429,7 @@ export function DocumentUploadZone({
                   <div className='flex justify-between items-center text-xs font-medium'>
                     <span className='text-muted-foreground flex items-center gap-1.5'>
                       <Loader2 className='w-3.5 h-3.5 animate-spin text-primary' />
-                      Subiendo e indexando en neon/vector...
+                      Subiendo e indexando en PostgreSQL (pgvector)...
                     </span>
                     <span className='text-primary font-bold'>{uploadProgress}%</span>
                   </div>
@@ -602,7 +602,7 @@ export function DocumentUploadZone({
                   {urlStepMessage || 'Procesando documento...'}
                 </p>
                 <p className='text-[10px] text-muted-foreground'>
-                  Descarga del binario, OCR multimodal Gemini, extracción del árbol ToC y almacenamiento vectorial en Neon.
+                  Descarga del binario, OCR multimodal Gemini, extracción del árbol ToC y almacenamiento vectorial en PostgreSQL.
                 </p>
               </div>
             </div>
