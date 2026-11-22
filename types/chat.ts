@@ -1,4 +1,5 @@
 import type { ModelProvider, ModelStatus } from '@/lib/prisma'
+import type { ThinkingLevel } from '@/constants/models'
 
 export interface SidebarChat {
   id: string
@@ -54,6 +55,7 @@ export interface ChatMessage {
   modelName?: string
   modelProvider?: string
   embeddingModel?: string
+  thinkingLevel?: ThinkingLevel
   reasoning?: string
   attachments?: MessageAttachment[]
   rating?: number

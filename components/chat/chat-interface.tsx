@@ -22,7 +22,9 @@ import { ChatSidePanel } from './chat-side-panel'
 import {
   SYSTEM_MODELS,
   DEFAULT_MODEL_CODE,
+  DEFAULT_THINKING_LEVEL,
   type ModelDefinition,
+  type ThinkingLevel,
   INITIAL_QUESTIONS,
   type SuggestedQuestionDefinition,
   MAX_QUESTIONS_PER_CONVERSATION,
@@ -123,6 +125,9 @@ export function ChatInterface({
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [attachedFiles, setAttachedFiles] = React.useState<AttachedFile[]>([])
+  const [thinkingLevel, setThinkingLevel] = React.useState<ThinkingLevel>(
+    DEFAULT_THINKING_LEVEL
+  )
 
   // Sincronizar mensajes e ID si cambian las props iniciales
   React.useEffect(() => {
@@ -324,6 +329,10 @@ export function ChatInterface({
           conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
           provider: selectedModel.provider,
+          thinkingLevel,
+          generation_config: {
+            thinking_level: thinkingLevel,
+          },
           parentId,
           attachments: attachmentsPayload
         })
@@ -355,6 +364,10 @@ export function ChatInterface({
       }
 
       let assistantAdded = false
+      let streamSources: MessageSource[] | undefined
+      let streamRetrievalLatencyMs: number | undefined
+      let streamEmbeddingModel: string | undefined
+      let streamThinkingLevel: ThinkingLevel = thinkingLevel
       const decoder = new TextDecoder()
       let buffer = ''
       let accumulatedText = ''
@@ -404,9 +417,19 @@ export function ChatInterface({
                   }
                 }
                 if (meta.sources && meta.sources.length > 0) {
+                  streamSources = meta.sources
                   setActiveSources(meta.sources)
                   setSidePanelTab('sources')
                   setSidePanelOpen(true)
+                }
+                if (typeof meta.retrievalLatencyMs === 'number') {
+                  streamRetrievalLatencyMs = meta.retrievalLatencyMs
+                }
+                if (meta.embeddingModel) {
+                  streamEmbeddingModel = meta.embeddingModel
+                }
+                if (meta.thinkingLevel) {
+                  streamThinkingLevel = meta.thinkingLevel
                 }
               }
 
@@ -434,6 +457,10 @@ export function ChatInterface({
                     parentId: userMessageId,
                     modelName: selectedModel.name,
                     modelProvider: selectedModel.provider,
+                    embeddingModel: streamEmbeddingModel || DEFAULT_EMBEDDING_MODEL,
+                    thinkingLevel: streamThinkingLevel,
+                    retrievalLatencyMs: streamRetrievalLatencyMs,
+                    sources: streamSources,
                     latencyMs: selectedModel.latencyMs || 140
                   }
                   setMessages((prev) => [...prev, newAssistantMsg])
@@ -494,6 +521,8 @@ export function ChatInterface({
                             packet.embeddingModel ||
                             msg.embeddingModel ||
                             DEFAULT_EMBEDDING_MODEL,
+                          thinkingLevel:
+                            packet.thinkingLevel || msg.thinkingLevel,
                           modelName: packet.modelName || selectedModel.name
                         }
                       : msg
@@ -503,10 +532,11 @@ export function ChatInterface({
 
               if (
                 packet.type === 'finish' &&
-                packet.messageMetadata?.conversationId
+                packet.messageMetadata
               ) {
-                const finishConvId = packet.messageMetadata.conversationId
-                if (finishConvId !== currentConversationId) {
+                const finishMeta = packet.messageMetadata
+                const finishConvId = finishMeta.conversationId
+                if (finishConvId && finishConvId !== currentConversationId) {
                   setCurrentConversationId(finishConvId)
                   if (
                     typeof window !== 'undefined' &&
@@ -519,6 +549,21 @@ export function ChatInterface({
                     )
                   }
                 }
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantTempId
+                      ? {
+                          ...msg,
+                          latencyMs: finishMeta.latencyMs ?? msg.latencyMs,
+                          generationLatencyMs:
+                            finishMeta.generationLatencyMs ??
+                            msg.generationLatencyMs,
+                          thinkingLevel:
+                            finishMeta.thinkingLevel ?? msg.thinkingLevel
+                        }
+                      : msg
+                  )
+                )
               }
 
               if (packet.type === 'error' || currentEvent === 'error') {
@@ -740,7 +785,9 @@ export function ChatInterface({
       isRegeneration: true,
       regeneratedFromId: assistantMessageId,
       modelName: selectedModel.name,
-      modelProvider: selectedModel.provider
+      modelProvider: selectedModel.provider,
+      embeddingModel: DEFAULT_EMBEDDING_MODEL,
+      thinkingLevel,
     }
 
     // Añadir la nueva versión y seleccionarla automáticamente (ej. 2/2)
@@ -763,6 +810,10 @@ export function ChatInterface({
           conversationId: currentConversationId,
           modelCode: selectedModel.modelCode,
           provider: selectedModel.provider,
+          thinkingLevel,
+          generation_config: {
+            thinking_level: thinkingLevel,
+          },
           isRegeneration: true,
           regeneratedFromId: assistantMessageId,
           parentId: userMessage.id
@@ -819,6 +870,22 @@ export function ChatInterface({
                   setSidePanelTab('sources')
                   setSidePanelOpen(true)
                 }
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === newAssistantTempId
+                      ? {
+                          ...msg,
+                          sources: meta.sources || msg.sources,
+                          retrievalLatencyMs:
+                            meta.retrievalLatencyMs ?? msg.retrievalLatencyMs,
+                          embeddingModel:
+                            meta.embeddingModel || msg.embeddingModel,
+                          thinkingLevel:
+                            meta.thinkingLevel || msg.thinkingLevel,
+                        }
+                      : msg
+                  )
+                )
               }
 
               // Chunks de texto
@@ -889,7 +956,28 @@ export function ChatInterface({
                             packet.embeddingModel ||
                             msg.embeddingModel ||
                             DEFAULT_EMBEDDING_MODEL,
+                          thinkingLevel:
+                            packet.thinkingLevel || msg.thinkingLevel,
                           modelName: packet.modelName || selectedModel.name
+                        }
+                      : msg
+                  )
+                )
+              }
+
+              if (packet.type === 'finish' && packet.messageMetadata) {
+                const finishMeta = packet.messageMetadata
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === newAssistantTempId
+                      ? {
+                          ...msg,
+                          latencyMs: finishMeta.latencyMs ?? msg.latencyMs,
+                          generationLatencyMs:
+                            finishMeta.generationLatencyMs ??
+                            msg.generationLatencyMs,
+                          thinkingLevel:
+                            finishMeta.thinkingLevel ?? msg.thinkingLevel
                         }
                       : msg
                   )
@@ -1001,6 +1089,9 @@ export function ChatInterface({
             isLimitReached={isConversationLimitReached}
             questionsCount={userQuestionsCount}
             maxQuestions={MAX_QUESTIONS_PER_CONVERSATION}
+            thinkingLevel={thinkingLevel}
+            onThinkingLevelChange={setThinkingLevel}
+            isGeminiModel={selectedModel.provider === 'GEMINI'}
             onSubmit={() => handleSendMessage()}
             onFileUpload={handleFileUpload}
             onNewChat={() => router.push('/chat')}

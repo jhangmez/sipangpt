@@ -28,7 +28,7 @@ import { Bubble, BubbleContent, BubbleReactions } from '@/components/ui/bubble'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DEFAULT_EMBEDDING_MODEL } from '@/constants'
+import { DEFAULT_EMBEDDING_MODEL, THINKING_LEVEL_OPTIONS } from '@/constants'
 import {
   Collapsible,
   CollapsibleContent,
@@ -102,6 +102,17 @@ export function ChatMessageItem({
     minute: '2-digit',
     second: '2-digit'
   })
+
+  const formatLatency = (ms: number) => {
+    if (ms >= 1000) {
+      return `${(ms / 1000).toFixed(2)} s (${ms.toLocaleString('es-PE')} ms)`
+    }
+    return `${ms} ms`
+  }
+
+  const thinkingOpt = message.thinkingLevel
+    ? THINKING_LEVEL_OPTIONS.find((opt) => opt.value === message.thinkingLevel)
+    : undefined
 
   return (
     <MessageScrollerItem
@@ -351,8 +362,8 @@ export function ChatMessageItem({
                           </Button>
                         }
                       />
-                      <DialogContent className='max-w-md rounded-3xl p-6 font-exo'>
-                        <DialogHeader className='space-y-2'>
+                      <DialogContent className='flex flex-col max-h-[85vh] w-full max-w-[calc(100%-2rem)] sm:max-w-xl rounded-3xl p-0 gap-0 overflow-hidden font-exo'>
+                        <DialogHeader className='space-y-1.5 px-6 pt-5 pb-4 pr-12 border-b border-border/50 shrink-0'>
                           <DialogTitle className='font-frances text-xl'>
                             Información del Mensaje
                           </DialogTitle>
@@ -362,81 +373,100 @@ export function ChatMessageItem({
                           </DialogDescription>
                         </DialogHeader>
 
-                        <div className='space-y-3 pt-3 text-xs'>
-                          <div className='rounded-2xl border border-border/70 p-3.5 space-y-2 bg-card/60'>
+                        <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4 text-xs'>
+                          <div className='rounded-2xl border border-border/70 p-4 space-y-2.5 bg-card/60'>
                             {message.isRegeneration && (
-                              <div className='flex justify-between items-center pb-2 border-b border-border/40'>
-                                <span className='text-muted-foreground'>
+                              <div className='flex items-start justify-between gap-4 pb-2 border-b border-border/40'>
+                                <span className='text-muted-foreground shrink-0'>
                                   Tipo de Generación:
                                 </span>
                                 <Badge
                                   variant='secondary'
-                                  className='text-[10px] bg-primary/10 text-primary border-primary/20 gap-1'
+                                  className='text-[10px] bg-primary/10 text-primary border-primary/20 gap-1 shrink-0'
                                 >
                                   <RefreshCw className='w-3 h-3' /> Respuesta
                                   Regenerada
                                 </Badge>
                               </div>
                             )}
-                            <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>
+                            <div className='flex items-start justify-between gap-4'>
+                              <span className='text-muted-foreground shrink-0'>
                                 Modelo de Generación:
                               </span>
-                              <span className='font-bold text-foreground'>
+                              <span className='font-bold text-foreground text-right min-w-0 break-words'>
                                 {message.modelName || selectedModel.name}
                               </span>
                             </div>
-                            <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>
+                            <div className='flex items-start justify-between gap-4'>
+                              <span className='text-muted-foreground shrink-0'>
                                 Modelo de Embeddings:
                               </span>
-                              <span className='font-mono font-medium text-foreground'>
+                              <span className='font-mono font-medium text-foreground text-right min-w-0 break-words'>
                                 {message.embeddingModel || DEFAULT_EMBEDDING_MODEL}
                               </span>
                             </div>
-                            <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>
+                            <div className='flex items-start justify-between gap-4'>
+                              <span className='text-muted-foreground shrink-0'>
                                 Proveedor:
                               </span>
-                              <Badge variant='outline'>
+                              <Badge variant='outline' className='shrink-0'>
                                 {message.modelProvider ||
                                   selectedModel.provider}
                               </Badge>
                             </div>
-                            <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>
+                            {message.thinkingLevel && (
+                              <div className='flex items-start justify-between gap-4'>
+                                <span className='text-muted-foreground shrink-0'>
+                                  Nivel de Pensamiento:
+                                </span>
+                                <Badge
+                                  variant='secondary'
+                                  className='text-[10px] font-mono shrink-0'
+                                >
+                                  {thinkingOpt?.shortLabel ||
+                                    message.thinkingLevel}{' '}
+                                  ({message.thinkingLevel})
+                                </Badge>
+                              </div>
+                            )}
+                            <div className='flex items-start justify-between gap-4'>
+                              <span className='text-muted-foreground shrink-0'>
                                 Tiempo total de respuesta:
                               </span>
-                              <span className='font-mono font-medium'>
+                              <span className='font-mono font-medium text-foreground text-right min-w-0 break-words'>
                                 {message.latencyMs
-                                  ? `${message.latencyMs} ms`
-                                  : '180 ms'}
+                                  ? formatLatency(message.latencyMs)
+                                  : '—'}
                               </span>
                             </div>
                             {(message.retrievalLatencyMs !== undefined ||
                               message.generationLatencyMs !== undefined) && (
-                              <div className='flex justify-between items-center text-[11px] text-muted-foreground border-t border-border/40 pt-1.5'>
+                              <div className='flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[11px] text-muted-foreground border-t border-border/40 pt-2'>
                                 <span>
                                   Búsqueda Vectorial:{' '}
-                                  <strong className='text-foreground'>
-                                    {message.retrievalLatencyMs ?? 0} ms
+                                  <strong className='text-foreground font-mono'>
+                                    {formatLatency(
+                                      message.retrievalLatencyMs ?? 0
+                                    )}
                                   </strong>
                                 </span>
                                 <span>
                                   Generación LLM:{' '}
-                                  <strong className='text-foreground'>
-                                    {message.generationLatencyMs ?? 0} ms
+                                  <strong className='text-foreground font-mono'>
+                                    {formatLatency(
+                                      message.generationLatencyMs ?? 0
+                                    )}
                                   </strong>
                                 </span>
                               </div>
                             )}
-                            <div className='flex justify-between items-center'>
-                              <span className='text-muted-foreground'>
+                            <div className='flex items-start justify-between gap-4 border-t border-border/40 pt-2'>
+                              <span className='text-muted-foreground shrink-0'>
                                 Emitido:
                               </span>
                               <span
                                 suppressHydrationWarning
-                                className='font-mono font-medium'
+                                className='font-mono font-medium text-right text-[11px] leading-snug min-w-0 break-words'
                               >
                                 {formatTimeAgo(message.createdAt)} (
                                 {formattedDate} {formattedTime})
@@ -446,24 +476,32 @@ export function ChatMessageItem({
 
                           {/* Fuentes y Citas RAG de la USS */}
                           {message.sources && message.sources.length > 0 && (
-                            <div className='space-y-2'>
-                              <span className='font-bold text-xs text-foreground block'>
-                                Fuentes y Normativas Consultadas:
-                              </span>
+                            <div className='space-y-2.5'>
+                              <div className='flex items-center justify-between gap-2'>
+                                <span className='font-bold text-xs text-foreground'>
+                                  Fuentes y Normativas Consultadas
+                                </span>
+                                <Badge
+                                  variant='secondary'
+                                  className='text-[10px] font-mono'
+                                >
+                                  {message.sources.length}
+                                </Badge>
+                              </div>
                               {message.sources.map((src, i) => (
                                 <div
                                   key={i}
-                                  className='rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-1.5'
+                                  className='rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2'
                                 >
-                                  <div className='flex items-center justify-between'>
-                                    <div className='flex items-center gap-1.5'>
-                                      <span className='font-semibold text-primary'>
+                                  <div className='flex items-start justify-between gap-2'>
+                                    <div className='flex items-center gap-1.5 flex-wrap min-w-0'>
+                                      <span className='font-semibold text-primary leading-snug break-words'>
                                         {src.title}
                                       </span>
                                       {src.relevance !== undefined && (
                                         <Badge
                                           variant='secondary'
-                                          className='text-[10px] py-0 px-1 font-mono'
+                                          className='text-[10px] py-0 px-1.5 font-mono shrink-0'
                                         >
                                           Similitud:{' '}
                                           {Math.round(src.relevance * 100)}%
@@ -475,25 +513,32 @@ export function ChatMessageItem({
                                         href={src.url}
                                         target='_blank'
                                         rel='noreferrer'
-                                        className='text-primary hover:underline flex items-center gap-1 text-[11px]'
+                                        className='text-primary hover:underline flex items-center gap-1 text-[11px] shrink-0 whitespace-nowrap'
                                       >
                                         Ver <ExternalLink className='h-3 w-3' />
                                       </a>
                                     )}
                                   </div>
                                   {src.breadcrumb && (
-                                    <div className='text-[10px] text-primary/90 font-sans font-medium flex items-center gap-1'>
-                                      <span className='font-semibold'>📌 Ruta:</span>
-                                      <span>{src.breadcrumb}</span>
+                                    <div className='rounded-lg bg-primary/10 px-2.5 py-1.5 text-[10px] text-primary/90 font-sans font-medium flex items-start gap-1.5'>
+                                      <span className='font-semibold shrink-0 whitespace-nowrap'>
+                                        📌 Ruta:
+                                      </span>
+                                      <span className='min-w-0 break-words leading-snug'>
+                                        {src.breadcrumb}
+                                      </span>
                                     </div>
                                   )}
                                   {src.snippet && (
-                                    <p className='text-[11px] text-muted-foreground leading-relaxed'>
+                                    <p className='text-[11px] text-muted-foreground leading-relaxed break-words'>
                                       {src.snippet}
                                     </p>
                                   )}
                                   {src.chunkId && (
-                                    <span className='text-[9px] text-muted-foreground font-mono block'>
+                                    <span
+                                      className='text-[10px] text-muted-foreground/80 font-mono block truncate'
+                                      title={src.chunkId}
+                                    >
                                       ID Fragmento: {src.chunkId}
                                     </span>
                                   )}

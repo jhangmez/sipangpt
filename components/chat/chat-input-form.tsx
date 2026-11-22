@@ -3,6 +3,9 @@
 import * as React from 'react'
 import {
   ArrowUp,
+  BrainCircuit,
+  Check,
+  ChevronDown,
   Paperclip,
   Sparkles,
   MessageSquarePlus
@@ -13,11 +16,21 @@ import {
   InputGroupButton,
   InputGroupTextarea
 } from '@/components/ui/input-group'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import {
   CHAT_LIMIT_MESSAGES,
-  MAX_QUESTIONS_PER_CONVERSATION
+  DEFAULT_THINKING_LEVEL,
+  MAX_QUESTIONS_PER_CONVERSATION,
+  THINKING_LEVEL_OPTIONS,
+  type ThinkingLevel
 } from '@/constants'
 
 interface ChatInputFormProps {
@@ -28,6 +41,9 @@ interface ChatInputFormProps {
   isLimitReached?: boolean
   questionsCount?: number
   maxQuestions?: number
+  thinkingLevel?: ThinkingLevel
+  onThinkingLevelChange?: (level: ThinkingLevel) => void
+  isGeminiModel?: boolean
   onSubmit: (e?: React.FormEvent) => void
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onNewChat?: () => void
@@ -41,11 +57,17 @@ export function ChatInputForm({
   isLimitReached = false,
   questionsCount = 0,
   maxQuestions = MAX_QUESTIONS_PER_CONVERSATION,
+  thinkingLevel = DEFAULT_THINKING_LEVEL,
+  onThinkingLevelChange,
+  isGeminiModel = true,
   onSubmit,
   onFileUpload,
   onNewChat
 }: ChatInputFormProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const currentThinkingOption =
+    THINKING_LEVEL_OPTIONS.find((opt) => opt.value === thinkingLevel) ??
+    THINKING_LEVEL_OPTIONS[0]
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,8 +165,94 @@ export function ChatInputForm({
           disabled={isLoading}
         />
 
-        {/* Botón Enviar */}
-        <InputGroupAddon align='inline-end' className='self-end pb-1 pr-1'>
+        {/* Selector de Nivel de Pensamiento (thinking_level) y Botón Enviar */}
+        <InputGroupAddon align='inline-end' className='self-end pb-1 pr-1 gap-1.5'>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              disabled={isLoading}
+              render={
+                <button
+                  type='button'
+                  disabled={isLoading}
+                  aria-label='Configurar nivel de pensamiento del modelo'
+                  title={`Nivel de pensamiento (${thinkingLevel}): ${currentThinkingOption.label}`}
+                  className={cn(
+                    'inline-flex items-center gap-1 h-8 sm:h-9 px-2 sm:px-2.5 rounded-2xl border text-xs font-medium transition cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed',
+                    thinkingLevel !== DEFAULT_THINKING_LEVEL
+                      ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/15'
+                      : 'border-border/70 bg-muted/40 text-foreground hover:bg-muted/80'
+                  )}
+                >
+                  <BrainCircuit className='h-3.5 w-3.5 text-primary shrink-0' />
+                  <span className='hidden sm:inline text-[11px] font-semibold'>
+                    {currentThinkingOption.shortLabel}
+                  </span>
+                  <ChevronDown className='h-3 w-3 text-muted-foreground shrink-0' />
+                </button>
+              }
+            />
+            <DropdownMenuContent
+              align='end'
+              side='top'
+              sideOffset={8}
+              className='w-68 p-1.5 rounded-2xl border border-border/80 shadow-xl font-exo bg-popover/95 backdrop-blur-md'
+            >
+              <div className='px-2.5 py-2 border-b border-border/40 mb-1 space-y-0.5'>
+                <div className='flex items-center justify-between gap-2'>
+                  <span className='font-frances font-bold text-xs text-foreground'>
+                    Nivel de Pensamiento
+                  </span>
+                  <span className='font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground'>
+                    thinking_level
+                  </span>
+                </div>
+                <p className='text-[10px] text-muted-foreground leading-snug'>
+                  {isGeminiModel
+                    ? 'Controla la profundidad de razonamiento de Gemini antes de responder.'
+                    : 'Aplica a modelos Gemini con razonamiento configurable.'}
+                </p>
+              </div>
+
+              <div className='space-y-1'>
+                {THINKING_LEVEL_OPTIONS.map((opt) => {
+                  const isSelected = thinkingLevel === opt.value
+                  return (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => onThinkingLevelChange?.(opt.value)}
+                      className={cn(
+                        'flex items-start justify-between gap-2.5 rounded-xl px-2.5 py-2 cursor-pointer',
+                        isSelected && 'bg-primary/10 text-foreground'
+                      )}
+                    >
+                      <div className='space-y-0.5 min-w-0'>
+                        <div className='flex items-center gap-1.5 flex-wrap'>
+                          <span className='text-xs font-semibold text-foreground'>
+                            {opt.label}
+                          </span>
+                          <span className='font-mono text-[9px] px-1.5 py-0 rounded bg-muted text-muted-foreground'>
+                            {opt.value}
+                          </span>
+                          {opt.value === DEFAULT_THINKING_LEVEL && (
+                            <span className='text-[9px] font-semibold px-1.5 py-0 rounded bg-primary/15 text-primary'>
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className='text-[10px] text-muted-foreground leading-snug'>
+                          {opt.description}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <Check className='h-3.5 w-3.5 text-primary shrink-0 mt-0.5' />
+                      )}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <InputGroupButton
             type='submit'
             size='icon-sm'

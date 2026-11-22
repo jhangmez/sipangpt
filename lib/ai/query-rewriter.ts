@@ -1,7 +1,11 @@
 import { generateText } from 'ai'
+import type { GoogleLanguageModelOptions } from '@ai-sdk/google'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { ModelProvider, TokenUsageConcept } from '@/lib/prisma'
-import { DOCUMENT_TRANSCRIPTION_MODEL_CODE } from '@/constants/models'
+import {
+  DEFAULT_THINKING_LEVEL,
+  DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+} from '@/constants/models'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 
 export interface RewrittenQuery {
@@ -142,6 +146,14 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
 }`,
       prompt: `Consulta del estudiante: "${clean}"`,
       maxOutputTokens: 120,
+      reasoning: DEFAULT_THINKING_LEVEL,
+      providerOptions: {
+        google: {
+          thinkingConfig: {
+            thinkingLevel: DEFAULT_THINKING_LEVEL,
+          },
+        } satisfies GoogleLanguageModelOptions,
+      },
       abortSignal: AbortSignal.timeout(2500),
     })
     const latencyMs = Date.now() - rewriteStart

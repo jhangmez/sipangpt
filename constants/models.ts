@@ -165,3 +165,51 @@ export const SYSTEM_MODELS: ModelDefinition[] = [
     outputPricePerMillion: 0.79,
   },
 ]
+
+export type ThinkingLevel = 'low' | 'medium' | 'high'
+
+export const DEFAULT_THINKING_LEVEL: ThinkingLevel = 'low'
+
+export interface ThinkingLevelOption {
+  value: ThinkingLevel
+  label: string
+  shortLabel: string
+  description: string
+}
+
+export const THINKING_LEVEL_OPTIONS: ThinkingLevelOption[] = [
+  {
+    value: 'low',
+    label: 'Bajo (Rápido)',
+    shortLabel: 'Bajo',
+    description: 'Respuestas ágiles y menor latencia. Recomendado por defecto.',
+  },
+  {
+    value: 'medium',
+    label: 'Medio (Balanceado)',
+    shortLabel: 'Medio',
+    description: 'Equilibrio entre velocidad y análisis normativo detallado.',
+  },
+  {
+    value: 'high',
+    label: 'Alto (Profundo)',
+    shortLabel: 'Alto',
+    description: 'Máximo razonamiento paso a paso para consultas complejas.',
+  },
+]
+
+/** Verifica si un valor corresponde a un nivel de pensamiento válido. */
+export function isValidThinkingLevel(value: unknown): value is ThinkingLevel {
+  return value === 'low' || value === 'medium' || value === 'high'
+}
+
+/** Normaliza el nivel de pensamiento al catálogo permitido o retorna el valor por defecto ('low'). */
+export function normalizeThinkingLevel(value: unknown): ThinkingLevel {
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (isValidThinkingLevel(normalized)) {
+      return normalized
+    }
+  }
+  return DEFAULT_THINKING_LEVEL
+}

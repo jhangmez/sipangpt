@@ -7,6 +7,7 @@ import {
   toUIMessageStream,
   type UIMessage,
 } from 'ai'
+import type { GoogleLanguageModelOptions } from '@ai-sdk/google'
 import { auth } from '@/auth'
 import { validateInternalAuth } from '@/lib/auth/internal-auth'
 import { getLanguageModel } from '@/lib/ai/providers'
@@ -22,6 +23,8 @@ import {
   DEFAULT_PROVIDER,
   MAX_QUESTIONS_PER_CONVERSATION,
   CHAT_LIMIT_MESSAGES,
+  normalizeThinkingLevel,
+  type ThinkingLevel,
 } from '@/constants'
 
 export interface ChatAttachment {
@@ -39,6 +42,11 @@ export interface ChatRequestBody {
   conversationId?: string
   modelCode?: string
   provider?: ModelProvider
+  thinkingLevel?: ThinkingLevel
+  thinking_level?: ThinkingLevel
+  generation_config?: {
+    thinking_level?: ThinkingLevel
+  }
   isVoiceInput?: boolean
   isRegeneration?: boolean
   regeneratedFromId?: string
@@ -91,6 +99,11 @@ export async function POST(req: Request) {
   const isRegeneration: boolean = Boolean(body.isRegeneration)
   const regeneratedFromId: string | undefined = body.regeneratedFromId
   const parentId: string | undefined = body.parentId
+  const thinkingLevel: ThinkingLevel = normalizeThinkingLevel(
+    body.thinkingLevel ??
+      body.thinking_level ??
+      body.generation_config?.thinking_level
+  )
 
   // 1.2 Obtener configuración del sistema global definida por el Administrador
   const systemConfig = await prisma.systemSetting
@@ -511,12 +524,33 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
 
     // 10. Inferencia con streamText de Vercel AI SDK (conciso y rápido)
     const generationStartTime = Date.now()
+    const isGeminiProvider = provider === ModelProvider.GEMINI
+    const isGeminiModel = /(?:^|\/)gemini-/i.test(modelCode)
+    const isGemini3OrNewer =
+      isGeminiProvider &&
+      isGeminiModel &&
+      !/(?:^|\/)gemini-[12](?:[.-]|$)/i.test(modelCode)
+    const isGemini25 =
+      isGeminiProvider && /(?:^|\/)gemini-2\.5(?:[.-]|$)/i.test(modelCode)
+
     const result = streamText({
       model: selectedModel,
       instructions: systemPrompt,
       messages: prunedMessages,
       maxOutputTokens: 2048,
       temperature: 0.3,
+      ...(isGemini3OrNewer || isGemini25 ? { reasoning: thinkingLevel } : {}),
+      ...(isGemini3OrNewer
+        ? {
+            providerOptions: {
+              google: {
+                thinkingConfig: {
+                  thinkingLevel,
+                },
+              } satisfies GoogleLanguageModelOptions,
+            },
+          }
+        : {}),
       onFinish: async ({ text, usage }) => {
         try {
           const totalDurationMs = Date.now() - startTime
@@ -694,9 +728,10 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
             promptTokens: usage?.inputTokens || 0,
             completionTokens: usage?.outputTokens || 0,
             latencyMs: totalDurationMs,
-            metadata: isRegeneration
-              ? { isRegeneration: true, regeneratedFromId }
-              : undefined,
+            metadata: {
+              thinkingLevel,
+              ...(isRegeneration ? { isRegeneration: true, regeneratedFromId } : {}),
+            },
           })
 
           // Registrar log de auditoría
@@ -730,6 +765,7 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
             modelName: modelCode,
             modelProvider: provider,
             embeddingModel: DEFAULT_EMBEDDING_MODEL,
+            thinkingLevel,
             retrievalLatencyMs,
             latencyMs: Date.now() - startTime,
             sources: sources.map((s) => ({
@@ -749,7 +785,9 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
         if (part.type === 'finish') {
           return {
             conversationId: activeConvId,
+            thinkingLevel,
             totalTokens: part.totalUsage?.totalTokens ?? 0,
+            generationLatencyMs: Date.now() - generationStartTime,
             latencyMs: Date.now() - startTime,
           }
         }
