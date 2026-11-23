@@ -9,6 +9,7 @@ import {
   DOCUMENT_OCR_ANTI_LAZINESS_RETRY_PROMPT,
 } from '@/constants'
 import { generateEmbeddingsWithUsage } from '@/lib/ai/embeddings'
+import { invalidateRagCache } from '@/lib/ai/rag'
 import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
 import {
   extractTocTreeFromMarkdown,
@@ -714,6 +715,8 @@ export async function indexDocumentContent(
       updatedAt: new Date()
     }
   })
+
+  invalidateRagCache()
 
   console.log(
     `${logPrefix} 🏁 ✅ ¡Indexación Sipán-STAIR completada exitosamente para "${docTitle}"!`

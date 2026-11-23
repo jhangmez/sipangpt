@@ -8,6 +8,7 @@ import {
   indexDocumentContent,
   extractAndStructureToMarkdown
 } from '@/lib/ai/document-processor'
+import { invalidateRagCache } from '@/lib/ai/rag'
 import { generateEmbedding } from '@/lib/ai/embeddings'
 import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
 
@@ -105,6 +106,7 @@ export async function createDocumentDirectAction(data: {
 
   // Indexar chunks inmediatamente
   const result = await indexDocumentContent(doc.id, cleanContent)
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: doc, chunkCount: result.chunkCount }
@@ -166,6 +168,14 @@ export async function updateDocumentChunkAction(
       }
     }
   })
+
+  await prisma.document
+    .update({
+      where: { id: updated.documentId },
+      data: { updatedAt: new Date() }
+    })
+    .catch(() => {})
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, chunk: updated }
@@ -231,6 +241,7 @@ export async function addDocumentChunkAction(
       status: 'INDEXED'
     }
   })
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, chunk: newChunk }
@@ -251,6 +262,7 @@ export async function deleteDocumentChunkAction(chunkId: string) {
       }
     })
   }
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true }
@@ -267,6 +279,7 @@ export async function reindexDocumentAction(
   }
 
   const result = await indexDocumentContent(documentId, content)
+  invalidateRagCache()
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return result
 }
@@ -296,6 +309,7 @@ export async function updateDocumentDetailsAction(
       category: true
     }
   })
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
@@ -311,6 +325,7 @@ export async function toggleDocumentStatus(
     where: { id: documentId },
     data: { status }
   })
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
@@ -326,6 +341,7 @@ export async function updateDocumentCategory(
     where: { id: documentId },
     data: { categoryId: categoryId || null }
   })
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
@@ -360,6 +376,7 @@ export async function deleteDocumentAction(documentId: string) {
   await prisma.document.delete({
     where: { id: documentId }
   })
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true }
@@ -372,6 +389,7 @@ export async function markDocumentAsIndexed(documentId: string) {
     where: { id: documentId },
     data: { status: 'INDEXED' }
   })
+  invalidateRagCache()
 
   revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
   return { success: true, document: updated }
@@ -447,6 +465,7 @@ export async function processAndIndexDocumentAction(documentId: string) {
       `${logPrefix} ⏳ Llamando a indexDocumentContent con ${markdownContent.length} caracteres...`
     )
     const result = await indexDocumentContent(documentId, markdownContent)
+    invalidateRagCache()
 
     revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
     revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
@@ -467,6 +486,7 @@ export async function processAndIndexDocumentAction(documentId: string) {
       where: { id: documentId },
       data: { status: 'ERROR' }
     })
+    invalidateRagCache()
     const msg =
       err instanceof Error
         ? err.message
@@ -810,6 +830,7 @@ export async function ingestDocumentFromUrlAction(data: {
       buffer
     )
     const result = await indexDocumentContent(doc.id, markdownContent)
+    invalidateRagCache()
 
     revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
     revalidatePath(CACHE_PATHS.ADMIN_DASHBOARD)
@@ -834,6 +855,7 @@ export async function ingestDocumentFromUrlAction(data: {
       where: { id: doc.id },
       data: { status: 'ERROR' }
     })
+    invalidateRagCache()
     revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
     throw new Error(
       `El documento se guardó pero falló la indexación: ${indexErr instanceof Error ? indexErr.message : String(indexErr)}`

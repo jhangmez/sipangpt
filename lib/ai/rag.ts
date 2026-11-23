@@ -2,18 +2,25 @@ import { prisma, ModelProvider, TokenUsageConcept, Prisma } from '@/lib/prisma'
 import {
   generateEmbeddingWithUsage,
   generateEmbeddingsWithUsage,
-  computeCosineSimilarity,
   DEFAULT_EMBEDDING_MODEL,
 } from '@/lib/ai/embeddings'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import {
   SPANISH_STOP_WORDS,
   extractCleanKeywords,
-  UNIVERSAL_CATEGORY_CODES,
   RAG_INITIAL_CANDIDATES,
   DEFAULT_RAG_TOP_K,
+  RAG_CACHE_TTL_MS,
+  RAG_LEXICAL_CANDIDATES,
+  RAG_NEIGHBOR_TOP_WINNERS,
+  RAG_MAX_MERGED_CHUNK_CHARS,
 } from '@/constants'
-import type { DocumentTocTree, ToCRouteMatch, TocChapterItem, TocSectionItem } from '@/types/stair'
+import type {
+  DocumentTocTree,
+  ToCRouteMatch,
+  TocChapterItem,
+  TocSectionItem,
+} from '@/types/stair'
 
 export interface RetrievedSource {
   chunkId?: string | null
@@ -36,12 +43,62 @@ export interface SearchKnowledgeBaseContext {
   conversationId?: string | null
 }
 
+interface CachedChunk {
+  id: string
+  documentId: string
+  chunkIndex: number
+  title: string
+  normTitle: string
+  sourceUrl: string | null
+  pageNumber: number | null
+  content: string
+  normContent: string
+  categoria: string | null
+  anioVigencia: number
+  breadcrumb: string
+  baseBreadcrumb: string
+  capitulo: string | null
+  articulo: string | null
+  unitVector: Float32Array | null
+  tokenFreqs: Map<string, number>
+  tokenCount: number
+  hasCostSignals: boolean
+}
+
+interface RagMemoryCache {
+  versionKey: string
+  loadedAt: number
+  filteredBoilerplateCount: number
+  chunks: CachedChunk[]
+  byDocChunk: Map<string, CachedChunk>
+  idfMap: Map<string, number>
+  avgTokenCount: number
+}
+
+interface RagCacheStore {
+  cache: RagMemoryCache | null
+  loadingPromise: Promise<RagMemoryCache> | null
+}
+
+const globalForRag = globalThis as unknown as {
+  __sipanRagCacheStore?: RagCacheStore
+}
+
+const ragStore: RagCacheStore = globalForRag.__sipanRagCacheStore ?? {
+  cache: null,
+  loadingPromise: null,
+}
+globalForRag.__sipanRagCacheStore = ragStore
+
 /**
- * ETAPA 1 STAIR: Enrutamiento por Índice (ToC Routing / Poda de Árbol).
- * Evalúa la consulta del estudiante contra los árboles ToC jerárquicos de los reglamentos
- * activos para identificar las ramas normativas (Capítulos y Artículos) más relevantes,
- * descartando cientos de fragmentos ajenos antes de la búsqueda vectorial.
+ * Invalida el índice vectorial en memoria para forzar recarga limpia tras
+ * cualquier alta, edición, re-procesamiento, desindexación o eliminación.
  */
+export function invalidateRagCache(): void {
+  ragStore.cache = null
+  ragStore.loadingPromise = null
+}
+
 function normalizeSearchText(text: string): string {
   return text
     .toLowerCase()
@@ -50,15 +107,89 @@ function normalizeSearchText(text: string): string {
     .trim()
 }
 
+/** Pre-normaliza un vector embedding a longitud unitaria L2 en Float32Array. */
+function toUnitFloat32Array(vec: unknown): Float32Array | null {
+  if (!Array.isArray(vec) || vec.length === 0) return null
+  const arr = new Float32Array(vec.length)
+  let normSq = 0
+  for (let i = 0; i < vec.length; i++) {
+    const v = Number(vec[i])
+    if (!Number.isFinite(v)) return null
+    arr[i] = v
+    normSq += v * v
+  }
+  if (normSq <= 0) return null
+  const invNorm = 1 / Math.sqrt(normSq)
+  for (let i = 0; i < arr.length; i++) {
+    arr[i] *= invNorm
+  }
+  return arr
+}
+
+/** Producto punto directo entre vectores L2 pre-normalizados (= similitud coseno). */
+function dotUnitVectors(a: Float32Array, b: Float32Array): number {
+  const len = Math.min(a.length, b.length)
+  let dot = 0
+  for (let i = 0; i < len; i++) {
+    dot += a[i] * b[i]
+  }
+  return dot
+}
+
+/**
+ * Tokeniza texto para BM25 preservando identificadores literales con guion o guion bajo
+ * (ej. `total_mora`, `e-library`) además de sus sub-términos individuales.
+ */
+function tokenizeForBm25(text: string): string[] {
+  const norm = normalizeSearchText(text)
+  if (!norm) return []
+  const matches = norm.match(/[a-z0-9]+(?:[_-][a-z0-9]+)*/g)
+  if (!matches) return []
+
+  const tokens: string[] = []
+  for (const token of matches) {
+    if (token.length >= 2 && !SPANISH_STOP_WORDS.has(token)) {
+      tokens.push(token)
+    }
+    if (token.includes('_') || token.includes('-')) {
+      const subParts = token.split(/[_-]+/)
+      for (const part of subParts) {
+        if (part.length >= 2 && !SPANISH_STOP_WORDS.has(part)) {
+          tokens.push(part)
+        }
+      }
+    }
+  }
+  return tokens
+}
+
+function stripLeadingBreadcrumb(content: string): string {
+  return content.replace(/^\s*\[[^\]]+\]\s*/u, '').trim()
+}
+
+function stripPartSuffix(breadcrumb: string): string {
+  return breadcrumb.replace(/\s*\(Parte\s+\d+\/\d+\)\s*$/i, '').trim()
+}
+
+function isSameSectionOrSeries(a: CachedChunk, b: CachedChunk): boolean {
+  if (a.documentId !== b.documentId) return false
+  if (a.articulo && b.articulo && a.articulo === b.articulo) return true
+  if (a.baseBreadcrumb && b.baseBreadcrumb && a.baseBreadcrumb === b.baseBreadcrumb) {
+    return true
+  }
+  if (a.capitulo && b.capitulo && a.capitulo === b.capitulo) return true
+  return false
+}
+
 /**
  * Detecta fragmentos sin contenido operativo real (portadas/carátulas, índices ToC
- * o preámbulos introductorios generados por el OCR) para excluirlos del reranking.
+ * o preámbulos introductorios generados por el OCR) para excluirlos del índice.
  */
 function isLowValueBoilerplateChunk(
   content: string,
   metadata?: Record<string, unknown> | null
 ): boolean {
-  const bodyWithoutBreadcrumb = content.replace(/^\s*\[[^\]]+\]\s*/u, '').trim()
+  const bodyWithoutBreadcrumb = stripLeadingBreadcrumb(content)
 
   const cleanedLines = bodyWithoutBreadcrumb
     .split('\n')
@@ -189,6 +320,228 @@ function isLowValueBoilerplateChunk(
   return false
 }
 
+async function getIndexedCorpusVersionKey(): Promise<string> {
+  const agg = await prisma.document.aggregate({
+    where: { status: 'INDEXED' },
+    _max: { updatedAt: true },
+    _count: { id: true },
+  })
+  const maxTs = agg._max.updatedAt ? agg._max.updatedAt.getTime() : 0
+  return `${agg._count.id}:${maxTs}`
+}
+
+async function loadRagCacheFromDb(versionKey: string): Promise<RagMemoryCache> {
+  const rows = await prisma.documentChunk.findMany({
+    where: {
+      document: { status: 'INDEXED' },
+    },
+    orderBy: [{ documentId: 'asc' }, { chunkIndex: 'asc' }],
+    select: {
+      id: true,
+      documentId: true,
+      chunkIndex: true,
+      content: true,
+      pageNumber: true,
+      metadata: true,
+      document: {
+        select: {
+          id: true,
+          title: true,
+          publicUrl: true,
+          fileUrl: true,
+          category: {
+            select: {
+              code: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (rows.length === 0) {
+    return {
+      versionKey,
+      loadedAt: Date.now(),
+      filteredBoilerplateCount: 0,
+      chunks: [],
+      byDocChunk: new Map(),
+      idfMap: new Map(),
+      avgTokenCount: 1,
+    }
+  }
+
+  // Filtrar portadas, índices ToC y preámbulos OCR una sola vez al poblar el caché
+  const filteredRows = rows.filter(
+    (r) =>
+      !isLowValueBoilerplateChunk(
+        r.content,
+        r.metadata as Record<string, unknown> | null
+      )
+  )
+  const filteredBoilerplateCount = rows.length - filteredRows.length
+  const activeRows = filteredRows.length > 0 ? filteredRows : rows
+
+  // Identificar chunks sin vector persistido para generarlos bajo demanda una única vez
+  const missingEmbeddingIndices: number[] = []
+  const unitVectors: (Float32Array | null)[] = activeRows.map((row, idx) => {
+    const meta = row.metadata as Record<string, unknown> | null
+    const unitVec = toUnitFloat32Array(meta?.embedding)
+    if (!unitVec) {
+      missingEmbeddingIndices.push(idx)
+    }
+    return unitVec
+  })
+
+  if (missingEmbeddingIndices.length > 0) {
+    try {
+      const missingTexts = missingEmbeddingIndices.map(
+        (i) => activeRows[i].content
+      )
+      const { embeddings: generated } =
+        await generateEmbeddingsWithUsage(missingTexts)
+      missingEmbeddingIndices.forEach((rowIdx, listIdx) => {
+        unitVectors[rowIdx] = toUnitFloat32Array(generated[listIdx])
+      })
+    } catch (embBatchErr) {
+      console.warn(
+        '[RAG_CACHE_EMBEDDING_BACKFILL_WARN] No se pudieron generar embeddings faltantes durante la carga:',
+        embBatchErr
+      )
+    }
+  }
+
+  const chunks: CachedChunk[] = []
+  const byDocChunk = new Map<string, CachedChunk>()
+  const dfMap = new Map<string, number>()
+  let totalTokenCount = 0
+
+  for (let i = 0; i < activeRows.length; i++) {
+    const row = activeRows[i]
+    const meta = row.metadata as Record<string, unknown> | null
+    const title = row.document.title
+    const normTitle = normalizeSearchText(title)
+    const content = row.content.trim()
+    const breadcrumb =
+      (meta?.breadcrumb as string) ||
+      `${title}${row.pageNumber ? ` > Pág. ${row.pageNumber}` : ''}`
+    const baseBreadcrumb = stripPartSuffix(breadcrumb)
+    const normContent = normalizeSearchText(`${title} ${breadcrumb} ${content}`)
+    const categoria =
+      (meta?.categoria as string) || row.document.category?.code || null
+    const anioVigencia =
+      typeof meta?.anio_vigencia === 'number' ? meta.anio_vigencia : 2026
+    const capitulo = (meta?.capitulo as string) || null
+    const articulo = (meta?.articulo as string) || null
+
+    const tokens = tokenizeForBm25(`${title} ${breadcrumb} ${content}`)
+    const tokenFreqs = new Map<string, number>()
+    for (const t of tokens) {
+      tokenFreqs.set(t, (tokenFreqs.get(t) || 0) + 1)
+    }
+    for (const uniqueTerm of tokenFreqs.keys()) {
+      dfMap.set(uniqueTerm, (dfMap.get(uniqueTerm) || 0) + 1)
+    }
+    totalTokenCount += tokens.length
+
+    const hasCostSignals =
+      /S\/\s*\d/i.test(content) ||
+      /\|[^|\n]+\|/.test(content) ||
+      normTitle.includes('tarifario')
+
+    const cachedChunk: CachedChunk = {
+      id: row.id,
+      documentId: row.document.id,
+      chunkIndex: row.chunkIndex,
+      title,
+      normTitle,
+      sourceUrl: row.document.publicUrl || row.document.fileUrl,
+      pageNumber: row.pageNumber,
+      content,
+      normContent,
+      categoria,
+      anioVigencia,
+      breadcrumb,
+      baseBreadcrumb,
+      capitulo,
+      articulo,
+      unitVector: unitVectors[i],
+      tokenFreqs,
+      tokenCount: tokens.length,
+      hasCostSignals,
+    }
+
+    chunks.push(cachedChunk)
+    byDocChunk.set(`${row.document.id}:${row.chunkIndex}`, cachedChunk)
+  }
+
+  const N = chunks.length
+  const idfMap = new Map<string, number>()
+  if (N > 0) {
+    for (const [term, df] of dfMap.entries()) {
+      idfMap.set(term, Math.log((N - df + 0.5) / (df + 0.5) + 1))
+    }
+  }
+
+  const avgTokenCount = N > 0 ? Math.max(1, totalTokenCount / N) : 1
+
+  console.log(
+    `[SIPAN_STAIR_CACHE] ⚡ Índice en memoria cargado (${N} chunks activos, ${filteredBoilerplateCount} boilerplate filtrados, versión ${versionKey})`
+  )
+
+  return {
+    versionKey,
+    loadedAt: Date.now(),
+    filteredBoilerplateCount,
+    chunks,
+    byDocChunk,
+    idfMap,
+    avgTokenCount,
+  }
+}
+
+/**
+ * Obtiene el índice vectorial en memoria validado contra DB (versionKey + TTL)
+ * con patrón single-flight (`loadingPromise`) anti-estampida.
+ */
+async function getOrLoadRagCache(): Promise<RagMemoryCache> {
+  const versionKey = await getIndexedCorpusVersionKey()
+  const now = Date.now()
+
+  if (
+    ragStore.cache &&
+    ragStore.cache.versionKey === versionKey &&
+    now - ragStore.cache.loadedAt < RAG_CACHE_TTL_MS
+  ) {
+    return ragStore.cache
+  }
+
+  if (ragStore.loadingPromise) {
+    return ragStore.loadingPromise
+  }
+
+  const loadTask = loadRagCacheFromDb(versionKey)
+    .then((loaded) => {
+      if (ragStore.loadingPromise === loadTask) {
+        ragStore.cache = loaded
+      }
+      return loaded
+    })
+    .finally(() => {
+      if (ragStore.loadingPromise === loadTask) {
+        ragStore.loadingPromise = null
+      }
+    })
+
+  ragStore.loadingPromise = loadTask
+  return loadTask
+}
+
+/**
+ * ETAPA 1 STAIR: Enrutamiento por Índice (ToC Routing / Poda de Árbol).
+ * Evalúa la consulta del estudiante contra los árboles ToC jerárquicos de todos
+ * los reglamentos activos (usando categoryFilter solo como boost suave).
+ */
 export async function routeQueryToToCBranches(
   query: string,
   keywords: string[],
@@ -206,32 +559,30 @@ export async function routeQueryToToCBranches(
     )
 
     // Detectar si el usuario menciona un número de artículo directo (ej: "artículo 15", "art 15", "art. 84", "art. 17-A", "art 24°")
-    const directArtMatch = cleanQuery.match(/\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i)
+    const directArtMatch = cleanQuery.match(
+      /\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i
+    )
     const directArtNum = directArtMatch
       ? directArtMatch[1].replace(/[º°]/g, '').trim()
       : null
 
-    // Consultar reglamentos indexados con árbol ToC registrado
+    // Consultar todos los reglamentos indexados con árbol ToC registrado (sin exclusión dura por categoría)
     const docsWithToc = await prisma.document.findMany({
       where: {
         status: 'INDEXED',
         tocTree: { not: Prisma.JsonNull },
-        ...(categoryFilter
-          ? {
-              OR: [
-                { category: { code: categoryFilter } },
-                { categoryId: null },
-                { category: { code: { in: [...UNIVERSAL_CATEGORY_CODES] } } },
-              ],
-            }
-          : {}),
       },
       select: {
         id: true,
         title: true,
         tocTree: true,
+        category: {
+          select: {
+            code: true,
+          },
+        },
       },
-      take: 50,
+      take: 100,
     })
 
     if (!docsWithToc || docsWithToc.length === 0) {
@@ -244,9 +595,10 @@ export async function routeQueryToToCBranches(
       const tree = doc.tocTree as unknown as DocumentTocTree
       if (!Array.isArray(tree)) continue
 
-      // Afinidad base del título del documento con la consulta (ej: "cobranza", "matricula", "grados")
       const normDocTitle = normalizeSearchText(doc.title)
-      let docBaseScore = 0
+      let docBaseScore =
+        categoryFilter && doc.category?.code === categoryFilter ? 0.08 : 0
+
       for (const word of normKeywords) {
         if (
           normDocTitle.includes(word) ||
@@ -257,7 +609,6 @@ export async function routeQueryToToCBranches(
       }
 
       for (const rootNode of tree) {
-        // Puede ser TocSectionItem o TocChapterItem
         const isSection = 'chapters' in rootNode || !('articles' in rootNode)
         const sectionTitle = rootNode.title
 
@@ -269,7 +620,6 @@ export async function routeQueryToToCBranches(
           const chapTitle = chapter.title
           const normChap = normalizeSearchText(chapTitle)
 
-          // Evaluar afinidad del capítulo con las palabras clave (con soporte de raíces semánticas)
           let chapScore = docBaseScore
           for (const word of normKeywords) {
             if (
@@ -280,7 +630,6 @@ export async function routeQueryToToCBranches(
             }
           }
 
-          // Evaluar artículos contenidos dentro del capítulo
           if (Array.isArray(chapter.articles)) {
             for (const article of chapter.articles) {
               const artTitle = article.title
@@ -289,7 +638,6 @@ export async function routeQueryToToCBranches(
 
               let artScore = chapScore
 
-              // Coincidencia exacta de número de artículo
               if (
                 directArtNum &&
                 artNum &&
@@ -298,7 +646,6 @@ export async function routeQueryToToCBranches(
                 artScore += 0.70
               }
 
-              // Coincidencias de palabras clave o raíces en el título del artículo
               for (const word of normKeywords) {
                 if (
                   normArt.includes(word) ||
@@ -308,7 +655,6 @@ export async function routeQueryToToCBranches(
                 }
               }
 
-              // Umbral flexible para no descartar ramas relevantes
               if (artScore >= 0.20) {
                 const breadcrumb = isSection
                   ? `${doc.title} > ${sectionTitle} > ${chapTitle} > ${artTitle}`
@@ -326,7 +672,6 @@ export async function routeQueryToToCBranches(
             }
           }
 
-          // Si el capítulo completo tiene afinidad pero ningún artículo superó el corte individual
           if (chapScore >= 0.25) {
             const breadcrumb = isSection
               ? `${doc.title} > ${sectionTitle} > ${chapTitle}`
@@ -344,7 +689,6 @@ export async function routeQueryToToCBranches(
       }
     }
 
-    // Ordenar ramas por mayor afinidad y retornar las mejores candidatas (ampliado a 6)
     return matches.sort((a, b) => b.score - a.score).slice(0, 6)
   } catch (err) {
     console.warn('[STAIR_TOC_ROUTING_WARN] Fallo al enrutar ramas ToC:', err)
@@ -353,11 +697,50 @@ export async function routeQueryToToCBranches(
 }
 
 /**
- * Búsqueda semántica y contextual en la base de conocimiento universitaria (RAG).
- * Implementa la arquitectura SIPÁN-STAIR en 2 Etapas:
- * - Etapa 1: ToC Routing / Poda de Árbol (identifica ramas y artículos normativos afines).
- * - Etapa 2: Recuperación Semántica en Ramas Podadas (Leaf Retrieval) con embeddings
- *   persistidos y breadcrumbs jerárquicos inyectados.
+ * Calcula puntaje BM25 de un fragmento en memoria dada la consulta tokenizada.
+ */
+function computeChunkBm25Score(
+  chunk: CachedChunk,
+  uniqueQueryTokens: string[],
+  idfMap: Map<string, number>,
+  avgTokenCount: number
+): number {
+  if (uniqueQueryTokens.length === 0 || chunk.tokenCount === 0) return 0
+  const k1 = 1.2
+  const b = 0.75
+  const lenNorm = 1 - b + b * (chunk.tokenCount / (avgTokenCount || 1))
+  let score = 0
+
+  for (const qToken of uniqueQueryTokens) {
+    let tf = chunk.tokenFreqs.get(qToken) || 0
+    let idf = idfMap.get(qToken) ?? 0
+
+    // Fallback por raíz léxica (>= 5 caracteres) si no hubo coincidencia exacta
+    if (tf === 0 && qToken.length >= 5) {
+      const stem = qToken.slice(0, 5)
+      for (const [cToken, cFreq] of chunk.tokenFreqs.entries()) {
+        if (cToken.startsWith(stem)) {
+          tf += cFreq * 0.7
+          const cIdf = idfMap.get(cToken) ?? 0
+          if (cIdf > idf) idf = cIdf
+        }
+      }
+    }
+
+    if (tf > 0) {
+      if (idf <= 0) idf = 0.2
+      score += (idf * (tf * (k1 + 1))) / (tf + k1 * lenNorm)
+    }
+  }
+
+  return score
+}
+
+/**
+ * Búsqueda semántica e híbrida sobre el 100% del corpus indexado en RAM (SIPÁN-STAIR):
+ * - Etapa 1: ToC Routing sin exclusiones duras por categoría.
+ * - Etapa 2A: Escaneo vectorial L2 completo en RAM + BM25 + unión RRF (Top 25 vec ∪ Top 15 léxico ∪ art.).
+ * - Etapa 2B: Reranking híbrido y expansión de vecinos contiguos (chunkIndex ± 1) para los 3 mejores ganadores.
  */
 export async function searchKnowledgeBase(
   query: string,
@@ -370,359 +753,219 @@ export async function searchKnowledgeBase(
     const cleanQuery = query.trim()
     if (!cleanQuery) return []
 
-    // 1. Extraer términos clave sustantivos (excluyendo stop words de constants/stopwords.ts)
     const keywords = extractCleanKeywords(cleanQuery)
 
-    // 2. ETAPA 1 (STAIR): Enrutamiento por Índice / Poda de Árbol
-    const routeMatches = await routeQueryToToCBranches(
-      cleanQuery,
-      keywords,
-      categoryFilter
-    )
+    // Ejecutar Enrutamiento ToC y carga/validación de caché en paralelo
+    const [routeMatches, cache] = await Promise.all([
+      routeQueryToToCBranches(cleanQuery, keywords, categoryFilter),
+      getOrLoadRagCache(),
+    ])
 
-    const chunkInclude = {
-      document: {
-        select: {
-          id: true,
-          title: true,
-          publicUrl: true,
-          fileUrl: true,
-          category: {
-            select: {
-              code: true,
-              name: true,
-            },
-          },
-        },
-      },
-    }
-
-    // Mapa de deduplicación para preservar el orden de prioridad
-    const candidateMap = new Map<string, any>()
-
-    // FASE 1 (PRIORIDAD ALTA STAIR): Recuperar de forma dedicada los chunks de las ramas ToC afines
-    if (routeMatches.length > 0) {
-      console.log(
-        `[SIPAN_STAIR] 🌳 ToC Routing identificó ${routeMatches.length} ramas normativas afines:`,
-        routeMatches.map((r) => `${r.documentTitle} -> ${r.branchTitle} (${Math.round(r.score * 100)}%)`).join(' | ')
-      )
-
-      const tocConditions: Array<Record<string, unknown>> = []
-      for (const branch of routeMatches) {
-        if (branch.articleTitle) {
-          tocConditions.push({
-            documentId: branch.documentId,
-            content: { contains: branch.articleTitle, mode: 'insensitive' as const },
-          })
-          const artNumMatch = branch.articleTitle.match(/(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i)
-          if (artNumMatch) {
-            tocConditions.push({
-              documentId: branch.documentId,
-              content: { contains: artNumMatch[0], mode: 'insensitive' as const },
-            })
-          }
-        }
-        if (branch.branchTitle) {
-          tocConditions.push({
-            documentId: branch.documentId,
-            content: { contains: branch.branchTitle, mode: 'insensitive' as const },
-          })
-        }
-      }
-
-      if (tocConditions.length > 0) {
-        const tocChunks = await prisma.documentChunk.findMany({
-          where: {
-            document: { status: 'INDEXED' },
-            OR: tocConditions,
-          },
-          take: 40,
-          include: chunkInclude,
-        })
-
-        for (const chunk of tocChunks) {
-          candidateMap.set(chunk.id, chunk)
-        }
-      }
-    }
-
-    // FASE 2 (PRIORIDAD COMPLEMENTARIA): Chunks adicionales por palabras clave sustantivas filtradas por ámbito institucional
-    const remainingSlots = Math.max(30, 60 - candidateMap.size)
-    const keywordConditions =
-      keywords.length > 0
-        ? keywords.map((word) => ({
-            content: {
-              contains: word,
-              mode: 'insensitive' as const,
-            },
-          }))
-        : []
-
-    if (keywordConditions.length > 0) {
-      const complementaryChunks = await prisma.documentChunk.findMany({
-        where: {
-          document: {
-            status: 'INDEXED',
-            ...(categoryFilter
-              ? {
-                  OR: [
-                    { category: { code: categoryFilter } },
-                    { categoryId: null },
-                    { category: { code: { in: [...UNIVERSAL_CATEGORY_CODES] } } },
-                  ],
-                }
-              : {}),
-          },
-          OR: keywordConditions,
-        },
-        take: remainingSlots,
-        include: chunkInclude,
-      })
-
-      for (const chunk of complementaryChunks) {
-        if (!candidateMap.has(chunk.id)) {
-          candidateMap.set(chunk.id, chunk)
-        }
-      }
-    }
-
-    // FASE 3 (RESPALDO TRANSVERSAL): Evitar que un categoryFilter estrecho excluya documentos clave (ej. Tarifario, Pagos Virtuales)
-    if (categoryFilter && keywordConditions.length > 0) {
-      const crossCategoryChunks = await prisma.documentChunk.findMany({
-        where: {
-          document: { status: 'INDEXED' },
-          OR: keywordConditions,
-        },
-        take: 25,
-        include: chunkInclude,
-      })
-
-      for (const chunk of crossCategoryChunks) {
-        if (!candidateMap.has(chunk.id)) {
-          candidateMap.set(chunk.id, chunk)
-        }
-      }
-    }
-
-    let candidateChunks = Array.from(candidateMap.values())
-
-    // Red de Seguridad contra Falsos Negativos (Resiliencia):
-    // Si no hubo candidatos, recuperar los chunks indexados más recientes para evaluación vectorial
-    if (!candidateChunks || candidateChunks.length === 0) {
-      candidateChunks = await prisma.documentChunk.findMany({
-        where: {
-          document: { status: 'INDEXED' },
-        },
-        take: 40,
-        orderBy: { createdAt: 'desc' },
-        include: chunkInclude,
-      })
-    }
-
-    if (!candidateChunks || candidateChunks.length === 0) {
+    if (cache.chunks.length === 0) {
       return []
     }
 
-    // Filtrar portadas/carátulas, índices ToC y preámbulos introductorios vacíos antes de vectorizar/rerankear
-    const filteredCandidates = candidateChunks.filter(
-      (c) =>
-        !isLowValueBoilerplateChunk(
-          c.content,
-          c.metadata as Record<string, unknown> | null
-        )
-    )
-    const filteredBoilerplateCount =
-      candidateChunks.length - filteredCandidates.length
-    if (filteredCandidates.length > 0) {
-      candidateChunks = filteredCandidates
+    if (routeMatches.length > 0) {
+      console.log(
+        `[SIPAN_STAIR] 🌳 ToC Routing identificó ${routeMatches.length} ramas normativas afines:`,
+        routeMatches
+          .map(
+            (r) =>
+              `${r.documentTitle} -> ${r.branchTitle} (${Math.round(r.score * 100)}%)`
+          )
+          .join(' | ')
+      )
     }
 
-    // 3. ETAPA 2 (STAIR): Recuperación Semántica Fina (Leaf Retrieval con Pool Inicial + Reranker Híbrido)
+    // Precomputar señales léxicas, artículo directo e intención de tarifas/costos
+    const uniqueQueryTokens = Array.from(new Set(tokenizeForBm25(cleanQuery)))
+    const normQuery = normalizeSearchText(cleanQuery)
+    const normKeywords = Array.from(
+      new Set(
+        keywords
+          .map((w) => normalizeSearchText(w))
+          .filter((w) => w.length >= 3 && !SPANISH_STOP_WORDS.has(w))
+      )
+    )
+    const directArtMatch = cleanQuery.match(
+      /\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i
+    )
+    const directArtNum = directArtMatch
+      ? directArtMatch[1].replace(/[º°]/g, '').trim()
+      : null
+    const directArtRegex = directArtNum
+      ? new RegExp(
+          `\\b(?:art[íi]culo|art\\.?)\\s*${directArtNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![0-9a-z])`,
+          'i'
+        )
+      : null
+    const isCostQuery =
+      /(?:costo|precio|tasa|tarifa|tarifario|monto|cuanto|soles|uniforme|pago|pagar|derecho|segunda\s+matricula)/i.test(
+        normQuery
+      )
+
+    // Precomputar BM25 y coincidencia directa de artículo en RAM (sirve tanto para RRF como para fallback léxico)
+    const bm25Scores = new Float64Array(cache.chunks.length)
+    const directArtFlags = new Uint8Array(cache.chunks.length)
+    const tocBoosts = new Float64Array(cache.chunks.length)
+
+    for (let i = 0; i < cache.chunks.length; i++) {
+      const chunk = cache.chunks[i]
+      bm25Scores[i] = computeChunkBm25Score(
+        chunk,
+        uniqueQueryTokens,
+        cache.idfMap,
+        cache.avgTokenCount
+      )
+
+      if (
+        directArtRegex &&
+        (directArtRegex.test(chunk.articulo || '') ||
+          directArtRegex.test(chunk.breadcrumb) ||
+          directArtRegex.test(chunk.content))
+      ) {
+        directArtFlags[i] = 1
+      }
+
+      const isMatchedBranch = routeMatches.some(
+        (m) =>
+          m.documentId === chunk.documentId &&
+          ((chunk.capitulo && m.branchTitle.includes(chunk.capitulo)) ||
+            (chunk.articulo &&
+              m.articleTitle &&
+              m.articleTitle.includes(chunk.articulo)))
+      )
+      if (isMatchedBranch) {
+        tocBoosts[i] = 0.04
+      }
+    }
+
     try {
       const embStartTime = Date.now()
       const { embedding: queryEmbedding, tokens: queryTokens } =
         await generateEmbeddingWithUsage(cleanQuery)
-      let totalRagTokens = queryTokens
-
-      // Separar chunks con embeddings ya persistidos de aquellos históricos que requieran cálculo
-      const missingEmbeddingIndices: number[] = []
-      const resolvedEmbeddings: (number[] | null)[] = candidateChunks.map((c, idx) => {
-        const meta = c.metadata as Record<string, unknown> | null
-        if (meta && Array.isArray(meta.embedding) && meta.embedding.length > 0) {
-          return meta.embedding as number[]
-        }
-        missingEmbeddingIndices.push(idx)
-        return null
-      })
-
-      // Si hay chunks históricos sin vector en metadata, generarlos en lote bajo demanda
-      if (missingEmbeddingIndices.length > 0) {
-        const missingTexts = missingEmbeddingIndices.map((i) => candidateChunks[i].content)
-        const { embeddings: generated, tokens: batchTokens } =
-          await generateEmbeddingsWithUsage(missingTexts)
-        totalRagTokens += batchTokens
-        missingEmbeddingIndices.forEach((chunkIdx, listIdx) => {
-          resolvedEmbeddings[chunkIdx] = generated[listIdx] || null
-        })
-      }
+      const queryUnitVec = toUnitFloat32Array(queryEmbedding)
       const embDurationMs = Date.now() - embStartTime
 
-      // Registrar consumo de tokens para RAG_EMBEDDING
+      // Registrar consumo de tokens para RAG_EMBEDDING (solo embedding de consulta)
       recordTokenUsageLog({
         userId: context?.userId || null,
         conversationId: context?.conversationId || null,
         modelCode: DEFAULT_EMBEDDING_MODEL,
         provider: ModelProvider.GEMINI,
         concept: TokenUsageConcept.RAG_EMBEDDING,
-        promptTokens: totalRagTokens,
+        promptTokens: queryTokens,
         completionTokens: 0,
         latencyMs: embDurationMs,
         metadata: {
           queryLength: cleanQuery.length,
-          candidatesEvaluated: candidateChunks.length,
-          filteredBoilerplateCount,
-          initialCandidatesPool: Math.min(
-            candidateChunks.length,
-            RAG_INITIAL_CANDIDATES
-          ),
-          missingEmbeddingsCalculated: missingEmbeddingIndices.length,
+          candidatesEvaluated: cache.chunks.length,
+          filteredBoilerplateCount: cache.filteredBoilerplateCount,
+          cacheVersion: cache.versionKey,
           tocBranchesMatched: routeMatches.length,
         },
       }).catch((err) => console.warn('[RAG_EMBEDDING_TOKEN_LOG_WARN]', err))
 
-      // Etapa 2A: Similitud coseno inicial y selección de los mejores candidatos para el reranker
-      const vectorScored = candidateChunks.map((chunk, idx) => {
-        const chunkVector = resolvedEmbeddings[idx]
-        const rawSim = chunkVector
-          ? computeCosineSimilarity(queryEmbedding, chunkVector)
-          : 0.5
-        const vectorScore = Math.max(
-          0,
-          Math.min(1, isNaN(rawSim) ? 0.0 : rawSim)
-        )
+      // Etapa 2A (Ajuste A): Evaluar similitud vectorial L2 sobre TODOS los chunks en RAM
+      const n = cache.chunks.length
+      const vectorScores = new Float64Array(n)
+      const allIndices = new Array<number>(n)
 
-        const meta = chunk.metadata as Record<string, unknown> | null
-        const categoria =
-          (meta?.categoria as string) || chunk.document.category?.code || null
-        const anioVigencia =
-          typeof meta?.anio_vigencia === 'number' ? meta.anio_vigencia : 2026
+      for (let i = 0; i < n; i++) {
+        allIndices[i] = i
+        const unitVec = cache.chunks[i].unitVector
+        const rawSim =
+          unitVec && queryUnitVec ? dotUnitVectors(queryUnitVec, unitVec) : 0.5
+        vectorScores[i] = Math.max(0, Math.min(1, isNaN(rawSim) ? 0.0 : rawSim))
+      }
 
-        // Extraer metadatos jerárquicos STAIR
-        const breadcrumb =
-          (meta?.breadcrumb as string) ||
-          `${chunk.document.title}${chunk.pageNumber ? ` > Pág. ${chunk.pageNumber}` : ''}`
-        const capitulo = (meta?.capitulo as string) || null
-        const articulo = (meta?.articulo as string) || null
-
-        // Boost sutil si el chunk coincide con una de las ramas identificadas en ToC Routing
-        const isMatchedBranch = routeMatches.some(
-          (m) =>
-            m.documentId === chunk.document.id &&
-            ((capitulo && m.branchTitle.includes(capitulo)) ||
-              (articulo && m.articleTitle && m.articleTitle.includes(articulo)))
-        )
-        const tocBoost = isMatchedBranch ? 0.04 : 0
-
-        const source: RetrievedSource = {
-          chunkId: chunk.id,
-          documentId: chunk.document.id,
-          title: chunk.document.title,
-          sourceUrl: chunk.document.publicUrl || chunk.document.fileUrl,
-          pageNumber: chunk.pageNumber,
-          snippetText: chunk.content.trim(),
-          relevance: vectorScore,
-          embeddingModel: DEFAULT_EMBEDDING_MODEL,
-          categoria,
-          anioVigencia,
-          breadcrumb,
-          capitulo,
-          articulo,
-        }
-
-        return {
-          vectorScore,
-          tocBoost,
-          source,
-        }
-      })
-
-      // Quedarse con los 25 mejores candidatos iniciales antes del reranker
-      const initialPool = vectorScored
-        .sort(
-          (a, b) =>
-            b.vectorScore + b.tocBoost - (a.vectorScore + a.tocBoost)
-        )
-        .slice(0, RAG_INITIAL_CANDIDATES)
-
-      // Etapa 2B: Reranker híbrido determinista sobre los 25 candidatos
-      const normQuery = normalizeSearchText(cleanQuery)
-      const normKeywords = Array.from(
-        new Set(
-          keywords
-            .map((w) => normalizeSearchText(w))
-            .filter((w) => w.length >= 3 && !SPANISH_STOP_WORDS.has(w))
-        )
+      // Ranking vectorial sobre el 100% del corpus
+      const sortedByVector = [...allIndices].sort(
+        (a, b) => vectorScores[b] + tocBoosts[b] - (vectorScores[a] + tocBoosts[a])
       )
-      const directArtMatch = cleanQuery.match(
-        /\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i
+      const vecRank = new Int32Array(n)
+      for (let rankIdx = 0; rankIdx < n; rankIdx++) {
+        vecRank[sortedByVector[rankIdx]] = rankIdx + 1
+      }
+
+      // Ranking léxico BM25 sobre el 100% del corpus
+      const sortedByLexical = [...allIndices].sort(
+        (a, b) => bm25Scores[b] - bm25Scores[a]
       )
-      const directArtNum = directArtMatch
-        ? directArtMatch[1].replace(/[º°]/g, '').trim()
-        : null
-      const directArtRegex = directArtNum
-        ? new RegExp(
-            `\\b(?:art[íi]culo|art\\.?)\\s*${directArtNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![0-9a-z])`,
-            'i'
-          )
-        : null
-      const isCostQuery =
-        /(?:costo|precio|tasa|tarifa|tarifario|monto|cuanto|soles|uniforme|pago|pagar|derecho|segunda\s+matricula)/i.test(
-          normQuery
-        )
+      const lexRank = new Int32Array(n)
+      for (let rankIdx = 0; rankIdx < n; rankIdx++) {
+        lexRank[sortedByLexical[rankIdx]] = rankIdx + 1
+      }
 
-      const scoredResults: RetrievedSource[] = initialPool.map((item) => {
-        const { source, vectorScore, tocBoost } = item
-        const normTitle = normalizeSearchText(source.title)
-        const normChunkText = normalizeSearchText(
-          `${source.title} ${source.breadcrumb || ''} ${source.snippetText}`
-        )
+      // Unión híbrida: Top 25 vectorial ∪ Top 15 léxico BM25 ∪ coincidencias directas de artículo
+      const unionIndices = new Set<number>()
+      for (const idx of sortedByVector.slice(0, RAG_INITIAL_CANDIDATES)) {
+        unionIndices.add(idx)
+      }
+      let addedLexical = 0
+      for (const idx of sortedByLexical) {
+        if (bm25Scores[idx] <= 0) break
+        unionIndices.add(idx)
+        addedLexical++
+        if (addedLexical >= RAG_LEXICAL_CANDIDATES) break
+      }
+      for (let i = 0; i < n; i++) {
+        if (directArtFlags[i] === 1) {
+          unionIndices.add(i)
+        }
+      }
 
-        let matchedChunkWords = 0
+      // Calcular peso total de keywords ponderado por IDF una sola vez
+      const keywordIdfWeights = normKeywords.map((w) =>
+        Math.max(0.2, cache.idfMap.get(w) ?? 1.0)
+      )
+      const totalKeywordWeight = keywordIdfWeights.reduce((acc, w) => acc + w, 0)
+
+      // Etapa 2B: Reranker híbrido RRF + señales léxicas, de título, categoría (Ajuste D), artículo y tarifas
+      interface ScoredCandidate {
+        chunk: CachedChunk
+        relevance: number
+      }
+
+      const scoredCandidates: ScoredCandidate[] = []
+
+      for (const idx of unionIndices) {
+        const chunk = cache.chunks[idx]
+        const vectorScore = vectorScores[idx]
+        const tocBoost = tocBoosts[idx]
+
+        const rrfRaw =
+          1 / (60 + vecRank[idx]) +
+          (bm25Scores[idx] > 0 ? 1 / (60 + lexRank[idx]) : 0)
+        const rrfBonus = Math.min(0.10, (rrfRaw / (2 / 61)) * 0.10)
+
+        let matchedKeywordWeight = 0
         let matchedTitleWords = 0
-        for (const word of normKeywords) {
+        for (let kIdx = 0; kIdx < normKeywords.length; kIdx++) {
+          const word = normKeywords[kIdx]
           const stem = word.length >= 5 ? word.slice(0, 5) : null
           if (
-            normChunkText.includes(word) ||
-            (stem !== null && normChunkText.includes(stem))
+            chunk.normContent.includes(word) ||
+            (stem !== null && chunk.normContent.includes(stem))
           ) {
-            matchedChunkWords++
+            matchedKeywordWeight += keywordIdfWeights[kIdx]
           }
           if (
-            normTitle.includes(word) ||
-            (stem !== null && normTitle.includes(stem))
+            chunk.normTitle.includes(word) ||
+            (stem !== null && chunk.normTitle.includes(stem))
           ) {
             matchedTitleWords++
           }
         }
 
         const lexicalCoverage =
-          normKeywords.length > 0 ? matchedChunkWords / normKeywords.length : 0
-        const lexicalBoost = lexicalCoverage * 0.10
+          totalKeywordWeight > 0 ? matchedKeywordWeight / totalKeywordWeight : 0
+        const lexicalBoost = lexicalCoverage * 0.12
         const titleBoost = Math.min(0.05, matchedTitleWords * 0.025)
-
-        const directArticleBoost =
-          directArtRegex &&
-          (directArtRegex.test(source.articulo || '') ||
-            directArtRegex.test(source.breadcrumb || '') ||
-            directArtRegex.test(source.snippetText))
-            ? 0.10
-            : 0
-
-        const hasCostSignals =
-          /S\/\s*\d/i.test(source.snippetText) ||
-          /\|[^|\n]+\|/.test(source.snippetText) ||
-          normTitle.includes('tarifario')
-        const costTableBoost = isCostQuery && hasCostSignals ? 0.08 : 0
+        const categoryBoost =
+          categoryFilter && chunk.categoria === categoryFilter ? 0.025 : 0
+        const directArticleBoost = directArtFlags[idx] === 1 ? 0.12 : 0
+        const costTableBoost = isCostQuery && chunk.hasCostSignals ? 0.08 : 0
 
         const finalScore = Math.max(
           0,
@@ -730,6 +973,8 @@ export async function searchKnowledgeBase(
             1,
             vectorScore +
               tocBoost +
+              categoryBoost +
+              rrfBonus +
               lexicalBoost +
               titleBoost +
               directArticleBoost +
@@ -737,62 +982,163 @@ export async function searchKnowledgeBase(
           )
         )
 
-        return {
-          ...source,
+        scoredCandidates.push({
+          chunk,
           relevance: Number(finalScore.toFixed(3)),
-        }
-      })
+        })
+      }
 
-      // Ordenar por mayor similitud y filtrar por umbral configurado con red de seguridad
-      let validResults = scoredResults
+      // Filtrar por umbral configurado con red de seguridad (>= 0.35)
+      let validCandidates = scoredCandidates
         .filter((r) => r.relevance >= minScore)
         .sort((a, b) => b.relevance - a.relevance)
 
-      // Si el umbral estricto no arrojó resultados pero hay candidatos evaluados, recuperar los más afines (>= 0.35)
-      if (validResults.length === 0 && scoredResults.length > 0) {
-        validResults = scoredResults
+      if (validCandidates.length === 0 && scoredCandidates.length > 0) {
+        validCandidates = scoredCandidates
           .filter((r) => r.relevance >= 0.35)
           .sort((a, b) => b.relevance - a.relevance)
       }
 
-      return validResults.slice(0, topK)
+      // Ajuste B: Expansión de vecinos contiguos (chunkIndex ± 1) en RAM a 0 ms para Top 3 ganadores
+      const absorbedIds = new Set<string>()
+      const finalResults: RetrievedSource[] = []
+
+      for (const item of validCandidates) {
+        if (absorbedIds.has(item.chunk.id)) continue
+
+        const winner = item.chunk
+
+        if (finalResults.length < RAG_NEIGHBOR_TOP_WINNERS) {
+          let currentLength = winner.content.length
+          const partsToMerge: CachedChunk[] = [winner]
+
+          const nextNeighbor = cache.byDocChunk.get(
+            `${winner.documentId}:${winner.chunkIndex + 1}`
+          )
+          if (
+            nextNeighbor &&
+            !absorbedIds.has(nextNeighbor.id) &&
+            (isSameSectionOrSeries(winner, nextNeighbor) ||
+              !winner.capitulo ||
+              !nextNeighbor.capitulo)
+          ) {
+            const nextAddition = stripLeadingBreadcrumb(nextNeighbor.content)
+            if (
+              currentLength + 2 + nextAddition.length <=
+              RAG_MAX_MERGED_CHUNK_CHARS
+            ) {
+              partsToMerge.push(nextNeighbor)
+              currentLength += 2 + nextAddition.length
+            }
+          }
+
+          const prevNeighbor = cache.byDocChunk.get(
+            `${winner.documentId}:${winner.chunkIndex - 1}`
+          )
+          if (
+            prevNeighbor &&
+            !absorbedIds.has(prevNeighbor.id) &&
+            isSameSectionOrSeries(winner, prevNeighbor)
+          ) {
+            const prevAddition = stripLeadingBreadcrumb(prevNeighbor.content)
+            if (
+              currentLength + 2 + prevAddition.length <=
+              RAG_MAX_MERGED_CHUNK_CHARS
+            ) {
+              partsToMerge.unshift(prevNeighbor)
+            }
+          }
+
+          let mergedSnippet = partsToMerge[0].content
+          for (let pIdx = 1; pIdx < partsToMerge.length; pIdx++) {
+            const addition = stripLeadingBreadcrumb(partsToMerge[pIdx].content)
+            if (addition) {
+              mergedSnippet += `\n\n${addition}`
+            }
+          }
+
+          for (const mergedPart of partsToMerge) {
+            absorbedIds.add(mergedPart.id)
+          }
+
+          finalResults.push({
+            chunkId: winner.id,
+            documentId: winner.documentId,
+            title: winner.title,
+            sourceUrl: winner.sourceUrl,
+            pageNumber: winner.pageNumber,
+            snippetText: mergedSnippet,
+            relevance: item.relevance,
+            embeddingModel: DEFAULT_EMBEDDING_MODEL,
+            categoria: winner.categoria,
+            anioVigencia: winner.anioVigencia,
+            breadcrumb: winner.breadcrumb,
+            capitulo: winner.capitulo,
+            articulo: winner.articulo,
+          })
+        } else {
+          absorbedIds.add(winner.id)
+          finalResults.push({
+            chunkId: winner.id,
+            documentId: winner.documentId,
+            title: winner.title,
+            sourceUrl: winner.sourceUrl,
+            pageNumber: winner.pageNumber,
+            snippetText: winner.content,
+            relevance: item.relevance,
+            embeddingModel: DEFAULT_EMBEDDING_MODEL,
+            categoria: winner.categoria,
+            anioVigencia: winner.anioVigencia,
+            breadcrumb: winner.breadcrumb,
+            capitulo: winner.capitulo,
+            articulo: winner.articulo,
+          })
+        }
+
+        if (finalResults.length >= topK) break
+      }
+
+      return finalResults
     } catch (embErr) {
       console.warn(
-        '[RAG_EMBEDDING_FALLBACK] Error en comparación vectorial, usando ranking léxico:',
+        '[RAG_EMBEDDING_FALLBACK] Error en comparación vectorial, usando ranking BM25 en RAM:',
         embErr
       )
 
-      // Fallback a ranking léxico si falla el servicio de embeddings
-      return candidateChunks.slice(0, topK).map((chunk, idx) => {
-        const meta = chunk.metadata as Record<string, unknown> | null
-        const breadcrumb =
-          (meta?.breadcrumb as string) ||
-          `${chunk.document.title}${chunk.pageNumber ? ` > Pág. ${chunk.pageNumber}` : ''}`
-        const capitulo = (meta?.capitulo as string) || null
-        const articulo = (meta?.articulo as string) || null
+      // Fallback léxico ordenado por BM25 + artículo directo sobre el 100% del corpus en RAM
+      const scoredFallback = cache.chunks.map((chunk, i) => ({
+        chunk,
+        score: bm25Scores[i] + (directArtFlags[i] === 1 ? 5 : 0) + tocBoosts[i],
+      }))
+      const maxFallback = Math.max(
+        1,
+        ...scoredFallback.map((x) => x.score)
+      )
 
-        return {
-          chunkId: chunk.id,
-          documentId: chunk.document.id,
-          title: chunk.document.title,
-          sourceUrl: chunk.document.publicUrl || chunk.document.fileUrl,
-          pageNumber: chunk.pageNumber,
-          snippetText: chunk.content.trim(),
-          relevance: Number((0.95 - idx * 0.05).toFixed(2)),
-          embeddingModel: 'lexical-fallback',
-          categoria:
-            (meta?.categoria as string) || chunk.document.category?.code || null,
-          anioVigencia:
-            typeof meta?.anio_vigencia === 'number' ? meta.anio_vigencia : 2026,
-          breadcrumb,
-          capitulo,
-          articulo,
-        }
-      })
+      return scoredFallback
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK)
+        .map((x) => ({
+          chunkId: x.chunk.id,
+          documentId: x.chunk.documentId,
+          title: x.chunk.title,
+          sourceUrl: x.chunk.sourceUrl,
+          pageNumber: x.chunk.pageNumber,
+          snippetText: x.chunk.content,
+          relevance: Number(
+            Math.max(0.4, Math.min(0.95, 0.4 + (x.score / maxFallback) * 0.55)).toFixed(3)
+          ),
+          embeddingModel: 'lexical-bm25-fallback',
+          categoria: x.chunk.categoria,
+          anioVigencia: x.chunk.anioVigencia,
+          breadcrumb: x.chunk.breadcrumb,
+          capitulo: x.chunk.capitulo,
+          articulo: x.chunk.articulo,
+        }))
     }
   } catch (error) {
     console.error('[RAG_SEARCH_ERROR]', error)
     return []
   }
 }
-
