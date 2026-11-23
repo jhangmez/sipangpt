@@ -36,6 +36,13 @@ import {
   EmptyTitle
 } from '@/components/ui/empty'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { ConfirmAlertDialog } from '@/components/admin/confirm-alert-dialog'
 import {
   FileText,
@@ -66,7 +73,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  MoreVertical,
+  RotateCcw
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { DocumentStatus } from '@/lib/prisma'
@@ -153,7 +162,7 @@ export function DocumentsManager({
   // Estado para Alertas de Confirmación (AlertDialog)
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
     isOpen: boolean
-    type: 'document' | 'chunk' | 'deindex'
+    type: 'document' | 'chunk' | 'deindex' | 'reprocess'
     id: string
     title: string
     chunkCount?: number
@@ -335,6 +344,13 @@ export function DocumentsManager({
           indexed: Math.max(0, prev.indexed - 1)
         }))
         toast.success('Documento desindexado. No será consultado por SipánGPT.')
+      } else if (deleteConfirm.type === 'reprocess') {
+        const targetDoc = documents.find((d) => d.id === deleteConfirm.id)
+        setDeleteConfirm((prev) => ({ ...prev, isOpen: false }))
+        if (targetDoc) {
+          void handleProcessAndIndex(targetDoc)
+        }
+        return
       }
       setDeleteConfirm((prev) => ({ ...prev, isOpen: false }))
     } catch (err: unknown) {
@@ -378,17 +394,30 @@ export function DocumentsManager({
     }
   }
 
-  // Procesar y Transcribir a Markdown con Gemini OCR
+  // Re-procesar OCR completo con Gemini y regenerar ingesta (ToC + chunks + embeddings) sin borrar el registro
   const handleProcessAndIndex = async (doc: DocumentItem) => {
-    console.log(`[CLIENT_DOCUMENTS] 👉 Iniciando procesamiento con IA para "${doc.title || doc.fileName}" (ID: ${doc.id})`)
+    const wasAlreadyIndexed = doc.status === 'INDEXED'
+    console.log(
+      `[CLIENT_DOCUMENTS] 👉 Iniciando OCR e ingesta completa para "${doc.title || doc.fileName}" (ID: ${doc.id})`
+    )
     setProcessingDocId(doc.id)
+    setDocuments((prev) =>
+      prev.map((d) =>
+        d.id === doc.id ? { ...d, status: 'PROCESSING' as DocumentStatus } : d
+      )
+    )
     const toastId = toast.loading(
-      `Extrayendo texto y transcribiendo "${doc.title || doc.fileName}" a Markdown con Gemini...`
+      `Re-procesando OCR con Gemini y regenerando fragmentos RAG de "${doc.title || doc.fileName}"...`
     )
     try {
-      console.log(`[CLIENT_DOCUMENTS] ⏳ Invocando Server Action processAndIndexDocumentAction("${doc.id}")...`)
+      console.log(
+        `[CLIENT_DOCUMENTS] ⏳ Invocando Server Action processAndIndexDocumentAction("${doc.id}")...`
+      )
       const res = await processAndIndexDocumentAction(doc.id)
-      console.log(`[CLIENT_DOCUMENTS] 🎉 Server Action respondió exitosamente:`, res)
+      console.log(
+        `[CLIENT_DOCUMENTS] 🎉 Server Action respondió exitosamente:`,
+        res
+      )
 
       setDocuments((prev) =>
         prev.map((d) =>
@@ -413,11 +442,14 @@ export function DocumentsManager({
         )
         loadChunks(doc.id)
       }
-      setStats((prev) => ({ ...prev, indexed: prev.indexed + 1 }))
+      if (!wasAlreadyIndexed) {
+        setStats((prev) => ({ ...prev, indexed: prev.indexed + 1 }))
+      }
       toast.success(
-        `¡Documento transcrito e indexado en ${res.chunkCount} fragmentos RAG!`,
+        `¡OCR completo e ingesta finalizada en ${res.chunkCount} fragmentos RAG!`,
         { id: toastId }
       )
+      void handleRefreshDocuments(true)
     } catch (err: unknown) {
       console.error(`[CLIENT_DOCUMENTS] 💥 Error en Server Action:`, err)
       setDocuments((prev) =>
@@ -425,6 +457,9 @@ export function DocumentsManager({
           d.id === doc.id ? { ...d, status: 'ERROR' as DocumentStatus } : d
         )
       )
+      if (wasAlreadyIndexed) {
+        setStats((prev) => ({ ...prev, indexed: Math.max(0, prev.indexed - 1) }))
+      }
       toast.error(
         getErrorMessage(err) || 'Error al procesar el documento con IA.',
         { id: toastId }
@@ -432,6 +467,27 @@ export function DocumentsManager({
     } finally {
       setProcessingDocId(null)
     }
+  }
+
+  // Solicitar confirmación si el documento ya tiene fragmentos previos o ejecutar directamente si está vacío/error
+  const requestReprocessDoc = (doc: DocumentItem) => {
+    if (!(doc.fileUrl || doc.publicUrl)) {
+      toast.error(
+        'Este documento no tiene un archivo PDF o URL asociada para re-procesar.'
+      )
+      return
+    }
+    if ((doc.chunkCount || 0) > 0 && doc.status !== 'ERROR') {
+      setDeleteConfirm({
+        isOpen: true,
+        type: 'reprocess',
+        id: doc.id,
+        title: doc.title || doc.fileName,
+        chunkCount: doc.chunkCount || 0
+      })
+      return
+    }
+    void handleProcessAndIndex(doc)
   }
 
   // Crear Documento Directo e Indexar
@@ -745,6 +801,9 @@ export function DocumentsManager({
                   const isIndexed = doc.status === 'INDEXED'
                   const isProcessing = doc.status === 'PROCESSING'
                   const isDeindexed = doc.status === 'DEINDEXED'
+                  const canReprocess = Boolean(doc.fileUrl || doc.publicUrl)
+                  const isCurrentlyBusy =
+                    processingDocId === doc.id || isProcessing
                   const dateStr = new Date(doc.createdAt).toLocaleDateString(
                     'es-PE',
                     {
@@ -857,7 +916,7 @@ export function DocumentsManager({
                         </div>
                       </div>
 
-                      {/* Botones de Acción */}
+                      {/* Barra de Acciones Organizada (4 controles uniformes) */}
                       <div className='flex items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-border/40 flex-wrap'>
                         {/* 1. Botón Gestionar Fragmentos RAG */}
                         <Button
@@ -867,7 +926,7 @@ export function DocumentsManager({
                           className='gap-1 text-[11px] rounded-xl font-semibold border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer'
                           title='Explorar y editar fragmentos semánticos'
                         >
-                          <BookOpen className='w-3.5 h-3.5' /> Fragmentos RAG
+                          <BookOpen className='w-3.5 h-3.5' /> Fragmentos
                         </Button>
 
                         {/* 2. Botón Visualizar Documento / PDF */}
@@ -876,112 +935,162 @@ export function DocumentsManager({
                           variant='outline'
                           onClick={() => setPreviewDoc(doc)}
                           className='gap-1 text-[11px] rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
-                          title='Visualizar documento y PDF oficial'
+                          title='Visualizar Markdown transcrito, ToC y PDF oficial'
                         >
                           <Eye className='w-3.5 h-3.5' /> Visualizar
                         </Button>
 
-                        {/* 3. Botón Editar Enlace y Metadatos */}
-                        <Button
-                          size='xs'
-                          variant='outline'
-                          onClick={() => handleOpenEditDoc(doc)}
-                          className='gap-1 text-[11px] rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
-                          title='Editar enlace público, título y categoría'
-                        >
-                          <LinkIcon className='w-3.5 h-3.5' /> Editar Enlace
-                        </Button>
-
-                        {/* 4. Botón Ver PDF en nueva ventana */}
-                        {(doc.fileUrl || doc.publicUrl) && (
+                        {/* 3. Acción Principal Contextual (Re-procesar OCR / Reintentar / Procesar / Activar RAG) */}
+                        {isCurrentlyBusy ? (
                           <Button
                             size='xs'
-                            variant='ghost'
+                            disabled
+                            variant='outline'
+                            className='gap-1 text-[11px] rounded-xl font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                          >
+                            <Loader2 className='w-3.5 h-3.5 animate-spin' />{' '}
+                            Procesando...
+                          </Button>
+                        ) : doc.status === 'ERROR' ? (
+                          <Button
+                            size='xs'
+                            onClick={() => requestReprocessDoc(doc)}
+                            disabled={!canReprocess}
+                            className='gap-1 text-[11px] rounded-xl font-semibold shadow-xs cursor-pointer bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                            title='Reintentar OCR completo con Gemini e ingesta sin borrar el registro'
+                          >
+                            <RotateCcw className='w-3.5 h-3.5' /> Reintentar OCR
+                          </Button>
+                        ) : (doc.chunkCount || 0) === 0 ? (
+                          <Button
+                            size='xs'
+                            onClick={() => requestReprocessDoc(doc)}
+                            disabled={!canReprocess}
+                            className='gap-1 text-[11px] rounded-xl font-semibold shadow-xs cursor-pointer bg-amber-600 hover:bg-amber-700 text-white'
+                            title='Transcribir PDF a Markdown con Gemini e indexar en RAG'
+                          >
+                            <Sparkles className='w-3.5 h-3.5' /> Procesar con IA
+                          </Button>
+                        ) : isDeindexed ? (
+                          <Button
+                            size='xs'
+                            onClick={() => handleToggleIndex(doc)}
+                            className='gap-1 text-[11px] rounded-xl font-semibold cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white'
+                            title='Activar indexación para búsquedas RAG'
+                          >
+                            <Power className='w-3.5 h-3.5' /> Indexar RAG
+                          </Button>
+                        ) : (
+                          canReprocess && (
+                            <Button
+                              size='xs'
+                              variant='outline'
+                              onClick={() => requestReprocessDoc(doc)}
+                              className='gap-1 text-[11px] rounded-xl font-semibold border-sky-500/30 text-sky-600 dark:text-sky-400 bg-sky-500/5 hover:bg-sky-500/10 cursor-pointer'
+                              title='Rehacer OCR completo con Gemini e ingesta (ToC + fragmentos + embeddings) sin borrar el registro'
+                            >
+                              <RotateCcw className='w-3.5 h-3.5' /> Re-procesar OCR
+                            </Button>
+                          )
+                        )}
+
+                        {/* 4. Menú Desplegable de Acciones Secundarias y Destructivas */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
                             render={
-                              <a
-                                href={doc.publicUrl || doc.fileUrl || '#'}
-                                target='_blank'
-                                rel='noreferrer'
+                              <Button
+                                type='button'
+                                size='icon-xs'
+                                variant='outline'
+                                aria-label='Más acciones del documento'
+                                title='Más acciones'
+                                className='h-7 w-7 rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
                               />
                             }
-                            className='gap-1 text-[11px] rounded-xl text-muted-foreground hover:text-foreground cursor-pointer'
-                            title='Abrir documento oficial en otra ventana'
                           >
-                            <ExternalLink className='w-3.5 h-3.5' /> Ver PDF
-                          </Button>
-                        )}
+                            <MoreVertical className='w-3.5 h-3.5' />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align='end'
+                            sideOffset={6}
+                            className='w-56 p-1.5 rounded-2xl border border-border/80 shadow-xl font-exo bg-popover/95 backdrop-blur-md'
+                          >
+                            <DropdownMenuItem
+                              disabled={!canReprocess || isCurrentlyBusy}
+                              onClick={() => requestReprocessDoc(doc)}
+                              className='rounded-xl gap-2 text-xs font-medium cursor-pointer py-2'
+                            >
+                              <RotateCcw className='w-3.5 h-3.5 text-sky-500' />
+                              <span>Re-procesar OCR e ingesta</span>
+                            </DropdownMenuItem>
 
-                        {/* 5. Botón Reintentar con IA (solo si está en ERROR o PROCESSING sin indexar) */}
-                        {(!isIndexed && (doc.status === 'ERROR' || doc.status === 'PROCESSING' || (doc.chunkCount || 0) === 0)) && (
-                          <Button
-                            size='xs'
-                            onClick={() => handleProcessAndIndex(doc)}
-                            disabled={processingDocId === doc.id}
-                            className={`gap-1 text-[11px] rounded-xl font-semibold shadow-xs cursor-pointer ${
-                              doc.status === 'ERROR'
-                                ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
-                                : 'bg-amber-600 hover:bg-amber-700 text-white'
-                            }`}
-                            title='Transcribir PDF a Markdown con Gemini 3.1 Flash-Lite e indexar en RAG'
-                          >
-                            {processingDocId === doc.id ? (
-                              <Loader2 className='w-3.5 h-3.5 animate-spin' />
-                            ) : (
-                              <Sparkles className='w-3.5 h-3.5' />
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEditDoc(doc)}
+                              className='rounded-xl gap-2 text-xs cursor-pointer py-2'
+                            >
+                              <LinkIcon className='w-3.5 h-3.5 text-muted-foreground' />
+                              <span>Editar enlace y metadatos</span>
+                            </DropdownMenuItem>
+
+                            {canReprocess && (
+                              <DropdownMenuItem
+                                render={
+                                  <a
+                                    href={doc.publicUrl || doc.fileUrl || '#'}
+                                    target='_blank'
+                                    rel='noreferrer'
+                                  />
+                                }
+                                className='rounded-xl gap-2 text-xs cursor-pointer py-2'
+                              >
+                                <ExternalLink className='w-3.5 h-3.5 text-muted-foreground' />
+                                <span>Abrir PDF original</span>
+                              </DropdownMenuItem>
                             )}
-                            {processingDocId === doc.id
-                              ? 'Indexando...'
-                              : doc.status === 'ERROR'
-                              ? 'Reintentar con IA'
-                              : 'Procesar con IA'}
-                          </Button>
-                        )}
 
-                        {/* 6. Botón Indexar / Desindexar con estado visual claro */}
-                        <Button
-                          size='xs'
-                          variant={isIndexed ? 'outline' : 'default'}
-                          onClick={() => handleToggleIndex(doc)}
-                          className={`gap-1 text-[11px] rounded-xl cursor-pointer ${
-                            isIndexed
-                              ? 'border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          }`}
-                          title={
-                            isIndexed
-                              ? 'Pausar/Desindexar de búsquedas RAG'
-                              : 'Activar indexación para RAG'
-                          }
-                        >
-                          {isIndexed ? (
-                            <>
-                              <PowerOff className='w-3.5 h-3.5' /> Desindexar
-                            </>
-                          ) : (
-                            <>
-                              <Power className='w-3.5 h-3.5' /> Indexar RAG
-                            </>
-                          )}
-                        </Button>
+                            <DropdownMenuSeparator className='my-1 bg-border/50' />
 
-                        {/* 5. Botón Eliminar con AlertDialog */}
-                        <Button
-                          size='xs'
-                          variant='ghost'
-                          onClick={() =>
-                            setDeleteConfirm({
-                              isOpen: true,
-                              type: 'document',
-                              id: doc.id,
-                              title: doc.title || doc.fileName,
-                              chunkCount: doc.chunkCount || 0
-                            })
-                          }
-                          className='text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 text-[11px] rounded-xl cursor-pointer'
-                          title='Eliminar documento'
-                        >
-                          <Trash2 className='w-3.5 h-3.5' />
-                        </Button>
+                            <DropdownMenuItem
+                              onClick={() => handleToggleIndex(doc)}
+                              className='rounded-xl gap-2 text-xs cursor-pointer py-2'
+                            >
+                              {isIndexed ? (
+                                <>
+                                  <PowerOff className='w-3.5 h-3.5 text-amber-500' />
+                                  <span className='text-amber-600 dark:text-amber-400'>
+                                    Desindexar (pausar RAG)
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <Power className='w-3.5 h-3.5 text-emerald-500' />
+                                  <span className='text-emerald-600 dark:text-emerald-400'>
+                                    Activar en RAG
+                                  </span>
+                                </>
+                              )}
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator className='my-1 bg-border/50' />
+
+                            <DropdownMenuItem
+                              variant='destructive'
+                              onClick={() =>
+                                setDeleteConfirm({
+                                  isOpen: true,
+                                  type: 'document',
+                                  id: doc.id,
+                                  title: doc.title || doc.fileName,
+                                  chunkCount: doc.chunkCount || 0
+                                })
+                              }
+                              className='rounded-xl gap-2 text-xs cursor-pointer py-2'
+                            >
+                              <Trash2 className='w-3.5 h-3.5' />
+                              <span>Eliminar documento</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   )
@@ -1767,7 +1876,9 @@ export function DocumentsManager({
             ? `¿Eliminar "${deleteConfirm.title}"?`
             : deleteConfirm.type === 'chunk'
               ? `¿Eliminar ${deleteConfirm.title}?`
-              : `¿Desindexar "${deleteConfirm.title}"?`
+              : deleteConfirm.type === 'reprocess'
+                ? `¿Re-procesar OCR e ingesta de "${deleteConfirm.title}"?`
+                : `¿Desindexar "${deleteConfirm.title}"?`
         }
         description={
           deleteConfirm.type === 'document'
@@ -1776,16 +1887,26 @@ export function DocumentsManager({
               } fragmentos semánticos indexados de la base de conocimiento.`
             : deleteConfirm.type === 'chunk'
               ? 'Esta acción eliminará permanentemente este fragmento normativo. SipánGPT ya no podrá utilizar este texto en sus respuestas.'
-              : 'El documento permanecerá en el sistema, pero sus fragmentos se pausarán temporalmente y SipánGPT no los utilizará para responder a las preguntas de los estudiantes.'
+              : deleteConfirm.type === 'reprocess'
+                ? `Se volverá a descargar el PDF original, ejecutar la transcripción OCR integral con Gemini sin resúmenes, reconstruir el árbol ToC (Sipán-STAIR) y reemplazar los ${
+                    deleteConfirm.chunkCount ?? 0
+                  } fragmentos actuales conservando el registro y su historial.`
+                : 'El documento permanecerá en el sistema, pero sus fragmentos se pausarán temporalmente y SipánGPT no los utilizará para responder a las preguntas de los estudiantes.'
         }
         confirmText={
           deleteConfirm.type === 'document'
             ? 'Eliminar Documento'
             : deleteConfirm.type === 'chunk'
               ? 'Eliminar Fragmento'
-              : 'Desindexar Documento'
+              : deleteConfirm.type === 'reprocess'
+                ? 'Re-procesar OCR e Ingesta'
+                : 'Desindexar Documento'
         }
-        variant={deleteConfirm.type === 'deindex' ? 'default' : 'destructive'}
+        variant={
+          deleteConfirm.type === 'deindex' || deleteConfirm.type === 'reprocess'
+            ? 'default'
+            : 'destructive'
+        }
         isLoading={isAlertLoading}
         onConfirm={handleConfirmAlert}
       />

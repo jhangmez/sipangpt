@@ -21,6 +21,7 @@ import {
   buildSystemPromptWithSources,
   DEFAULT_MODEL_CODE,
   DEFAULT_PROVIDER,
+  DEFAULT_RAG_TOP_K,
   MAX_QUESTIONS_PER_CONVERSATION,
   CHAT_LIMIT_MESSAGES,
   normalizeThinkingLevel,
@@ -314,7 +315,7 @@ export async function POST(req: Request) {
       isRAGEnabled && queryForSearch
         ? await searchKnowledgeBase(
             queryForSearch,
-            4,
+            DEFAULT_RAG_TOP_K,
             minSimScore,
             rewrittenQuery?.inferredCategory,
             ragContext
@@ -330,7 +331,7 @@ export async function POST(req: Request) {
 
     if (!isWebSearchEnabled) {
       systemPrompt += `\n\n[POLÍTICA DE INFORMACIÓN INSTITUCIONAL USS]
-Prioriza siempre la información reglamentaria oficial de la USS provista. Cuando los fragmentos oficiales contengan la respuesta, fundamenta tus explicaciones en ellos citando el reglamento o manual correspondiente. Si la consulta involucra procedimientos operativos estándar en plataformas institucionales (como Aula Virtual, Moodle o Campus Virtual) que complementan la normativa, brinda la orientación procedimental clara, estructurada y paso a paso con amabilidad institucional, orientando al usuario a validar en los canales oficiales de atención (informes@uss.edu.pe o Campus Virtual) ante gestiones sensibles.`
+Prioriza siempre la información reglamentaria oficial de la USS provista. Cuando los fragmentos oficiales contengan la respuesta, fundamenta tus explicaciones en ellos citando el reglamento o manual correspondiente y reproduciendo literalmente los nombres exactos de botones, menús, rutas, columnas, estados, montos, medidas, plazos, artículos, casillas y excepciones sin resumir ni sustituir nombres de interfaz por sinónimos genéricos; reduce saludos o relleno innecesario. Si la consulta involucra procedimientos operativos estándar en plataformas institucionales (como Aula Virtual, Moodle o Campus Virtual) que complementan la normativa, brinda la orientación procedimental completa, clara y paso a paso, orientando al usuario a validar en los canales oficiales de atención (informes@uss.edu.pe o Campus Virtual) ante gestiones sensibles.`
     }
 
     if (!isMapsSearchEnabled) {

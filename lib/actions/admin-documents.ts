@@ -419,12 +419,28 @@ export async function processAndIndexDocumentAction(documentId: string) {
   })
 
   try {
-    // 2. Extraer y transcribir a Markdown enriquecido mediante Gemini Multimodal
+    // 2. Extraer y transcribir a Markdown enriquecido mediante Gemini Multimodal (con fallback a publicUrl)
     console.log(`${logPrefix} ⏳ Llamando a extractAndStructureToMarkdown...`)
-    const markdownContent = await extractAndStructureToMarkdown(
-      fileUrl,
-      doc.mimeType || 'application/pdf'
-    )
+    let markdownContent: string
+    try {
+      markdownContent = await extractAndStructureToMarkdown(
+        fileUrl,
+        doc.mimeType || 'application/pdf'
+      )
+    } catch (primaryErr) {
+      if (doc.publicUrl && doc.fileUrl && doc.publicUrl !== doc.fileUrl) {
+        console.warn(
+          `${logPrefix} ⚠️ Falló lectura desde fileUrl (${doc.fileUrl}), reintentando con publicUrl (${doc.publicUrl}):`,
+          primaryErr instanceof Error ? primaryErr.message : primaryErr
+        )
+        markdownContent = await extractAndStructureToMarkdown(
+          doc.publicUrl,
+          doc.mimeType || 'application/pdf'
+        )
+      } else {
+        throw primaryErr
+      }
+    }
 
     // 3. Segmentar semánticamente en chunks con solapamiento e indexar en Neon
     console.log(
@@ -441,6 +457,7 @@ export async function processAndIndexDocumentAction(documentId: string) {
     return {
       success: true,
       chunkCount: result.chunkCount,
+      tocNodesCount: result.tocNodesCount,
       markdownPreview: markdownContent.substring(0, 500)
     }
   } catch (err: unknown) {

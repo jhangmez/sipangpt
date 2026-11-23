@@ -1,6 +1,13 @@
 import { prisma, ModelProvider, TokenUsageConcept, Prisma } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
-import { DOCUMENT_TRANSCRIPTION_MODEL_CODE, DEFAULT_EMBEDDING_MODEL } from '@/constants'
+import {
+  DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+  DEFAULT_EMBEDDING_MODEL,
+  DEFAULT_THINKING_LEVEL,
+  DOCUMENT_OCR_TRANSCRIPTION_PROMPT,
+  DOCUMENT_OCR_CONTINUATION_PROMPT,
+  DOCUMENT_OCR_ANTI_LAZINESS_RETRY_PROMPT,
+} from '@/constants'
 import { generateEmbeddingsWithUsage } from '@/lib/ai/embeddings'
 import { sanitizeMojibake, stripBase64Images } from '@/lib/utils'
 import {
@@ -17,6 +24,42 @@ export interface TextChunk {
   pageNumber?: number | null
   chunkIndex: number
   metadata?: Record<string, unknown>
+}
+
+interface GeminiPart {
+  text?: string
+  thought?: boolean
+}
+
+interface GeminiCandidate {
+  finishReason?: string
+  content?: {
+    parts?: GeminiPart[]
+  }
+}
+
+/**
+ * Extrae únicamente las partes textuales finales de un candidato Gemini,
+ * excluyendo bloques internos de razonamiento (`thought: true`).
+ */
+function extractCandidateText(candidate?: GeminiCandidate): string {
+  const parts = candidate?.content?.parts
+  if (!Array.isArray(parts)) return ''
+  return parts
+    .filter((p) => !p.thought && typeof p.text === 'string')
+    .map((p) => p.text!)
+    .join('')
+    .trim()
+}
+
+/**
+ * Detecta patrones de abreviación o resumen perezoso emitidos por modelos OCR
+ * (especialmente al procesar tablas densas o tarifarios extensos).
+ */
+function detectTranscriptionLaziness(text: string): boolean {
+  return /(?:debido a la extensi[oó]n|se resumen las tablas|\(extracto\)|incluye tablas detalladas|por brevedad|se omiten las dem[aá]s|resumen de las tablas principales)/i.test(
+    text
+  )
 }
 
 /**
@@ -112,19 +155,6 @@ export async function extractAndStructureToMarkdown(
     throw new Error('API Key de Google no configurada en el servidor.')
   }
 
-  const systemTranscriptionPrompt = `Analiza y extrae de manera estructurada y completa todo el contenido, normativas, capítulos, artículos, tablas, cronogramas y directivas presentes en este documento de la Universidad Señor de Sipán (USS).
-
-Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
-1. Estructura la jerarquía formal con encabezados Markdown estandarizados:
-   - Usa nivel 1 (# TÍTULO ...) para Títulos mayores o Denominación del Reglamento.
-   - Usa nivel 2 (## CAPÍTULO ...) para Capítulos normativos (ej: "## Capítulo II: De la Matrícula Regular y Extemporánea").
-   - Usa nivel 3 (### ARTÍCULO ...) para cada Artículo normativo individual (ej: "### Artículo 17: Requisitos y Plazos").
-2. No cortes ni trunques los artículos. Transcribe el texto íntegro de cada artículo incluyendo todos sus incisos, literales y párrafos.
-3. Si el documento contiene un Índice general o Tabla de Contenidos (ToC) al inicio, transcríbelo fielmente con viñetas.
-4. Si hay páginas identificadas en el PDF, incluye separadores con formato exacto "--- Página X ---".
-5. Si hay tablas, escalas de tasas, calendarios de pagos o cronogramas, represéntalos en tablas Markdown con sintaxis GFM.
-6. Mantén la terminología y formalidad institucional estricta de la USS.`
-
   let googleFileName: string | null = null
   let fileUri: string | null = null
 
@@ -208,7 +238,7 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
 
   // Preparar payload para Gemini
   const parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string }; inlineData?: { mimeType: string; data: string } }> = [
-    { text: systemTranscriptionPrompt }
+    { text: DOCUMENT_OCR_TRANSCRIPTION_PROMPT }
   ]
 
   if (fileUri) {
@@ -227,6 +257,14 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
     })
   }
 
+  const ocrGenerationConfig = {
+    maxOutputTokens: 65536,
+    temperature: 0.0,
+    thinkingConfig: {
+      thinkingLevel: DEFAULT_THINKING_LEVEL
+    }
+  }
+
   const payload = {
     contents: [
       {
@@ -234,10 +272,7 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
         parts
       }
     ],
-    generationConfig: {
-      maxOutputTokens: 65536,
-      temperature: 0.1
-    }
+    generationConfig: ocrGenerationConfig
   }
 
   try {
@@ -266,10 +301,12 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
       )
     }
 
-    const candidate = data.candidates?.[0]
+    let totalInputTokens = data.usageMetadata?.promptTokenCount || 0
+    let totalOutputTokens = data.usageMetadata?.candidatesTokenCount || 0
+
+    const candidate = data.candidates?.[0] as GeminiCandidate | undefined
     let finishReason = candidate?.finishReason
-    let transcribedText =
-      candidate?.content?.parts?.[0]?.text?.trim() || ''
+    let transcribedText = extractCandidateText(candidate)
 
     // Si el documento es masivo y alcanzó MAX_TOKENS, solicitar continuación automática para CERO pérdida de datos
     let continuationPass = 1
@@ -295,15 +332,12 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
             role: 'user',
             parts: [
               {
-                text: 'Continúa transcribiendo el documento exactamente desde donde te quedaste, sin repetir lo anterior. Transcribe íntegramente los artículos faltantes, manteniendo la jerarquía Markdown (#, ##, ###) y todos sus incisos y literales.'
+                text: DOCUMENT_OCR_CONTINUATION_PROMPT
               }
             ]
           }
         ],
-        generationConfig: {
-          maxOutputTokens: 65536,
-          temperature: 0.1
-        }
+        generationConfig: ocrGenerationConfig
       }
 
       try {
@@ -326,8 +360,11 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
           break
         }
 
-        const contCandidate = contData.candidates?.[0]
-        const contText = contCandidate?.content?.parts?.[0]?.text?.trim() || ''
+        totalInputTokens += contData.usageMetadata?.promptTokenCount || 0
+        totalOutputTokens += contData.usageMetadata?.candidatesTokenCount || 0
+
+        const contCandidate = contData.candidates?.[0] as GeminiCandidate | undefined
+        const contText = extractCandidateText(contCandidate)
         finishReason = contCandidate?.finishReason
 
         if (contText) {
@@ -347,6 +384,95 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
       }
     }
 
+    // Guardrail Anti-Pereza: Si el modelo resumió o abrevió tablas/anexos pese a las reglas, exigir transcripción íntegra
+    if (transcribedText && detectTranscriptionLaziness(transcribedText)) {
+      console.warn(
+        `${logPrefix} ⚠️ [Guardrail Anti-Pereza] Se detectaron marcadores de resumen en la transcripción. Solicitando transcripción literal completa de tablas y secciones omitidas...`
+      )
+
+      try {
+        const recRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                { role: 'user', parts },
+                { role: 'model', parts: [{ text: transcribedText }] },
+                { role: 'user', parts: [{ text: DOCUMENT_OCR_ANTI_LAZINESS_RETRY_PROMPT }] }
+              ],
+              generationConfig: ocrGenerationConfig
+            }),
+            signal: AbortSignal.timeout(180_000)
+          }
+        )
+
+        const recData = await recRes.json()
+        if (recRes.ok && !recData.error) {
+          totalInputTokens += recData.usageMetadata?.promptTokenCount || 0
+          totalOutputTokens += recData.usageMetadata?.candidatesTokenCount || 0
+
+          const recCandidate = recData.candidates?.[0] as GeminiCandidate | undefined
+          let recText = extractCandidateText(recCandidate)
+          let recFinishReason = recCandidate?.finishReason
+
+          let recContPass = 0
+          while (recFinishReason === 'MAX_TOKENS' && recContPass < 3 && recText) {
+            recContPass++
+            console.warn(
+              `${logPrefix} 🔄 [Anti-Pereza Continuación #${recContPass}] Solicitando continuación de tablas recuperadas...`
+            )
+            const recContRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [
+                    { role: 'user', parts },
+                    { role: 'model', parts: [{ text: transcribedText + '\n\n' + recText }] },
+                    { role: 'user', parts: [{ text: DOCUMENT_OCR_CONTINUATION_PROMPT }] }
+                  ],
+                  generationConfig: ocrGenerationConfig
+                }),
+                signal: AbortSignal.timeout(180_000)
+              }
+            )
+
+            const recContData = await recContRes.json()
+            if (!recContRes.ok || recContData.error) break
+
+            totalInputTokens += recContData.usageMetadata?.promptTokenCount || 0
+            totalOutputTokens += recContData.usageMetadata?.candidatesTokenCount || 0
+
+            const recContCandidate = recContData.candidates?.[0] as GeminiCandidate | undefined
+            const extraRecText = extractCandidateText(recContCandidate)
+            recFinishReason = recContCandidate?.finishReason
+            if (!extraRecText) break
+            recText += '\n\n' + extraRecText
+          }
+
+          if (recText) {
+            transcribedText += '\n\n' + recText
+            console.log(
+              `${logPrefix} ✅ [Guardrail Anti-Pereza] +${recText.length} caracteres recuperados (Total: ${transcribedText.length}).`
+            )
+          }
+        } else {
+          console.warn(
+            `${logPrefix} ⚠️ Error en recuperación anti-pereza:`,
+            recData.error
+          )
+        }
+      } catch (recErr) {
+        console.warn(
+          `${logPrefix} ⚠️ Fallo de conexión en recuperación anti-pereza:`,
+          recErr
+        )
+      }
+    }
+
     if (!transcribedText || transcribedText.length < 20) {
       console.error(
         `${logPrefix} ❌ [Paso 2/3] Gemini devolvió respuesta vacía o insuficiente (finishReason=${finishReason}):`,
@@ -358,22 +484,20 @@ Reglas de Estructuración en Markdown (.md) para la Arquitectura Sipán-STAIR:
     }
 
     console.log(
-      `${logPrefix} ✅ [Paso 2/3] Transcripción completada en ${ocrDuration}ms con ${DOCUMENT_TRANSCRIPTION_MODEL_CODE}. Total caracteres: ${transcribedText.length}`
+      `${logPrefix} ✅ [Paso 2/3] Transcripción completada en ${ocrDuration}ms con ${DOCUMENT_TRANSCRIPTION_MODEL_CODE} (thinkingLevel=${DEFAULT_THINKING_LEVEL}). Total caracteres: ${transcribedText.length}`
     )
 
-    // Registrar consumo de tokens
-    const inputTokens = data.usageMetadata?.promptTokenCount || 0
-    const outputTokens = data.usageMetadata?.candidatesTokenCount || 0
+    // Registrar consumo de tokens acumulados
     try {
       await recordTokenUsageLog({
         modelCode: DOCUMENT_TRANSCRIPTION_MODEL_CODE,
         provider: ModelProvider.GEMINI,
         concept: TokenUsageConcept.DOCUMENT_OCR_TRANSCRIPTION,
-        promptTokens: inputTokens,
-        completionTokens: outputTokens
+        promptTokens: totalInputTokens,
+        completionTokens: totalOutputTokens
       })
       console.log(
-        `${logPrefix} 📊 Tokens registrados: input=${inputTokens}, output=${outputTokens}`
+        `${logPrefix} 📊 Tokens registrados: input=${totalInputTokens}, output=${totalOutputTokens}`
       )
     } catch (logErr) {
       console.warn(

@@ -10,6 +10,8 @@ import {
   SPANISH_STOP_WORDS,
   extractCleanKeywords,
   UNIVERSAL_CATEGORY_CODES,
+  RAG_INITIAL_CANDIDATES,
+  DEFAULT_RAG_TOP_K,
 } from '@/constants'
 import type { DocumentTocTree, ToCRouteMatch, TocChapterItem, TocSectionItem } from '@/types/stair'
 
@@ -46,6 +48,145 @@ function normalizeSearchText(text: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
+}
+
+/**
+ * Detecta fragmentos sin contenido operativo real (portadas/carátulas, índices ToC
+ * o preámbulos introductorios generados por el OCR) para excluirlos del reranking.
+ */
+function isLowValueBoilerplateChunk(
+  content: string,
+  metadata?: Record<string, unknown> | null
+): boolean {
+  const bodyWithoutBreadcrumb = content.replace(/^\s*\[[^\]]+\]\s*/u, '').trim()
+
+  const cleanedLines = bodyWithoutBreadcrumb
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        l.length > 0 &&
+        !/^[-=*_]{3,}$/.test(l) &&
+        !/^---\s*P[áa]gina\s+\d+\s*---$/i.test(l)
+    )
+
+  const normalizedBody = cleanedLines.join('\n')
+
+  // Guardas de alto valor: tablas Markdown con datos, montos en soles, URLs o correos USS
+  const hasRealMarkdownTable =
+    /\|[^|\n]+\|[^|\n]+\|/.test(normalizedBody) &&
+    (normalizedBody.match(/\|/g) || []).length >= 6
+  const hasHighValueFacts =
+    /S\/\s*\d/i.test(normalizedBody) ||
+    /https?:\/\//i.test(normalizedBody) ||
+    /@uss\.edu\.pe/i.test(normalizedBody)
+
+  if (hasRealMarkdownTable || hasHighValueFacts) {
+    return false
+  }
+
+  const plainText = normalizedBody
+    .replace(/[#>*_`~]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (plainText.length < 40) {
+    return true
+  }
+
+  // Patrón A: Preámbulo introductorio generado por Gemini durante el OCR
+  const withoutOcrPreamble = plainText
+    .replace(
+      /A continuaci[oó]n,?\s+se presenta[^.:\n]*(?:estructura|transcripci[oó]n|contenido|documento)[^.:\n]*[.:]?/gi,
+      ''
+    )
+    .replace(/conforme a la arquitectura solicitada[^.:\n]*[.:]?/gi, '')
+    .replace(/Aqu[ií] tienes la transcripci[oó]n[^.:\n]*[.:]?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (withoutOcrPreamble.length < 45) {
+    return true
+  }
+
+  // Guarda de artículo normativo sustantivo
+  if (
+    /\b(?:art[íi]culo|art\.?)\s*[0-9]+[A-Za-z\-º°]*/i.test(withoutOcrPreamble) &&
+    withoutOcrPreamble.length >= 100
+  ) {
+    return false
+  }
+
+  // Patrón C: Tabla de contenidos / Índice
+  const nonEmptyLines = cleanedLines
+    .map((l) => l.replace(/^[#>*\-\s]+/, '').trim())
+    .filter(Boolean)
+  const hasLongProseParagraph = nonEmptyLines.some((l) => l.length >= 220)
+  const dotLeaderLines = nonEmptyLines.filter((l) =>
+    /(?:\.{3,}|…)\s*\d{1,3}\s*$/.test(l)
+  ).length
+
+  if (dotLeaderLines >= 3 && !hasLongProseParagraph) {
+    return true
+  }
+
+  const breadcrumbStr =
+    typeof metadata?.breadcrumb === 'string'
+      ? normalizeSearchText(metadata.breadcrumb)
+      : ''
+  const capituloStr =
+    typeof metadata?.capitulo === 'string'
+      ? normalizeSearchText(metadata.capitulo)
+      : ''
+  const firstThreeLinesNorm = nonEmptyLines
+    .slice(0, 3)
+    .map((l) => normalizeSearchText(l))
+    .join(' ')
+
+  const hasTocHeader =
+    /\b(?:indice|indice general|tabla de contenidos?|contenido)\b/.test(
+      firstThreeLinesNorm
+    ) ||
+    /\b(?:indice|indice general|tabla de contenidos?)\b/.test(breadcrumbStr) ||
+    /\b(?:indice|indice general|tabla de contenidos?)\b/.test(capituloStr)
+
+  if (hasTocHeader && !hasLongProseParagraph) {
+    const pageSuffixLines = nonEmptyLines.filter((l) =>
+      /\s+\d{1,3}\s*$/.test(l)
+    ).length
+    const shortLinesCount = nonEmptyLines.filter((l) => l.length <= 85).length
+    const hasProceduralUiVerbs =
+      /\b(?:clic|click|seleccionar|ingresar|presionar|pulsar|bot[oó]n|deber[aá]|requisitos?)\b/i.test(
+        withoutOcrPreamble
+      )
+
+    if (
+      pageSuffixLines >= 2 ||
+      (nonEmptyLines.length >= 4 &&
+        shortLinesCount / nonEmptyLines.length >= 0.8 &&
+        !hasProceduralUiVerbs)
+    ) {
+      return true
+    }
+  }
+
+  // Patrón B: Portada o carátula institucional vacía
+  const nonCoverLines = nonEmptyLines.filter((l) => {
+    if (l.length > 95) return true
+    const normLine = normalizeSearchText(l)
+    const isCoverMetaLine =
+      /^(?:universidad\s+senor\s+de\s+sipan|vicerrectorado|direccion\s+de|gerencia|oficina\s+de|manual\s+de\s+usuario|reglamento|directiva|tarifario|resolucion|version|codigo\s*:|fecha\s*:|vigencia\s*:|pimentel|chiclayo|peru|\d{4})\b/i.test(
+        normLine
+      )
+    return !isCoverMetaLine
+  })
+
+  const substantiveLength = nonCoverLines.reduce((acc, l) => acc + l.length, 0)
+  if (substantiveLength < 55) {
+    return true
+  }
+
+  return false
 }
 
 export async function routeQueryToToCBranches(
@@ -220,7 +361,7 @@ export async function routeQueryToToCBranches(
  */
 export async function searchKnowledgeBase(
   query: string,
-  topK: number = 4,
+  topK: number = DEFAULT_RAG_TOP_K,
   minScore: number = 0.50,
   categoryFilter?: string | null,
   context?: SearchKnowledgeBaseContext
@@ -345,6 +486,24 @@ export async function searchKnowledgeBase(
       }
     }
 
+    // FASE 3 (RESPALDO TRANSVERSAL): Evitar que un categoryFilter estrecho excluya documentos clave (ej. Tarifario, Pagos Virtuales)
+    if (categoryFilter && keywordConditions.length > 0) {
+      const crossCategoryChunks = await prisma.documentChunk.findMany({
+        where: {
+          document: { status: 'INDEXED' },
+          OR: keywordConditions,
+        },
+        take: 25,
+        include: chunkInclude,
+      })
+
+      for (const chunk of crossCategoryChunks) {
+        if (!candidateMap.has(chunk.id)) {
+          candidateMap.set(chunk.id, chunk)
+        }
+      }
+    }
+
     let candidateChunks = Array.from(candidateMap.values())
 
     // Red de Seguridad contra Falsos Negativos (Resiliencia):
@@ -364,7 +523,21 @@ export async function searchKnowledgeBase(
       return []
     }
 
-    // 3. ETAPA 2 (STAIR): Recuperación Semántica Fina (Leaf Retrieval con Similitud Coseno)
+    // Filtrar portadas/carátulas, índices ToC y preámbulos introductorios vacíos antes de vectorizar/rerankear
+    const filteredCandidates = candidateChunks.filter(
+      (c) =>
+        !isLowValueBoilerplateChunk(
+          c.content,
+          c.metadata as Record<string, unknown> | null
+        )
+    )
+    const filteredBoilerplateCount =
+      candidateChunks.length - filteredCandidates.length
+    if (filteredCandidates.length > 0) {
+      candidateChunks = filteredCandidates
+    }
+
+    // 3. ETAPA 2 (STAIR): Recuperación Semántica Fina (Leaf Retrieval con Pool Inicial + Reranker Híbrido)
     try {
       const embStartTime = Date.now()
       const { embedding: queryEmbedding, tokens: queryTokens } =
@@ -407,18 +580,26 @@ export async function searchKnowledgeBase(
         metadata: {
           queryLength: cleanQuery.length,
           candidatesEvaluated: candidateChunks.length,
+          filteredBoilerplateCount,
+          initialCandidatesPool: Math.min(
+            candidateChunks.length,
+            RAG_INITIAL_CANDIDATES
+          ),
           missingEmbeddingsCalculated: missingEmbeddingIndices.length,
           tocBranchesMatched: routeMatches.length,
         },
       }).catch((err) => console.warn('[RAG_EMBEDDING_TOKEN_LOG_WARN]', err))
 
-      // Calcular similitud coseno sobre cada fragmento e inyectar metadatos STAIR
-      const scoredResults: RetrievedSource[] = candidateChunks.map((chunk, idx) => {
+      // Etapa 2A: Similitud coseno inicial y selección de los mejores candidatos para el reranker
+      const vectorScored = candidateChunks.map((chunk, idx) => {
         const chunkVector = resolvedEmbeddings[idx]
         const rawSim = chunkVector
           ? computeCosineSimilarity(queryEmbedding, chunkVector)
           : 0.5
-        let similarity = isNaN(rawSim) ? 0.0 : rawSim
+        const vectorScore = Math.max(
+          0,
+          Math.min(1, isNaN(rawSim) ? 0.0 : rawSim)
+        )
 
         const meta = chunk.metadata as Record<string, unknown> | null
         const categoria =
@@ -440,26 +621,125 @@ export async function searchKnowledgeBase(
             ((capitulo && m.branchTitle.includes(capitulo)) ||
               (articulo && m.articleTitle && m.articleTitle.includes(articulo)))
         )
-        if (isMatchedBranch) {
-          similarity = Math.min(1.0, similarity + 0.05)
-        }
+        const tocBoost = isMatchedBranch ? 0.04 : 0
 
-        const safeRelevance = isNaN(similarity) ? 0.0 : similarity
-
-        return {
+        const source: RetrievedSource = {
           chunkId: chunk.id,
           documentId: chunk.document.id,
           title: chunk.document.title,
           sourceUrl: chunk.document.publicUrl || chunk.document.fileUrl,
           pageNumber: chunk.pageNumber,
           snippetText: chunk.content.trim(),
-          relevance: Number(Math.max(0, Math.min(1, safeRelevance)).toFixed(3)),
+          relevance: vectorScore,
           embeddingModel: DEFAULT_EMBEDDING_MODEL,
           categoria,
           anioVigencia,
           breadcrumb,
           capitulo,
           articulo,
+        }
+
+        return {
+          vectorScore,
+          tocBoost,
+          source,
+        }
+      })
+
+      // Quedarse con los 25 mejores candidatos iniciales antes del reranker
+      const initialPool = vectorScored
+        .sort(
+          (a, b) =>
+            b.vectorScore + b.tocBoost - (a.vectorScore + a.tocBoost)
+        )
+        .slice(0, RAG_INITIAL_CANDIDATES)
+
+      // Etapa 2B: Reranker híbrido determinista sobre los 25 candidatos
+      const normQuery = normalizeSearchText(cleanQuery)
+      const normKeywords = Array.from(
+        new Set(
+          keywords
+            .map((w) => normalizeSearchText(w))
+            .filter((w) => w.length >= 3 && !SPANISH_STOP_WORDS.has(w))
+        )
+      )
+      const directArtMatch = cleanQuery.match(
+        /\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i
+      )
+      const directArtNum = directArtMatch
+        ? directArtMatch[1].replace(/[º°]/g, '').trim()
+        : null
+      const directArtRegex = directArtNum
+        ? new RegExp(
+            `\\b(?:art[íi]culo|art\\.?)\\s*${directArtNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![0-9a-z])`,
+            'i'
+          )
+        : null
+      const isCostQuery =
+        /(?:costo|precio|tasa|tarifa|tarifario|monto|cuanto|soles|uniforme|pago|pagar|derecho|segunda\s+matricula)/i.test(
+          normQuery
+        )
+
+      const scoredResults: RetrievedSource[] = initialPool.map((item) => {
+        const { source, vectorScore, tocBoost } = item
+        const normTitle = normalizeSearchText(source.title)
+        const normChunkText = normalizeSearchText(
+          `${source.title} ${source.breadcrumb || ''} ${source.snippetText}`
+        )
+
+        let matchedChunkWords = 0
+        let matchedTitleWords = 0
+        for (const word of normKeywords) {
+          const stem = word.length >= 5 ? word.slice(0, 5) : null
+          if (
+            normChunkText.includes(word) ||
+            (stem !== null && normChunkText.includes(stem))
+          ) {
+            matchedChunkWords++
+          }
+          if (
+            normTitle.includes(word) ||
+            (stem !== null && normTitle.includes(stem))
+          ) {
+            matchedTitleWords++
+          }
+        }
+
+        const lexicalCoverage =
+          normKeywords.length > 0 ? matchedChunkWords / normKeywords.length : 0
+        const lexicalBoost = lexicalCoverage * 0.10
+        const titleBoost = Math.min(0.05, matchedTitleWords * 0.025)
+
+        const directArticleBoost =
+          directArtRegex &&
+          (directArtRegex.test(source.articulo || '') ||
+            directArtRegex.test(source.breadcrumb || '') ||
+            directArtRegex.test(source.snippetText))
+            ? 0.10
+            : 0
+
+        const hasCostSignals =
+          /S\/\s*\d/i.test(source.snippetText) ||
+          /\|[^|\n]+\|/.test(source.snippetText) ||
+          normTitle.includes('tarifario')
+        const costTableBoost = isCostQuery && hasCostSignals ? 0.08 : 0
+
+        const finalScore = Math.max(
+          0,
+          Math.min(
+            1,
+            vectorScore +
+              tocBoost +
+              lexicalBoost +
+              titleBoost +
+              directArticleBoost +
+              costTableBoost
+          )
+        )
+
+        return {
+          ...source,
+          relevance: Number(finalScore.toFixed(3)),
         }
       })
 
