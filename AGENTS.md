@@ -168,11 +168,14 @@ Cualquier valor constante, configuración estática o texto institucional **NUNC
 
 ### 📌 Estructura y Módulos de Constantes:
 
-- **`constants/prompts.ts`**: Prompts de sistema (`SIPANGPT_SYSTEM_PROMPT`), instrucciones institucionales de la USS y constructores de contexto RAG (`buildSystemPromptWithSources`).
-- **`constants/models.ts`**: Lista de modelos disponibles (`SYSTEM_MODELS`), modelo por defecto (`DEFAULT_MODEL_CODE`), proveedor por defecto (`DEFAULT_PROVIDER`).
+- **`constants/prompts.ts`**: Prompts de sistema (`SIPANGPT_SYSTEM_PROMPT`), constructores de contexto RAG (`buildSystemPromptWithSources`) y prompts de transcripción OCR (`DOCUMENT_OCR_TRANSCRIPTION_PROMPT`, `DOCUMENT_OCR_RECITATION_FALLBACK_PROMPT`).
+- **`constants/models.ts`**: Lista de modelos disponibles (`SYSTEM_MODELS`), modelo por defecto (`DEFAULT_MODEL_CODE`), modelo OCR (`DOCUMENT_TRANSCRIPTION_MODEL_CODE`, `DOCUMENT_TRANSCRIPTION_THINKING_LEVEL`), cascada fallback OCR y niveles de razonamiento (`ThinkingLevel`).
+- **`constants/chat.ts`**: Parámetros del índice RAG en RAM (`RAG_CACHE_TTL_MS`, `RAG_INITIAL_CANDIDATES`, `DEFAULT_RAG_TOP_K`, `RAG_APPROVAL_RESOLUTION_PENALTY`, `RAG_COST_TABLE_BOOST`, `RAG_MAX_CHUNKS_PER_DOC`, `RAG_MAX_MERGED_CHUNK_CHARS`) y límites conversacionales (`MAX_QUESTIONS_PER_CONVERSATION`).
+- **`constants/rag-snapshot.ts`**: Formato, versión y tamaño de lote (`RAG_SNAPSHOT_FORMAT`, `RAG_SNAPSHOT_VERSION`, `RAG_SNAPSHOT_IMPORT_BATCH_SIZE`) para migración portátil `.json.gz`.
 - **`constants/questions.ts`**: Preguntas sugeridas para estudiantes y usuarios (`INITIAL_QUESTIONS`).
 - **`constants/routes.ts`**: Rutas canónicas del sistema (`ROUTES.PUBLIC`, `ROUTES.PROTECTED`, `ROUTES.ADMIN`).
 - **`constants/admin.ts`**: Correos administradores iniciales para auto-promoción (`INITIAL_ADMIN_EMAILS`, `isInitialAdminEmail`).
+- **`constants/stopwords.ts`**, **`constants/internal-auth.ts`**, **`constants/cache.ts`**: Stop words en español para ToC/BM25, credenciales de benchmark interno y rutas de revalidación.
 - **`constants/index.ts`**: Archivo barril que re-exporta todas las constantes para importarlas directamente desde `@/constants`:
 
 ```typescript
@@ -180,6 +183,9 @@ import {
   buildSystemPromptWithSources,
   DEFAULT_MODEL_CODE,
   DEFAULT_PROVIDER,
+  DEFAULT_RAG_TOP_K,
+  DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+  RAG_SNAPSHOT_IMPORT_BATCH_SIZE,
   INITIAL_QUESTIONS,
   INITIAL_ADMIN_EMAILS,
   ROUTES
@@ -281,4 +287,32 @@ Para destacar la identidad visual institucional sin sobrecargar la interfaz:
 2. **Enlaces Institucionales y Autoría:**
    - Todo crédito al autor debe referenciar a su perfil profesional oficial (`https://www.linkedin.com/in/jhangomez`) y aplicar el efecto hover interactivo.
    - Toda mención legal a la universidad debe enlazar de forma segura al portal oficial (`https://www.uss.edu.pe`, `target='_blank'`, `rel='noopener noreferrer'`).
+
+---
+
+# 🧠 Protocolo del Motor RAG Sipán-STAIR, OCR Multimodal y Migración por Snapshots
+
+### 📌 1. Invalidación Obligatoria del Índice Vectorial en Memoria (`invalidateRagCache`)
+
+El buscador híbrido (`lib/ai/rag.ts`) mantiene en `globalThis.__sipanRagCacheStore` el 100 % de los fragmentos activos (`INDEXED`) pre-normalizados en `Float32Array` junto con `tocTree` e índice BM25:
+- Toda mutación sobre `Document` o `DocumentChunk` (ingesta, edición manual de chunk, re-procesamiento, cambio de estado, eliminación o importación de snapshots) **DEBE** invocar `invalidateRagCache()` después de persistir en PostgreSQL (y recalcular `metadata.embedding` vía `generateEmbedding()` si cambió `content`).
+
+### 📌 2. Regla Ética de Cero Fabricación en Curación OCR
+
+- Al auditar o corregir fragmentos de un documento, **contrasta obligatoriamente** `DocumentChunk.content` contra el PDF oficial (`publicUrl` / `fileUrl`).
+- **NUNCA** inventes puntajes, botones, dígitos, casillas `[x]/[ ]` ni flujos que no aparezcan explícitamente en el PDF cargado en SipánGPT. Si una captura está recortada o pertenece a otra versión del manual, documéntalo de forma neutra sin fabricar valores.
+
+### 📌 3. Portabilidad Local → Producción mediante Snapshots RAG (`.json.gz`)
+
+Para mover documentos ya curados y sus embeddings `3072`d desde desarrollo hacia producción sin re-ejecutar Gemini OCR ni recalcular vectores:
+- **Exportación (`GET /api/admin/documents/export`):** Empaqueta categorías (`TopicCategory`), documentos (incluyendo `tocTree` y `publicUrl`), y fragmentos con embeddings compactados en `Float32` Base64 (`f32-base64`) comprimidos con GZIP. Usar `scope=indexed` para llevar únicamente la base activa limpia a producción.
+- **Importación en 3 Fases (`POST /api/admin/documents/import`):**
+  1. `prepare`: sincroniza `TopicCategory` por código/nombre (sin borrar categorías existentes), ejecuta limpieza total (`mode: 'replace'`) o selectiva (`mode: 'merge'`) preservando citas históricas de chats (`MessageCitation` vía `onDelete: SetNull`), y prepara encabezados de `Document`.
+  2. `import-chunks`: inserta fragmentos en lotes acotados (`RAG_SNAPSHOT_IMPORT_BATCH_SIZE = 40`, máx. `100` en servidor) para evitar límites de cuerpo HTTP en proxies inversos, reconstruyendo `metadata.embedding` como arreglo numérico.
+  3. `finalize`: recalcula `chunkCount` real, restaura el `status` final de cada documento e invoca `invalidateRagCache()` + `revalidatePath()`.
+- **Uso de campos JSON en Prisma 7:** Para campos `Json?` nulos (`tocTree`, `metadata`), utilizar siempre `Prisma.JsonNull` importado desde `@/lib/prisma`.
+
+### 📌 4. Seguridad en Route Handlers Administrativos (`/api/admin/**`)
+
+- Todo endpoint bajo `/api/admin/**` **DEBE** validar la sesión y rol en la primera línea mediante `getAdminApiAuth()` (`lib/session.ts`) o verificación explícita `auth()` + `Role.ADMIN`, devolviendo respuestas JSON `401` (sin sesión) o `403` (sin permisos) sin redirigir.
 

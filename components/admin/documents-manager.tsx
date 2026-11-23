@@ -17,7 +17,11 @@ import {
 } from '@/lib/actions/admin-documents'
 import { DocumentUploadZone } from '@/components/admin/document-upload-zone'
 import { DocumentPreviewSheet } from '@/components/admin/document-preview-sheet'
-import { DEFAULT_EMBEDDING_MODEL } from '@/constants'
+import { RagSnapshotDialog } from '@/components/admin/rag-snapshot-dialog'
+import {
+  DEFAULT_EMBEDDING_MODEL,
+  DOCUMENT_TRANSCRIPTION_MODEL_CODE
+} from '@/constants'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -75,7 +79,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   MoreVertical,
-  RotateCcw
+  RotateCcw,
+  ArrowDownUp
 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/utils'
 import type { DocumentStatus } from '@/lib/prisma'
@@ -177,6 +182,7 @@ export function DocumentsManager({
     null
   )
   const [showPipelineInfo, setShowPipelineInfo] = React.useState(false)
+  const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = React.useState(false)
   const [isRefreshing, setIsRefreshing] = React.useState(false)
 
   // Paginación de Documentos
@@ -193,8 +199,13 @@ export function DocumentsManager({
     if (!silent) setIsRefreshing(true)
     try {
       const data = await getAdminDocuments()
-      setDocuments(data.documents as unknown as DocumentItem[])
+      const refreshedDocs = data.documents as unknown as DocumentItem[]
+      setDocuments(refreshedDocs)
       setStats(data.stats)
+      setSelectedDocForChunks((prev) => {
+        if (!prev) return refreshedDocs[0] ?? null
+        return refreshedDocs.find((d) => d.id === prev.id) ?? (refreshedDocs[0] ?? null)
+      })
       if (!silent) {
         toast.success('Estado de los documentos actualizado.')
       }
@@ -634,6 +645,14 @@ export function DocumentsManager({
         </div>
 
         <div className='flex items-center gap-2 flex-wrap'>
+          <Button
+            variant='outline'
+            onClick={() => setIsSnapshotDialogOpen(true)}
+            className='gap-1.5 rounded-2xl cursor-pointer text-xs font-semibold border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10'
+          >
+            <ArrowDownUp className='w-3.5 h-3.5' /> Exportar / Importar RAG
+          </Button>
+
           <Button
             variant='outline'
             onClick={() => setShowPipelineInfo(true)}
@@ -1912,6 +1931,21 @@ export function DocumentsManager({
       />
 
       {/* ========================================================================= */}
+      {/* MODAL DE EXPORTACIÓN E IMPORTACIÓN PORTÁTIL DE SNAPSHOTS RAG */}
+      {/* ========================================================================= */}
+      <RagSnapshotDialog
+        open={isSnapshotDialogOpen}
+        onOpenChange={setIsSnapshotDialogOpen}
+        currentStats={{
+          total: stats.total,
+          indexed: stats.indexed
+        }}
+        onImportComplete={async () => {
+          await handleRefreshDocuments(true)
+        }}
+      />
+
+      {/* ========================================================================= */}
       {/* VISUALIZADOR AVANZADO DE DOCUMENTOS EN SHEET LATERAL DESLIZANTE */}
       {/* ========================================================================= */}
       <DocumentPreviewSheet
@@ -1972,9 +2006,11 @@ export function DocumentsManager({
                   OCR)
                 </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  Gemini 2.5 Flash lee el documento binario página por página y
-                  lo convierte a formato Markdown estructurado con títulos (#),
-                  viñetas, tablas y delimitadores (
+                  <strong>{DOCUMENT_TRANSCRIPTION_MODEL_CODE}</strong>{' '}
+                  (con cascada de respaldo y manejo anti-recitación) lee el PDF
+                  página por página y lo transcribe a Markdown estructurado con
+                  títulos (<code className='font-mono'>#</code>), tablas GFM,
+                  bloques de capturas de interfaz y delimitadores (
                   <code className='font-mono'>--- Página X ---</code>).
                 </p>
               </div>
@@ -1987,12 +2023,13 @@ export function DocumentsManager({
               </div>
               <div className='space-y-0.5'>
                 <p className='font-bold text-foreground'>
-                  Fragmentación Semántica con Solapamiento (Chunking & Overlap)
+                  Chunking Estructural Sipán-STAIR y Árbol ToC
                 </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  El texto se segmenta en bloques de ~650 caracteres con 90
-                  caracteres de solapamiento (overlap) para garantizar que las
-                  frases no se corten abruptamente.
+                  Extrae el árbol jerárquico (<code className='font-mono'>tocTree</code>)
+                  y segmenta respetando fronteras de Títulos, Capítulos,
+                  Artículos y secciones de manuales, inyectando breadcrumbs en
+                  cada fragmento.
                 </p>
               </div>
             </div>
@@ -2021,13 +2058,14 @@ export function DocumentsManager({
               </div>
               <div className='space-y-0.5'>
                 <p className='font-bold text-foreground'>
-                  Indexación Activa en PostgreSQL (pgvector) & Citación en Chat
+                  Índice Vectorial L2 en Memoria RAM & Recuperación Híbrida RRF
                 </p>
                 <p className='text-muted-foreground leading-relaxed text-[11px]'>
-                  El documento pasa a estado <strong>INDEXED</strong>. Cuando un
-                  estudiante pregunta algo, SipánGPT compara el coseno de
-                  similitud, inyecta los mejores fragmentos en el prompt y
-                  genera citas oficiales con enlace al PDF.
+                  El documento pasa a estado <strong>INDEXED</strong>. Ante cada
+                  consulta, SipánGPT evalúa similitud coseno en caché RAM,
+                  combina con ranking léxico BM25 mediante RRF y enrutamiento ToC,
+                  expande vecinos contiguos e inyecta hasta los 8 mejores
+                  fragmentos con enlace directo al PDF.
                 </p>
               </div>
             </div>

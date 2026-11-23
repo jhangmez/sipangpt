@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import type { Role } from '@/lib/prisma'
+import { Role } from '@/lib/prisma'
 
 /**
  * Obtiene el usuario autenticado actual desde la sesión.
@@ -41,4 +41,26 @@ export async function requireRole(
     redirect(redirectTo)
   }
   return user
+}
+
+/**
+ * Guard de autenticación y rol ADMIN para Route Handlers (/api/admin/**).
+ * Devuelve el estado de autorización sin redirigir, listo para responder 401/403 JSON.
+ */
+export async function getAdminApiAuth(): Promise<
+  | { authorized: true; userId: string }
+  | { authorized: false; error: string; status: 401 | 403 }
+> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { authorized: false, error: 'No autorizado', status: 401 }
+  }
+  if (session.user.role !== Role.ADMIN) {
+    return {
+      authorized: false,
+      error: 'Se requiere rol de administrador',
+      status: 403,
+    }
+  }
+  return { authorized: true, userId: session.user.id }
 }

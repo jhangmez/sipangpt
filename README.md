@@ -30,7 +30,7 @@ La plataforma incorpora una arquitectura **RAG (Retrieval-Augmented Generation) 
 
 ### 1. 💬 Experiencia de Chat Conversacional Avanzada
 - **Streaming de Texto en Tiempo Real:** Implementado con **Vercel AI SDK 7.x** (`streamText`, `createUIMessageStreamResponse`, `toUIMessageStream`) y decodificación reactiva de paquetes SSE (`text-delta`, `reasoning-delta`).
-- **Ventana de Generación Ampliada:** Salida de hasta **2,048 tokens por respuesta** (`maxOutputTokens: 2048`), garantizando respuestas exhaustivas en procedimientos administrativos extensos sin cortes abruptos.
+- **Ventana de Generación Ampliada y Pensamiento Configurable:** Salida de hasta **4,096 tokens por respuesta** (`6,144` tokens en Gemini 3+), selector de nivel de razonamiento (`ThinkingLevel`: `low`, `medium`, `high`) y condensación contextual multiturno en `rewriteAndExpandQuery`.
 - **Límite Preventivo por Conversación:** Control automático que limita a un máximo de **20 consultas de usuario por chat** para prevenir la degradación de contexto y orientar al usuario a iniciar una nueva sesión focalizada.
 - **Persistencia y Continuidad de Sesión:** Creación de conversaciones por adelantado, sincronización dinámica de URLs (`/chat/[id]`), regeneración y branching de respuestas alternativas con trazabilidad de mensajes padre/hijo.
 - **Renderizador Markdown Shadcn de Alta Precisión (`shadcn-markdown`):**
@@ -49,43 +49,42 @@ Para la recuperación de normativas universitarias y reglamentos oficiales de la
 
 ```mermaid
 graph TD
-    subgraph INGESTA_DUAL ["📥 1. Ingesta Dual de Documentos"]
+    subgraph INGESTA_DUAL ["📥 1. Ingesta Dual / Snapshot Portátil"]
         A1["📂 Archivo Local (Drag & Drop / Explorar)"] --> P["⚡ Pre-procesamiento de Archivo"]
         A2["🔗 Enlace Web / URL (Portal USS / SUNEDU)"] --> P
+        A3["📦 Snapshot RAG (.json.gz Float32 Base64)"] -. Importación por lotes .-> F
     end
 
-    P --> B["🤖 2. OCR Multimodal Gemini (65k Tokens + Continuación Multi-Pass)"]
-    B --> C["🌳 3. Extractor de Árbol ToC Canónico (Títulos > Capítulos > Artículos)"]
-    C --> D["✂️ 4. Chunking Estructural por Artículos Completos (sin cortes arbitrarios)"]
-    D --> E["📐 5. Generación de Embeddings Vectoriales (gemini-embedding-2)"]
+    P --> B["🤖 2. OCR Multimodal gemini-4-hydrogen (medium) + Cascada Anti-RECITATION"]
+    B --> C["🌳 3. Extractor de Árbol ToC Canónico (Reglamentos + Manuales)"]
+    C --> D["✂️ 4. Chunking Estructural Sipán-STAIR + [Captura de pantalla - Interfaz]"]
+    D --> E["📐 5. Generación de Embeddings Vectoriales (gemini-embedding-2, 3072d)"]
     E --> F["🗄️ 6. Indexación en Neon PostgreSQL (Document.tocTree + DocumentChunk)"]
+    F --> M["⚡ Índice Vectorial L2 en Caché RAM (globalThis Float32Array)"]
 
-    subgraph CONSULTA ["🧑‍🎓 7. Recuperación en Dos Etapas (Two-Stage ToC Retrieval)"]
-        Q["❓ Consulta del Estudiante"] --> R1["🌳 Etapa 1: Poda de Árbol ToC en Memoria (routeQueryToToCBranches)"]
-        R1 --> R2["🎯 Etapa 2: Búsqueda Vectorial Semántica en Hojas (Leaf Retrieval - Top 4)"]
-        R2 --> CIT["📌 8. Generación con Cita Jerárquica y Enlace Oficial (publicUrl)"]
+    subgraph CONSULTA ["🧑‍🎓 7. Recuperación Híbrida en Dos Etapas (RRF + ToC + Vecinos)"]
+        Q["❓ Consulta + Condensación Multiturno"] --> R1["🌳 Etapa 1: Poda de Árbol ToC en Memoria (routeQueryToToCBranches)"]
+        R1 --> R2["🎯 Etapa 2A/2B: RRF Híbrido (Coseno 100% + BM25) · Top 8 + Diversidad"]
+        M --> R2
+        R2 --> R3["🔗 Expansión Simétrica de Vecinos Contiguos (chunkIndex ± 1, ≤ 6,500 chars)"]
+        R3 --> CIT["📌 8. Generación con Fidelidad Literal y Enlace Oficial (publicUrl)"]
     end
 ```
 
 #### Pilares Metodológicos y Mejoras Recientes de Sipán-STAIR:
 1. **🌳 Extracción y Persistencia del Árbol ToC (`Document.tocTree`):**
-   - Construye una representación jerárquica canónica de la norma (`Secciones > Capítulos > Artículos`).
-   - Almacenado como estructura `JSONB` en PostgreSQL para permitir podas de árbol en memoria ultrarrápidas (< 5ms).
-2. **✂️ Chunking Estructural por Artículos Completos (`splitTextIntoStructuralChunks`):**
-   - Delimita el fragmento respetando las fronteras normativas del reglamento, evitando cortes a mitad de artículos o párrafos.
-   - Si un artículo es muy extenso (> 3,000 caracteres), se segmenta internamente preservando el contexto padre.
-   - **Inyección de Breadcrumbs Contextuales:** Cada fragmento incluye en su cabecera y metadatos la ruta jerárquica completa (ej: `[Reglamento General de Matrícula USS > Capítulo II > Artículo 17: Matrícula Extemporánea]`).
-3. **🎯 Enrutamiento ToC Flexible y Resiliente (Etapa 1):**
-   - **Detección Flexible de Artículos:** Expresión regular robusta con soporte para prefijos y sufijos alfanuméricos (`/\b(?:art[íi]culo|art\.?)\s*([0-9]+[A-Za-z\-º°]*)/i`), reconociendo variantes como `"art 15"`, `"art. 15"`, `"artículo 15"`, `"art. 17-A"` y limpiando símbolos de grado (`º`, `°`).
-   - **Filtro de Stop Words en Español:** Excluye preposiciones y artículos frecuentes (`del`, `los`, `con`, `para`, `sobre`, `hacia`) definidos en `constants/stopwords.ts` para evitar sesgos de puntuación.
-   - **Taxonomía Universitaria Homologada:** Alineación de temas con códigos de categorías (`MATRICULA`, `PAGOS`, `GRADOS`, etc.) y soporte para categorías de ámbito universal (`UNIVERSAL_CATEGORY_CODES`).
-4. **🎯 Recuperación Vectorial de Alta Fidelidad (Etapa 2 - Leaf Retrieval):**
-   - Búsqueda semántica combinada con similitud de coseno (`gemini-embedding-2`) sobre las ramas podadas, ampliando el conjunto de fuentes a **Top 4 fragmentos (`top_k: 4`)**.
-   - **Filtro Estricto de Estado:** Exclusión garantizada de documentos desindexados (`status: DEINDEXED`).
-   - **Bonificación de Rama Coincidente (+0.05):** Incremento de relevancia cuando un fragmento coincide estructuralmente con el capítulo o artículo detectado.
-   - **Red de Seguridad (Safety Net):** Si la consulta no supera el umbral estricto configurado, el sistema recurre a los fragmentos más afines ($\ge 0.35$) o a un ranking léxico de respaldo, garantizando cero fallos silenciosos.
-5. **📌 Citas Oficiales con Enlace Institucional Directo:**
-   - Cada respuesta cita con precisión la norma, capítulo y artículo correspondiente, enlazando directamente al documento oficial (`publicUrl` o `fileUrl`) para auditoría del estudiante.
+   - Construye una representación jerárquica canónica tanto para reglamentos (`Títulos > Capítulos > Artículos`) como para manuales (`Secciones ## / ###`), activando solapamiento real (~250 caracteres) cuando una sección extensa se subdivide.
+   - Almacenado como estructura `JSONB` en PostgreSQL y cacheado en RAM junto con los fragmentos para permitir podas ultrarrápidas sin consultas redundantes por petición.
+2. **🤖 Motor OCR Multimodal `gemini-4-hydrogen` (`thinkingLevel: 'medium'`):**
+   - Transcribe íntegramente tablas, artículos y bloques `[Captura de pantalla - Interfaz]` (precisión espacial, botones con color, pestañas, campos numerados y casillas `[x]`/`[ ]`).
+   - Incluye cascada automática de respaldo (`gemini-3.5-flash`, `gemini-3.1-flash-lite`), reintento anti-pereza y prompt estructural anti-`RECITATION`, garantizando transcripciones completas auditadas contra el PDF original (regla de cero fabricación).
+3. **⚡ Índice Vectorial L2 en Caché RAM (`globalThis.__sipanRagCacheStore`):**
+   - Precarga y normaliza en `Float32Array` los vectores del **100 % de los chunks activos (`INDEXED`)** filtrando carátulas y resoluciones de aprobación administrativas salvo consulta explícita (`RAG_APPROVAL_RESOLUTION_PENALTY = 0.22`), con patrón *single-flight*, TTL de 5 min, validación de versión cada 60 s e invalidación inmediata vía `invalidateRagCache()`.
+4. **🎯 Fusión Híbrida RRF, Reranker con Diversidad y Expansión Contigua (`Top 8`):**
+   - Combina el **100 % de la similitud coseno en RAM** con ranking léxico **BM25** mediante *Reciprocal Rank Fusion (RRF)* (`RAG_INITIAL_CANDIDATES = 25`), entregando hasta **8 fragmentos (`DEFAULT_RAG_TOP_K = 8`)**.
+   - Incorpora boost para tarifarios/montos reales (`RAG_COST_TABLE_BOOST = 0.11`), límite de diversidad de **máx. 3 fragmentos por documento** (`RAG_MAX_CHUNKS_PER_DOC = 3` con umbral `>= 0.58` para consultas operativas) y **expansión simétrica de vecinos contiguos** (`chunkIndex ± 1`, hasta `6,500` caracteres en `RAG_MAX_MERGED_CHUNK_CHARS`).
+5. **📌 Fidelidad Literal y Citas Oficiales con Enlace Institucional:**
+   - Exige conservar textualmente botones, rutas, columnas, estados y casillas, prohíbe contaminar pasos entre trámites distintos y enlaza al documento oficial (`publicUrl` o `fileUrl`).
 
 ---
 
@@ -127,6 +126,11 @@ El administrador regula la plataforma desde `/admin/settings`, aplicándose de f
   - Edición en línea de texto y metadatos jerárquicos preservando datos contextuales previos (`prevMeta`).
   - Creación manual de nuevos fragmentos heredando categoría y año de vigencia.
   - Contador de citas realizadas por la IA por cada fragmento.
+- **Re-procesamiento OCR e Ingesta Sin Eliminar Registros:**
+  - Botón contextual para re-ejecutar el pipeline completo OCR (`gemini-4-hydrogen`) + ToC + embeddings desde el catálogo manteniendo el registro documental, URL pública y citas históricas (preservando el estado `INDEXED` previo si ocurre un fallo).
+- **Exportación e Importación Portátil de Snapshots RAG (`.json.gz`):**
+  - Empaquetado compacto (`Float32` Base64 + compresión GZIP) de categorías, documentos, árboles `tocTree` y fragmentos con sus embeddings de `3072` dimensiones desde `/admin/documents` (`GET /api/admin/documents/export`).
+  - Importación guiada por lotes de **40 fragmentos** (`POST /api/admin/documents/import`) en modos **Reemplazar todo** (limpieza total de documentos/chunks preservando chats, usuarios y configuraciones) o **Combinar / Actualizar**, tolerante a límites de proxy y **sin re-ejecutar OCR ni recalcular embeddings en producción**.
 - **Limpieza Automática en Storage al Eliminar:**
   - Al borrar un reglamento desde el panel de administración, el sistema elimina los registros en PostgreSQL y ejecuta la eliminación remota del archivo binario en la CDN de **UploadThing** vía `UTApi.deleteFiles`.
 
@@ -333,6 +337,9 @@ sipangpt/
 │   │       ├── questions/              # Preguntas sugeridas dinámicas
 │   │       └── settings/               # Políticas de gobernanza, RAG, Web y Slider
 │   ├── api/                            # API Routes & Webhooks
+│   │   ├── admin/documents/
+│   │   │   ├── export/route.ts         # Exportación de Snapshots RAG (.json.gz)
+│   │   │   └── import/route.ts         # Importación por lotes de Snapshots RAG (3 fases)
 │   │   ├── auth/                       # Endpoints de NextAuth.js
 │   │   ├── chat/                       # Streaming SSE, RAG STAIR y clave interna
 │   │   ├── feedback/                   # Calificaciones de respuestas (1-5 estrellas)
@@ -350,6 +357,7 @@ sipangpt/
 │   │   ├── document-upload-zone.tsx    # Ingesta dual: archivos locales y enlaces web
 │   │   ├── documents-manager.tsx       # Gestor RAG, paginación, editor de chunks y estados
 │   │   ├── models-manager.tsx          # Panel de estado, salud y tarifas de modelos
+│   │   ├── rag-snapshot-dialog.tsx     # Modal Exportar / Importar Snapshots RAG (.json.gz)
 │   │   └── settings-manager.tsx        # Panel de políticas de gobernanza y Slider RAG
 │   ├── chat/                           # Componentes del módulo de chat
 │   │   ├── chat-empty-state.tsx        # Bienvenida y tarjetas de preguntas sugeridas
@@ -384,10 +392,13 @@ sipangpt/
 │
 ├── constants/                          # Constantes institucionales centralizadas
 │   ├── admin.ts                        # Correos de administradores iniciales
+│   ├── cache.ts                        # Rutas para revalidación ISR / Server Actions
+│   ├── chat.ts                         # Parámetros de caché RAM, Top-K (8), RRF y límites de chat
 │   ├── internal-auth.ts                # Claves de cabecera y usuario de benchmark
-│   ├── models.ts                       # Catálogo de modelos de IA, embeddings y precios
-│   ├── prompts.ts                      # Prompts del sistema SipánGPT e inyectores RAG
+│   ├── models.ts                       # Catálogo de modelos IA, OCR (gemini-4-hydrogen) y precios
+│   ├── prompts.ts                      # Prompts de chat, transcripción OCR y anti-recitación
 │   ├── questions.ts                    # Preguntas iniciales sugeridas
+│   ├── rag-snapshot.ts                 # Formato, versión y tamaño de lote para Snapshots RAG
 │   ├── routes.ts                       # Rutas canónicas públicas, protegidas y admin
 │   ├── stopwords.ts                    # Lista de stop words en español para enrutamiento ToC
 │   ├── topic-categories.ts             # Taxonomía temática universitaria
@@ -404,19 +415,20 @@ sipangpt/
 │   │   ├── admin-settings.ts           # Acciones de políticas de gobernanza
 │   │   └── user-settings.ts            # Acciones de memorias, perfil y consumo
 │   ├── ai/                             # Módulo de Inteligencia Artificial
-│   │   ├── document-processor.ts       # Chunking STAIR, OCR multimodal 65k y continuación
+│   │   ├── document-processor.ts       # Chunking STAIR, OCR gemini-4-hydrogen y cascada fallback
 │   │   ├── embeddings.ts               # Embeddings vectoriales con cómputo de tokens seguro
 │   │   ├── providers.ts                # Inicializador de proveedores Vercel AI SDK
-│   │   ├── query-rewriter.ts           # Pre-RAG NLU, expansión y detección de intenciones
-│   │   ├── rag.ts                      # Two-Stage ToC Retrieval, top-4 y búsqueda resiliente
+│   │   ├── query-rewriter.ts           # Pre-RAG NLU, condensación multiturno y expansión
+│   │   ├── rag-snapshot.ts             # Codec isomórfico Float32 Base64 y validación de snapshots
+│   │   ├── rag.ts                      # Caché L2 en RAM, RRF híbrido, vecinos y ToC (top-8)
 │   │   ├── resolution-detector.ts      # Detección analítica del estado de resolución
-│   │   ├── toc-extractor.ts            # Extractor canónico de ToC Tree y división por artículos
+│   │   ├── toc-extractor.ts            # Extractor ToC Tree (reglamentos/manuales) y overlap
 │   │   └── token-tracker.ts            # Auditoría y estimación de costos en USD
 │   ├── auth/                           # Módulo de autenticación interna y sincronización
 │   │   ├── internal-auth.ts            # Validación de API Key interna para pruebas de carga
 │   │   └── multi-tab-sync.ts           # Sincronización de sesión entre pestañas
 │   ├── prisma.ts                       # Singleton PrismaClient con Adapter PG y pool reutilizable
-│   ├── session.ts                      # Validación de sesión y roles (`requireRole`)
+│   ├── session.ts                      # Validación de sesión/roles (`requireRole`, `getAdminApiAuth`)
 │   ├── timeago.ts                      # Formateador de tiempo relativo en español
 │   ├── uploadthing.ts                  # Clientes y handlers de UploadThing
 │   └── utils.ts                        # Utilidades generales y función `cn`
