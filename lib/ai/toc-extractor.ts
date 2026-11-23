@@ -96,8 +96,11 @@ export function extractTocTreeFromMarkdown(
       currentPage = parseInt(pageMatch[1], 10)
     }
 
-    // 1. Detectar Título General (ej. "Título I: Disposiciones Generales")
-    if (isSectionHeader(rawLine) || /^#\s+(?!art|cap)/i.test(rawLine)) {
+    // 1. Detectar Título General (ej. "Título I: Disposiciones Generales" o encabezado H1 de manual)
+    if (
+      isSectionHeader(rawLine) ||
+      /^#\s+(?!(?:art[íi]culo\b|art\.|cap[íi]tulo\b|cap\.))(?=.*[\p{L}\p{N}])/iu.test(rawLine)
+    ) {
       const title = cleanTitle(rawLine)
       const secNum = extractSectionNumber(title)
 
@@ -113,8 +116,11 @@ export function extractTocTreeFromMarkdown(
       continue
     }
 
-    // 2. Detectar Capítulo (ej. "Capítulo II: De la Matrícula")
-    if (isChapterHeader(rawLine) || /^##\s+(?:cap[íi]tulo|cap\.)/i.test(rawLine)) {
+    // 2. Detectar Capítulo explícito (ej. "Capítulo II: De la Matrícula")
+    if (
+      isChapterHeader(rawLine) ||
+      /^#{2,3}\s+(?:cap[íi]tulo\b|cap\.)/i.test(rawLine)
+    ) {
       const title = cleanTitle(rawLine)
       const chapNum = extractChapterNumber(title)
 
@@ -134,8 +140,11 @@ export function extractTocTreeFromMarkdown(
       continue
     }
 
-    // 3. Detectar Artículo (ej. "Artículo 17: Matrícula Extemporánea" o "### Art 18" o "### Art. 18.-")
-    if (isArticleHeader(rawLine) || /^#{2,4}\s*(?:art[íi]culo|art\.?)/i.test(rawLine)) {
+    // 3. Detectar Artículo explícito (evaluar antes de encabezados ##/### de manuales)
+    if (
+      isArticleHeader(rawLine) ||
+      /^#{2,4}\s*(?:art[íi]culo\b|art\.|art\s+\d)/i.test(rawLine)
+    ) {
       const title = cleanTitle(rawLine)
       const artNum = extractArticleNumber(title)
 
@@ -155,6 +164,50 @@ export function extractTocTreeFromMarkdown(
         currentChapter = {
           title: 'Disposiciones y Articulado',
           articles: [articleItem],
+          pageNumber: currentPage,
+        }
+        tree.push(currentChapter)
+      }
+      continue
+    }
+
+    // 4. Detectar Sección H2 de manual (## ...) que no sea capítulo ni artículo formal
+    if (/^##\s+(?=.*[\p{L}\p{N}])/u.test(rawLine)) {
+      const title = cleanTitle(rawLine)
+      currentChapter = {
+        title,
+        chapterNumber: extractChapterNumber(title),
+        articles: [],
+        pageNumber: currentPage,
+      }
+
+      if (currentSection) {
+        if (!currentSection.chapters) currentSection.chapters = []
+        currentSection.chapters.push(currentChapter)
+      } else {
+        tree.push(currentChapter)
+      }
+      continue
+    }
+
+    // 5. Detectar Subsección H3 de manual (### ...) que no sea capítulo ni artículo formal
+    if (/^###\s+(?=.*[\p{L}\p{N}])/u.test(rawLine)) {
+      const title = cleanTitle(rawLine)
+      const stepItem: TocArticleItem = {
+        title,
+        articleNumber: extractArticleNumber(title),
+        pageNumber: currentPage,
+      }
+
+      if (currentChapter) {
+        currentChapter.articles.push(stepItem)
+      } else if (currentSection) {
+        if (!currentSection.articles) currentSection.articles = []
+        currentSection.articles.push(stepItem)
+      } else {
+        currentChapter = {
+          title: 'Secciones y Procedimientos',
+          articles: [stepItem],
           pageNumber: currentPage,
         }
         tree.push(currentChapter)
@@ -215,18 +268,156 @@ export function extractTocTreeFromMarkdown(
 }
 
 /**
+ * Calcula un bloque de traslape (overlap) contextual desde el final del chunk previo.
+ * Si el chunk previo termina dentro de una tabla Markdown, arrastra su encabezado
+ * y fila separadora (más la última fila si cabe) para preservar los títulos de columna.
+ */
+function computeParagraphOverlap(
+  prevChunkText: string,
+  overlapChars: number
+): string {
+  const cleanPrev = prevChunkText.trim()
+  if (overlapChars <= 0 || !cleanPrev) return ''
+
+  const prevLines = cleanPrev.split('\n')
+  const lastLine = prevLines[prevLines.length - 1]?.trim() ?? ''
+  if (lastLine.startsWith('|')) {
+    for (let idx = prevLines.length - 2; idx >= 0; idx--) {
+      const sep = prevLines[idx + 1]?.trim() ?? ''
+      const hdr = prevLines[idx]?.trim() ?? ''
+      if (hdr.startsWith('|') && /^\|[\s:-]+\|/.test(sep)) {
+        const headerBlock = `${hdr}\n${sep}`
+        if (
+          idx + 1 < prevLines.length - 1 &&
+          headerBlock.length + 1 + lastLine.length <= overlapChars + 140
+        ) {
+          return `${headerBlock}\n${lastLine}`
+        }
+        return headerBlock
+      }
+    }
+  }
+
+  const paragraphs = cleanPrev
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (paragraphs.length === 0) return ''
+
+  const selected: string[] = []
+  let totalLen = 0
+  for (let i = paragraphs.length - 1; i >= 0; i--) {
+    const para = paragraphs[i]
+    const nextLen = totalLen === 0 ? para.length : totalLen + 2 + para.length
+    if (nextLen <= overlapChars) {
+      selected.unshift(para)
+      totalLen = nextLen
+    } else {
+      break
+    }
+  }
+
+  if (selected.length > 0) {
+    return selected.join('\n\n')
+  }
+
+  const tail = paragraphs[paragraphs.length - 1]
+  const sliced = tail.slice(-overlapChars)
+  const firstWhitespace = sliced.search(/\s/)
+  return (firstWhitespace > 0 ? sliced.slice(firstWhitespace + 1) : sliced).trim()
+}
+
+/**
+ * Divide un texto extenso por párrafos (y por líneas si un bloque/tabla único excede
+ * maxChars), aplicando overlap real y arrastre de cabeceras de tablas Markdown.
+ */
+function splitParagraphsWithOverlap(
+  text: string,
+  maxChars: number,
+  overlapChars: number
+): string[] {
+  const rawParagraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  const blocks: string[] = []
+  const maxBlockLen = Math.max(400, maxChars - overlapChars - 160)
+
+  for (const para of rawParagraphs) {
+    if (para.length <= maxChars) {
+      blocks.push(para)
+      continue
+    }
+
+    const lines = para.split('\n')
+    let acc = ''
+    for (const line of lines) {
+      if (!acc) {
+        acc = line
+      } else if (acc.length + 1 + line.length <= maxBlockLen) {
+        acc = `${acc}\n${line}`
+      } else {
+        blocks.push(acc)
+        acc = line
+      }
+    }
+    if (acc.trim()) {
+      blocks.push(acc.trim())
+    }
+  }
+
+  const result: string[] = []
+  let current = ''
+
+  for (const block of blocks) {
+    const isTableContinuation =
+      current.trimEnd().endsWith('|') && block.trimStart().startsWith('|')
+    const sep = isTableContinuation ? '\n' : '\n\n'
+
+    if (!current) {
+      current = block
+    } else if (current.length + sep.length + block.length <= maxChars) {
+      current = `${current}${sep}${block}`
+    } else {
+      result.push(current)
+      const overlapPrefix = computeParagraphOverlap(current, overlapChars)
+      if (overlapPrefix) {
+        const nextIsTable =
+          overlapPrefix.trimEnd().endsWith('|') &&
+          block.trimStart().startsWith('|')
+        const nextSep = nextIsTable ? '\n' : '\n\n'
+        current =
+          overlapPrefix.length + nextSep.length + block.length <= maxChars + 140
+            ? `${overlapPrefix}${nextSep}${block}`
+            : block
+      } else {
+        current = block
+      }
+    }
+  }
+
+  if (current.trim()) {
+    result.push(current.trim())
+  }
+
+  return result
+}
+
+/**
  * Segmenta el texto en chunks semánticos basados en los artículos y secciones
  * naturales del reglamento (Arquitectura Sipán-STAIR), inyectando el Breadcrumb jerárquico.
  *
- * Cada artículo se convierte en una unidad semántica indivisible. Solo si un artículo
- * excede maxArticleChars (~3,000 caracteres) se subdivide internamente conservando
- * el breadcrumb padre con sufijo de subsección.
+ * Cada artículo o sección se convierte en una unidad semántica. Solo si excede
+ * maxArticleChars (~3,000 caracteres) se subdivide internamente con overlap real
+ * conservando el breadcrumb padre con sufijo de subsección.
  */
 export function splitTextIntoStructuralChunks(
   text: string,
   documentTitle: string = 'Reglamento Institucional USS',
   categoryCode: string = 'GENERAL',
-  maxArticleChars: number = 3000
+  maxArticleChars: number = 3000,
+  overlapChars: number = 250
 ): ParsedStructuralChunk[] {
   const clean = text.trim()
   if (!clean) return []
@@ -300,30 +491,13 @@ export function splitTextIntoStructuralChunks(
       return
     }
 
-    // Si el artículo es muy extenso (> maxArticleChars, ej. 50 incisos o tabla extensa),
-    // dividir internamente por párrafos conservando el breadcrumb padre
-    const paragraphs = rawUnitText
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter(Boolean)
-
-    let subChunkText = ''
-    let partIndex = 1
-    const subChunksBuffer: string[] = []
-
-    for (const para of paragraphs) {
-      if ((subChunkText + '\n\n' + para).length <= maxArticleChars) {
-        subChunkText = subChunkText ? `${subChunkText}\n\n${para}` : para
-      } else {
-        if (subChunkText) {
-          subChunksBuffer.push(subChunkText)
-        }
-        subChunkText = para
-      }
-    }
-    if (subChunkText.trim()) {
-      subChunksBuffer.push(subChunkText.trim())
-    }
+    // Si el artículo o sección es extenso (> maxArticleChars), subdividir con overlap
+    // real (~250 chars / arrastre de cabeceras de tabla) conservando el breadcrumb padre
+    const subChunksBuffer = splitParagraphsWithOverlap(
+      rawUnitText,
+      maxArticleChars,
+      overlapChars
+    )
 
     const totalParts = subChunksBuffer.length
     for (let pIdx = 0; pIdx < subChunksBuffer.length; pIdx++) {
@@ -373,14 +547,21 @@ export function splitTextIntoStructuralChunks(
       currentPage = parseInt(pageMatch[1], 10)
     }
 
-    // 1. Detectar frontera de TÍTULO
-    if (isSectionHeader(trimmed) || /^#\s+(?!art|cap)/i.test(trimmed)) {
+    const flushPending = () => {
       if (accumulatedContent.length > 0) {
         flushCurrentUnit(
           currentArticulo,
           currentArticulo ? 'ARTICLE' : 'SECTION'
         )
       }
+    }
+
+    // 1. Detectar frontera de TÍTULO / H1
+    if (
+      isSectionHeader(trimmed) ||
+      /^#\s+(?!(?:art[íi]culo\b|art\.|cap[íi]tulo\b|cap\.))(?=.*[\p{L}\p{N}])/iu.test(trimmed)
+    ) {
+      flushPending()
       currentTitulo = cleanTitle(trimmed)
       currentCapitulo = null
       currentArticulo = null
@@ -388,28 +569,41 @@ export function splitTextIntoStructuralChunks(
       continue
     }
 
-    // 2. Detectar frontera de CAPÍTULO
-    if (isChapterHeader(trimmed) || /^##\s+(?:cap[íi]tulo|cap\.)/i.test(trimmed)) {
-      if (accumulatedContent.length > 0) {
-        flushCurrentUnit(
-          currentArticulo,
-          currentArticulo ? 'ARTICLE' : 'SECTION'
-        )
-      }
+    // 2. Detectar frontera de CAPÍTULO explícito
+    if (
+      isChapterHeader(trimmed) ||
+      /^#{2,3}\s+(?:cap[íi]tulo\b|cap\.)/i.test(trimmed)
+    ) {
+      flushPending()
       currentCapitulo = cleanTitle(trimmed)
       currentArticulo = null
       accumulatedContent.push(line)
       continue
     }
 
-    // 3. Detectar frontera de ARTÍCULO
-    if (isArticleHeader(trimmed) || /^#{2,4}\s*(?:art[íi]culo|art\.?)/i.test(trimmed)) {
-      if (accumulatedContent.length > 0) {
-        flushCurrentUnit(
-          currentArticulo,
-          currentArticulo ? 'ARTICLE' : 'SECTION'
-        )
-      }
+    // 3. Detectar frontera de ARTÍCULO explícito (antes de H2/H3 genéricos de manuales)
+    if (
+      isArticleHeader(trimmed) ||
+      /^#{2,4}\s*(?:art[íi]culo\b|art\.|art\s+\d)/i.test(trimmed)
+    ) {
+      flushPending()
+      currentArticulo = cleanTitle(trimmed)
+      accumulatedContent.push(line)
+      continue
+    }
+
+    // 4. Detectar Sección H2 de manual (## ...) como frontera de capítulo/módulo
+    if (/^##\s+(?=.*[\p{L}\p{N}])/u.test(trimmed)) {
+      flushPending()
+      currentCapitulo = cleanTitle(trimmed)
+      currentArticulo = null
+      accumulatedContent.push(line)
+      continue
+    }
+
+    // 5. Detectar Subsección H3 de manual (### ...) como unidad de paso/procedimiento
+    if (/^###\s+(?=.*[\p{L}\p{N}])/u.test(trimmed)) {
+      flushPending()
       currentArticulo = cleanTitle(trimmed)
       accumulatedContent.push(line)
       continue
@@ -426,46 +620,18 @@ export function splitTextIntoStructuralChunks(
     )
   }
 
-  // Si no se detectó ningún artículo formal (ej. texto plano o comunicado),
-  // hacer fallback limpio por párrafos respetando el límite maxArticleChars
+  // Si no se detectó ninguna sección o artículo formal (ej. texto plano o comunicado),
+  // hacer fallback limpio por párrafos con overlap real respetando maxArticleChars
   if (chunks.length === 0 && clean.length > 0) {
-    const paragraphs = clean
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter(Boolean)
-
-    let currentBuffer = ''
-    for (const para of paragraphs) {
-      if ((currentBuffer + '\n\n' + para).length <= maxArticleChars) {
-        currentBuffer = currentBuffer ? `${currentBuffer}\n\n${para}` : para
-      } else {
-        if (currentBuffer) {
-          const breadcrumb = `${documentTitle} > Fragmento ${chunkIndex + 1}`
-          chunks.push({
-            content: `[${breadcrumb}]\n\n${currentBuffer}`,
-            pageNumber: 1,
-            chunkIndex,
-            metadata: {
-              documentTitle,
-              categoria: categoryCode,
-              breadcrumb,
-              nodeType: 'GENERAL',
-              isLeaf: true,
-              anio_vigencia: anioVigencia,
-              estado: 'ACTIVO',
-              pageNumber: 1,
-            },
-          })
-          chunkIndex++
-        }
-        currentBuffer = para
-      }
-    }
-
-    if (currentBuffer.trim()) {
+    const fallbackBuffers = splitParagraphsWithOverlap(
+      clean,
+      maxArticleChars,
+      overlapChars
+    )
+    for (const buffer of fallbackBuffers) {
       const breadcrumb = `${documentTitle} > Fragmento ${chunkIndex + 1}`
       chunks.push({
-        content: `[${breadcrumb}]\n\n${currentBuffer}`,
+        content: `[${breadcrumb}]\n\n${buffer}`,
         pageNumber: 1,
         chunkIndex,
         metadata: {
@@ -479,6 +645,7 @@ export function splitTextIntoStructuralChunks(
           pageNumber: 1,
         },
       })
+      chunkIndex++
     }
   }
 

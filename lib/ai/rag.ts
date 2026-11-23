@@ -11,9 +11,14 @@ import {
   RAG_INITIAL_CANDIDATES,
   DEFAULT_RAG_TOP_K,
   RAG_CACHE_TTL_MS,
+  RAG_VERSION_CHECK_INTERVAL_MS,
   RAG_LEXICAL_CANDIDATES,
   RAG_NEIGHBOR_TOP_WINNERS,
   RAG_MAX_MERGED_CHUNK_CHARS,
+  RAG_APPROVAL_RESOLUTION_PENALTY,
+  RAG_COST_TABLE_BOOST,
+  RAG_MAX_CHUNKS_PER_DOC,
+  RAG_DIVERSITY_MIN_RELEVANCE,
 } from '@/constants'
 import type {
   DocumentTocTree,
@@ -63,14 +68,24 @@ interface CachedChunk {
   tokenFreqs: Map<string, number>
   tokenCount: number
   hasCostSignals: boolean
+  isApprovalResolution: boolean
+}
+
+interface CachedTocDocument {
+  id: string
+  title: string
+  tocTree: Prisma.JsonValue | null
+  category: { code: string } | null
 }
 
 interface RagMemoryCache {
   versionKey: string
   loadedAt: number
+  lastValidatedAt: number
   filteredBoilerplateCount: number
   chunks: CachedChunk[]
   byDocChunk: Map<string, CachedChunk>
+  docsWithToc: CachedTocDocument[]
   idfMap: Map<string, number>
   avgTokenCount: number
 }
@@ -331,41 +346,63 @@ async function getIndexedCorpusVersionKey(): Promise<string> {
 }
 
 async function loadRagCacheFromDb(versionKey: string): Promise<RagMemoryCache> {
-  const rows = await prisma.documentChunk.findMany({
-    where: {
-      document: { status: 'INDEXED' },
-    },
-    orderBy: [{ documentId: 'asc' }, { chunkIndex: 'asc' }],
-    select: {
-      id: true,
-      documentId: true,
-      chunkIndex: true,
-      content: true,
-      pageNumber: true,
-      metadata: true,
-      document: {
-        select: {
-          id: true,
-          title: true,
-          publicUrl: true,
-          fileUrl: true,
-          category: {
-            select: {
-              code: true,
+  const [rows, docsWithToc] = await Promise.all([
+    prisma.documentChunk.findMany({
+      where: {
+        document: { status: 'INDEXED' },
+      },
+      orderBy: [{ documentId: 'asc' }, { chunkIndex: 'asc' }],
+      select: {
+        id: true,
+        documentId: true,
+        chunkIndex: true,
+        content: true,
+        pageNumber: true,
+        metadata: true,
+        document: {
+          select: {
+            id: true,
+            title: true,
+            publicUrl: true,
+            fileUrl: true,
+            category: {
+              select: {
+                code: true,
+              },
             },
           },
         },
       },
-    },
-  })
+    }),
+    prisma.document.findMany({
+      where: {
+        status: 'INDEXED',
+        tocTree: { not: Prisma.JsonNull },
+      },
+      select: {
+        id: true,
+        title: true,
+        tocTree: true,
+        category: {
+          select: {
+            code: true,
+          },
+        },
+      },
+      take: 100,
+    }),
+  ])
 
   if (rows.length === 0) {
+    const emptyNow = Date.now()
     return {
       versionKey,
-      loadedAt: Date.now(),
+      loadedAt: emptyNow,
+      lastValidatedAt: emptyNow,
       filteredBoilerplateCount: 0,
       chunks: [],
       byDocChunk: new Map(),
+      docsWithToc,
       idfMap: new Map(),
       avgTokenCount: 1,
     }
@@ -444,10 +481,49 @@ async function loadRagCacheFromDb(versionKey: string): Promise<RagMemoryCache> {
     }
     totalTokenCount += tokens.length
 
+    const hasCurrencyAmount = /S\/\s*\d/i.test(content)
+    const mentionsTarifario = /\btarifario\b/i.test(normContent)
+    const hasNumericTariffRow = content.split('\n').some((line) => {
+      const trimmed = line.trim()
+      if (!trimmed.startsWith('|')) return false
+      if (
+        /\b(?:c[oó]digo|versi[oó]n|hoja|p[aá]gina|fecha|vigencia)\b/i.test(
+          trimmed
+        )
+      ) {
+        return false
+      }
+      const cells = trimmed
+        .split('|')
+        .slice(1, -1)
+        .map((c) => c.trim())
+      if (cells.length < 2) return false
+      return cells.slice(1).some((cell) => {
+        if (!cell || /^20[1-3]\d$/.test(cell)) return false
+        return /^(?:S\/\s*)?\d{2,5}(?:[.,]\d{2})?$/i.test(cell)
+      })
+    })
     const hasCostSignals =
-      /S\/\s*\d/i.test(content) ||
-      /\|[^|\n]+\|/.test(content) ||
-      normTitle.includes('tarifario')
+      hasCurrencyAmount || mentionsTarifario || hasNumericTariffRow
+
+    const normBreadcrumb = normalizeSearchText(breadcrumb)
+    const firstHeaderLines = content
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+      .map((l) => normalizeSearchText(l))
+      .join(' ')
+    const normBody = normalizeSearchText(content)
+    const hasOperationalOrTariffContent =
+      hasCostSignals || /\[captura\s+de\s+pantalla/i.test(content)
+    const isApprovalResolution =
+      !hasOperationalOrTariffContent &&
+      (normBreadcrumb.includes('resolucion de directorio') ||
+        /\bresolucion\s+de\s+directorio\b/.test(firstHeaderLines) ||
+        (/\bse\s+resuelve\b/.test(normBody) &&
+          /\baprobar\b/.test(normBody) &&
+          /\bvisto\b/.test(normBody)))
 
     const cachedChunk: CachedChunk = {
       id: row.id,
@@ -469,6 +545,7 @@ async function loadRagCacheFromDb(versionKey: string): Promise<RagMemoryCache> {
       tokenFreqs,
       tokenCount: tokens.length,
       hasCostSignals,
+      isApprovalResolution,
     }
 
     chunks.push(cachedChunk)
@@ -485,34 +562,54 @@ async function loadRagCacheFromDb(versionKey: string): Promise<RagMemoryCache> {
 
   const avgTokenCount = N > 0 ? Math.max(1, totalTokenCount / N) : 1
 
+  const now = Date.now()
+
   console.log(
-    `[SIPAN_STAIR_CACHE] ⚡ Índice en memoria cargado (${N} chunks activos, ${filteredBoilerplateCount} boilerplate filtrados, versión ${versionKey})`
+    `[SIPAN_STAIR_CACHE] ⚡ Índice en memoria cargado (${N} chunks activos, ${filteredBoilerplateCount} boilerplate filtrados, ${docsWithToc.length} árboles ToC, versión ${versionKey})`
   )
 
   return {
     versionKey,
-    loadedAt: Date.now(),
+    loadedAt: now,
+    lastValidatedAt: now,
     filteredBoilerplateCount,
     chunks,
     byDocChunk,
+    docsWithToc,
     idfMap,
     avgTokenCount,
   }
 }
 
 /**
- * Obtiene el índice vectorial en memoria validado contra DB (versionKey + TTL)
- * con patrón single-flight (`loadingPromise`) anti-estampida.
+ * Obtiene el índice vectorial en memoria validado contra DB (ventana 60s + TTL)
+ * con patrón single-flight (`loadingPromise`) anti-estampida. En hits calientes
+ * ejecuta 0 consultas a PostgreSQL (manteniendo invalidateRagCache inmediato en admin).
  */
 async function getOrLoadRagCache(): Promise<RagMemoryCache> {
-  const versionKey = await getIndexedCorpusVersionKey()
   const now = Date.now()
 
   if (
     ragStore.cache &&
-    ragStore.cache.versionKey === versionKey &&
-    now - ragStore.cache.loadedAt < RAG_CACHE_TTL_MS
+    now - ragStore.cache.loadedAt < RAG_CACHE_TTL_MS &&
+    now - ragStore.cache.lastValidatedAt < RAG_VERSION_CHECK_INTERVAL_MS
   ) {
+    return ragStore.cache
+  }
+
+  if (ragStore.loadingPromise) {
+    return ragStore.loadingPromise
+  }
+
+  const versionKey = await getIndexedCorpusVersionKey()
+  const checkedAt = Date.now()
+
+  if (
+    ragStore.cache &&
+    ragStore.cache.versionKey === versionKey &&
+    checkedAt - ragStore.cache.loadedAt < RAG_CACHE_TTL_MS
+  ) {
+    ragStore.cache.lastValidatedAt = checkedAt
     return ragStore.cache
   }
 
@@ -539,13 +636,14 @@ async function getOrLoadRagCache(): Promise<RagMemoryCache> {
 
 /**
  * ETAPA 1 STAIR: Enrutamiento por Índice (ToC Routing / Poda de Árbol).
- * Evalúa la consulta del estudiante contra los árboles ToC jerárquicos de todos
- * los reglamentos activos (usando categoryFilter solo como boost suave).
+ * Evalúa la consulta del estudiante contra los árboles ToC jerárquicos en RAM
+ * de todos los reglamentos activos (usando categoryFilter solo como boost suave).
  */
 export async function routeQueryToToCBranches(
   query: string,
   keywords: string[],
-  categoryFilter?: string | null
+  categoryFilter?: string | null,
+  cachedDocsWithToc?: CachedTocDocument[]
 ): Promise<ToCRouteMatch[]> {
   try {
     const cleanQuery = query.toLowerCase()
@@ -566,24 +664,9 @@ export async function routeQueryToToCBranches(
       ? directArtMatch[1].replace(/[º°]/g, '').trim()
       : null
 
-    // Consultar todos los reglamentos indexados con árbol ToC registrado (sin exclusión dura por categoría)
-    const docsWithToc = await prisma.document.findMany({
-      where: {
-        status: 'INDEXED',
-        tocTree: { not: Prisma.JsonNull },
-      },
-      select: {
-        id: true,
-        title: true,
-        tocTree: true,
-        category: {
-          select: {
-            code: true,
-          },
-        },
-      },
-      take: 100,
-    })
+    // Leer árboles ToC directamente desde el caché en memoria (0 queries extra a PostgreSQL)
+    const docsWithToc =
+      cachedDocsWithToc ?? (await getOrLoadRagCache()).docsWithToc
 
     if (!docsWithToc || docsWithToc.length === 0) {
       return []
@@ -755,15 +838,19 @@ export async function searchKnowledgeBase(
 
     const keywords = extractCleanKeywords(cleanQuery)
 
-    // Ejecutar Enrutamiento ToC y carga/validación de caché en paralelo
-    const [routeMatches, cache] = await Promise.all([
-      routeQueryToToCBranches(cleanQuery, keywords, categoryFilter),
-      getOrLoadRagCache(),
-    ])
+    // Cargar o reutilizar caché en memoria (chunks + árboles ToC) sin consultas redundantes a PostgreSQL
+    const cache = await getOrLoadRagCache()
 
     if (cache.chunks.length === 0) {
       return []
     }
+
+    const routeMatches = await routeQueryToToCBranches(
+      cleanQuery,
+      keywords,
+      categoryFilter,
+      cache.docsWithToc
+    )
 
     if (routeMatches.length > 0) {
       console.log(
@@ -801,6 +888,10 @@ export async function searchKnowledgeBase(
       : null
     const isCostQuery =
       /(?:costo|precio|tasa|tarifa|tarifario|monto|cuanto|soles|uniforme|pago|pagar|derecho|segunda\s+matricula)/i.test(
+        normQuery
+      )
+    const isResolutionQuery =
+      /\b(?:resolucion|directorio|aprobo|aprobacion|acuerdo)\b/i.test(
         normQuery
       )
 
@@ -965,7 +1056,12 @@ export async function searchKnowledgeBase(
         const categoryBoost =
           categoryFilter && chunk.categoria === categoryFilter ? 0.025 : 0
         const directArticleBoost = directArtFlags[idx] === 1 ? 0.12 : 0
-        const costTableBoost = isCostQuery && chunk.hasCostSignals ? 0.08 : 0
+        const costTableBoost =
+          isCostQuery && chunk.hasCostSignals ? RAG_COST_TABLE_BOOST : 0
+        const approvalResolutionPenalty =
+          chunk.isApprovalResolution && !isResolutionQuery
+            ? -RAG_APPROVAL_RESOLUTION_PENALTY
+            : 0
 
         const finalScore = Math.max(
           0,
@@ -978,7 +1074,8 @@ export async function searchKnowledgeBase(
               lexicalBoost +
               titleBoost +
               directArticleBoost +
-              costTableBoost
+              costTableBoost +
+              approvalResolutionPenalty
           )
         )
 
@@ -999,13 +1096,17 @@ export async function searchKnowledgeBase(
           .sort((a, b) => b.relevance - a.relevance)
       }
 
-      // Ajuste B: Expansión de vecinos contiguos (chunkIndex ± 1) en RAM a 0 ms para Top 3 ganadores
+      // Ajuste B + Diversidad documental: Expansión de vecinos contiguos (chunkIndex ± 1)
+      // en RAM a 0 ms para Top 3 ganadores y máximo RAG_MAX_CHUNKS_PER_DOC por documento
+      // mientras existan candidatos válidos de otros documentos (>= RAG_DIVERSITY_MIN_RELEVANCE).
       const absorbedIds = new Set<string>()
       const finalResults: RetrievedSource[] = []
+      const docResultCounts = new Map<string, number>()
+      const deferredCandidates: ScoredCandidate[] = []
+      const enforceDocDiversity = !isCostQuery && !directArtNum
 
-      for (const item of validCandidates) {
-        if (absorbedIds.has(item.chunk.id)) continue
-
+      const pushWinner = (item: ScoredCandidate) => {
+        if (absorbedIds.has(item.chunk.id)) return
         const winner = item.chunk
 
         if (finalResults.length < RAG_NEIGHBOR_TOP_WINNERS) {
@@ -1038,7 +1139,9 @@ export async function searchKnowledgeBase(
           if (
             prevNeighbor &&
             !absorbedIds.has(prevNeighbor.id) &&
-            isSameSectionOrSeries(winner, prevNeighbor)
+            (isSameSectionOrSeries(winner, prevNeighbor) ||
+              !winner.capitulo ||
+              !prevNeighbor.capitulo)
           ) {
             const prevAddition = stripLeadingBreadcrumb(prevNeighbor.content)
             if (
@@ -1095,7 +1198,43 @@ export async function searchKnowledgeBase(
           })
         }
 
+        docResultCounts.set(
+          winner.documentId,
+          (docResultCounts.get(winner.documentId) ?? 0) + 1
+        )
+      }
+
+      for (let idx = 0; idx < validCandidates.length; idx++) {
+        const item = validCandidates[idx]
+        if (absorbedIds.has(item.chunk.id)) continue
+
+        const currentDocCount = docResultCounts.get(item.chunk.documentId) ?? 0
+        if (enforceDocDiversity && currentDocCount >= RAG_MAX_CHUNKS_PER_DOC) {
+          const hasDiverseAlternative = validCandidates
+            .slice(idx + 1)
+            .some(
+              (other) =>
+                !absorbedIds.has(other.chunk.id) &&
+                (docResultCounts.get(other.chunk.documentId) ?? 0) <
+                  RAG_MAX_CHUNKS_PER_DOC &&
+                other.relevance >= RAG_DIVERSITY_MIN_RELEVANCE
+            )
+          if (hasDiverseAlternative) {
+            deferredCandidates.push(item)
+            continue
+          }
+        }
+
+        pushWinner(item)
         if (finalResults.length >= topK) break
+      }
+
+      if (finalResults.length < topK) {
+        for (const deferred of deferredCandidates) {
+          if (absorbedIds.has(deferred.chunk.id)) continue
+          pushWinner(deferred)
+          if (finalResults.length >= topK) break
+        }
       }
 
       return finalResults

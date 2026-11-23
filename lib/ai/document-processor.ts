@@ -2,11 +2,15 @@ import { prisma, ModelProvider, TokenUsageConcept, Prisma } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 import {
   DOCUMENT_TRANSCRIPTION_MODEL_CODE,
-  DEFAULT_EMBEDDING_MODEL,
+  DOCUMENT_TRANSCRIPTION_THINKING_LEVEL,
+  DOCUMENT_TRANSCRIPTION_FALLBACK_MODEL_CODES,
   DEFAULT_THINKING_LEVEL,
+  DEFAULT_EMBEDDING_MODEL,
   DOCUMENT_OCR_TRANSCRIPTION_PROMPT,
   DOCUMENT_OCR_CONTINUATION_PROMPT,
   DOCUMENT_OCR_ANTI_LAZINESS_RETRY_PROMPT,
+  DOCUMENT_OCR_RECITATION_FALLBACK_PROMPT,
+  type ThinkingLevel,
 } from '@/constants'
 import { generateEmbeddingsWithUsage } from '@/lib/ai/embeddings'
 import { invalidateRagCache } from '@/lib/ai/rag'
@@ -63,6 +67,13 @@ function detectTranscriptionLaziness(text: string): boolean {
   )
 }
 
+export class DocumentDownloadError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'DocumentDownloadError'
+  }
+}
+
 /**
  * Transcribe y estructura cualquier documento (PDF, TXT o Markdown) a formato Markdown enriquecido
  * utilizando el modelo multimodal Gemini oficial configurado en constantes
@@ -101,7 +112,7 @@ export async function extractAndStructureToMarkdown(
     } catch (err: unknown) {
       const isTimeout = err instanceof DOMException && err.name === 'TimeoutError'
       console.error(`${logPrefix} ❌ [Paso 1/3] Error en fetch de archivo:`, err)
-      throw new Error(
+      throw new DocumentDownloadError(
         isTimeout
           ? 'Tiempo de espera agotado al descargar el archivo desde UploadThing (>30s).'
           : `Error de red al descargar el archivo: ${err instanceof Error ? err.message : String(err)}`
@@ -112,7 +123,7 @@ export async function extractAndStructureToMarkdown(
       console.error(
         `${logPrefix} ❌ [Paso 1/3] Respuesta HTTP no exitosa: ${response.status} ${response.statusText}`
       )
-      throw new Error(
+      throw new DocumentDownloadError(
         `No se pudo descargar el archivo (HTTP ${response.status} ${response.statusText}). Verifica que la URL sea accesible.`
       )
     }
@@ -237,153 +248,219 @@ export async function extractAndStructureToMarkdown(
     )
   }
 
-  // Preparar payload para Gemini
-  const parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string }; inlineData?: { mimeType: string; data: string } }> = [
-    { text: DOCUMENT_OCR_TRANSCRIPTION_PROMPT }
-  ]
-
-  if (fileUri) {
-    parts.push({
-      fileData: {
-        mimeType: 'application/pdf',
-        fileUri
-      }
-    })
-  } else {
-    parts.push({
-      inlineData: {
-        mimeType: 'application/pdf',
-        data: buffer.toString('base64')
-      }
-    })
+  // Preparar mediaPart reutilizable para el pase principal y eventuales reintentos/respaldos
+  type GeminiInputPart = {
+    text?: string
+    fileData?: { mimeType: string; fileUri: string }
+    inlineData?: { mimeType: string; data: string }
   }
 
-  const ocrGenerationConfig = {
-    maxOutputTokens: 65536,
-    temperature: 0.0,
-    thinkingConfig: {
-      thinkingLevel: DEFAULT_THINKING_LEVEL
-    }
-  }
-
-  const payload = {
-    contents: [
-      {
-        role: 'user',
-        parts
+  const mediaPart: GeminiInputPart = fileUri
+    ? {
+        fileData: {
+          mimeType: 'application/pdf',
+          fileUri
+        }
       }
-    ],
-    generationConfig: ocrGenerationConfig
-  }
+    : {
+        inlineData: {
+          mimeType: 'application/pdf',
+          data: buffer.toString('base64')
+        }
+      }
 
   try {
-    const apiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(180_000) // 180s para documentos pesados
+    let totalInputTokens = 0
+    let totalOutputTokens = 0
+
+    const runGeminiOcrPass = async (
+      modelCode: string,
+      thinkingLevel: ThinkingLevel,
+      promptText: string
+    ): Promise<{
+      text: string
+      finishReason?: string
+      partsUsed: GeminiInputPart[]
+      generationConfigUsed: {
+        maxOutputTokens: number
+        thinkingConfig: { thinkingLevel: ThinkingLevel }
       }
+    }> => {
+      const partsUsed: GeminiInputPart[] = [{ text: promptText }, mediaPart]
+      const generationConfigUsed = {
+        maxOutputTokens: 65536,
+        thinkingConfig: {
+          thinkingLevel
+        }
+      }
+
+      const apiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelCode}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: partsUsed }],
+            generationConfig: generationConfigUsed
+          }),
+          signal: AbortSignal.timeout(180_000) // 180s para documentos pesados
+        }
+      )
+
+      const data = await apiRes.json()
+
+      if (!apiRes.ok || data.error) {
+        const errMsg =
+          data.error?.message || `HTTP ${apiRes.status} ${apiRes.statusText}`
+        console.error(
+          `${logPrefix} ❌ [Paso 2/3] Error de Google Generative AI (${modelCode}):`,
+          errMsg
+        )
+        throw new Error(
+          `Fallo al transcribir el PDF con Gemini (${modelCode}): ${errMsg}`
+        )
+      }
+
+      totalInputTokens += data.usageMetadata?.promptTokenCount || 0
+      totalOutputTokens += data.usageMetadata?.candidatesTokenCount || 0
+
+      const candidate = data.candidates?.[0] as GeminiCandidate | undefined
+      let passFinishReason = candidate?.finishReason
+      let passText = extractCandidateText(candidate)
+
+      if ((!passText || passText.length < 20) && passFinishReason) {
+        console.warn(
+          `${logPrefix} ⚠️ [Paso 2/3] ${modelCode} devolvió salida insuficiente (chars=${passText.length}, finishReason=${passFinishReason}).`
+        )
+      }
+
+      // Si el documento es masivo y alcanzó MAX_TOKENS, solicitar continuación automática para CERO pérdida de datos
+      let continuationPass = 1
+      const maxContinuationPasses = 5
+
+      while (passFinishReason === 'MAX_TOKENS' && continuationPass < maxContinuationPasses) {
+        continuationPass++
+        console.warn(
+          `${logPrefix} 🔄 [Paso 2/3 - Continuación #${continuationPass}] ${modelCode} alcanzó límite de salida. Solicitando continuación para preservar el 100% de los artículos y caracteres...`
+        )
+
+        try {
+          const contRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelCode}:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  { role: 'user', parts: partsUsed },
+                  { role: 'model', parts: [{ text: passText }] },
+                  { role: 'user', parts: [{ text: DOCUMENT_OCR_CONTINUATION_PROMPT }] }
+                ],
+                generationConfig: generationConfigUsed
+              }),
+              signal: AbortSignal.timeout(180_000)
+            }
+          )
+
+          const contData = await contRes.json()
+          if (!contRes.ok || contData.error) {
+            console.warn(
+              `${logPrefix} ⚠️ Error en solicitud de continuación #${continuationPass}:`,
+              contData.error
+            )
+            break
+          }
+
+          totalInputTokens += contData.usageMetadata?.promptTokenCount || 0
+          totalOutputTokens += contData.usageMetadata?.candidatesTokenCount || 0
+
+          const contCandidate = contData.candidates?.[0] as GeminiCandidate | undefined
+          const contText = extractCandidateText(contCandidate)
+          passFinishReason = contCandidate?.finishReason
+
+          if (contText) {
+            passText += '\n\n' + contText
+            console.log(
+              `${logPrefix} 📥 [Continuación #${continuationPass}] +${contText.length} caracteres añadidos (Total acumulado: ${passText.length}). finishReason: ${passFinishReason}`
+            )
+          } else {
+            break
+          }
+        } catch (contErr) {
+          console.warn(
+            `${logPrefix} ⚠️ Fallo de conexión en continuación #${continuationPass}:`,
+            contErr
+          )
+          break
+        }
+      }
+
+      return {
+        text: passText,
+        finishReason: passFinishReason,
+        partsUsed,
+        generationConfigUsed,
+      }
+    }
+
+    let activeModelCode: string = DOCUMENT_TRANSCRIPTION_MODEL_CODE
+    let activeThinkingLevel: ThinkingLevel = DOCUMENT_TRANSCRIPTION_THINKING_LEVEL
+    let activeResult = await runGeminiOcrPass(
+      activeModelCode,
+      activeThinkingLevel,
+      DOCUMENT_OCR_TRANSCRIPTION_PROMPT
     )
 
-    const data = await apiRes.json()
-    const ocrDuration = Date.now() - ocrStart
-
-    if (!apiRes.ok || data.error) {
-      const errMsg =
-        data.error?.message || `HTTP ${apiRes.status} ${apiRes.statusText}`
-      console.error(
-        `${logPrefix} ❌ [Paso 2/3] Error de Google Generative AI:`,
-        errMsg
-      )
-      throw new Error(
-        `Fallo al transcribir el PDF con Gemini (${DOCUMENT_TRANSCRIPTION_MODEL_CODE}): ${errMsg}`
-      )
-    }
-
-    let totalInputTokens = data.usageMetadata?.promptTokenCount || 0
-    let totalOutputTokens = data.usageMetadata?.candidatesTokenCount || 0
-
-    const candidate = data.candidates?.[0] as GeminiCandidate | undefined
-    let finishReason = candidate?.finishReason
-    let transcribedText = extractCandidateText(candidate)
-
-    // Si el documento es masivo y alcanzó MAX_TOKENS, solicitar continuación automática para CERO pérdida de datos
-    let continuationPass = 1
-    const maxContinuationPasses = 5
-
-    while (finishReason === 'MAX_TOKENS' && continuationPass < maxContinuationPasses) {
-      continuationPass++
+    // Cascada automática anti-RECITATION:
+    // Paso A: reintentar con el mismo modelo usando el prompt estructurado anti-recitación
+    if (
+      (!activeResult.text || activeResult.text.length < 20) &&
+      activeResult.finishReason === 'RECITATION'
+    ) {
       console.warn(
-        `${logPrefix} 🔄 [Paso 2/3 - Continuación #${continuationPass}] Gemini alcanzó límite de salida. Solicitando continuación para preservar el 100% de los artículos y caracteres...`
+        `${logPrefix} ⚠️ [Anti-RECITATION Paso 1/2] ${activeModelCode} bloqueó la transcripción verbatim por RECITATION. Reintentando con guía estructurada preservando interfaz y tablas literales...`
       )
+      activeResult = await runGeminiOcrPass(
+        activeModelCode,
+        activeThinkingLevel,
+        DOCUMENT_OCR_RECITATION_FALLBACK_PROMPT
+      )
+    }
 
-      const continuationPayload = {
-        contents: [
-          {
-            role: 'user',
-            parts
-          },
-          {
-            role: 'model',
-            parts: [{ text: transcribedText }]
-          },
-          {
-            role: 'user',
-            parts: [
-              {
-                text: DOCUMENT_OCR_CONTINUATION_PROMPT
-              }
-            ]
-          }
-        ],
-        generationConfig: ocrGenerationConfig
-      }
-
-      try {
-        const contRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(continuationPayload),
-            signal: AbortSignal.timeout(180_000)
-          }
-        )
-
-        const contData = await contRes.json()
-        if (!contRes.ok || contData.error) {
-          console.warn(
-            `${logPrefix} ⚠️ Error en solicitud de continuación #${continuationPass}:`,
-            contData.error
-          )
-          break
-        }
-
-        totalInputTokens += contData.usageMetadata?.promptTokenCount || 0
-        totalOutputTokens += contData.usageMetadata?.candidatesTokenCount || 0
-
-        const contCandidate = contData.candidates?.[0] as GeminiCandidate | undefined
-        const contText = extractCandidateText(contCandidate)
-        finishReason = contCandidate?.finishReason
-
-        if (contText) {
-          transcribedText += '\n\n' + contText
-          console.log(
-            `${logPrefix} 📥 [Continuación #${continuationPass}] +${contText.length} caracteres añadidos (Total acumulado: ${transcribedText.length}). finishReason: ${finishReason}`
-          )
-        } else {
-          break
-        }
-      } catch (contErr) {
+    // Paso B: si persiste RECITATION, escalar a modelos de respaldo sin duplicar subida de archivo
+    if (
+      (!activeResult.text || activeResult.text.length < 20) &&
+      activeResult.finishReason === 'RECITATION'
+    ) {
+      for (const fallbackModel of DOCUMENT_TRANSCRIPTION_FALLBACK_MODEL_CODES) {
         console.warn(
-          `${logPrefix} ⚠️ Fallo de conexión en continuación #${continuationPass}:`,
-          contErr
+          `${logPrefix} 🔄 [Anti-RECITATION Paso 2/2] Escalando OCR a modelo de respaldo ${fallbackModel} (thinkingLevel=${DEFAULT_THINKING_LEVEL})...`
         )
-        break
+        try {
+          const fallbackResult = await runGeminiOcrPass(
+            fallbackModel,
+            DEFAULT_THINKING_LEVEL,
+            DOCUMENT_OCR_RECITATION_FALLBACK_PROMPT
+          )
+          activeResult = fallbackResult
+          activeModelCode = fallbackModel
+          activeThinkingLevel = DEFAULT_THINKING_LEVEL
+          if (activeResult.text && activeResult.text.length >= 20) {
+            break
+          }
+        } catch (fallbackErr) {
+          console.warn(
+            `${logPrefix} ⚠️ Fallo en modelo de respaldo ${fallbackModel}:`,
+            fallbackErr instanceof Error ? fallbackErr.message : fallbackErr
+          )
+        }
       }
     }
+
+    let transcribedText = activeResult.text
+    const finishReason = activeResult.finishReason
+    const activeParts = activeResult.partsUsed
+    const activeGenerationConfig = activeResult.generationConfigUsed
 
     // Guardrail Anti-Pereza: Si el modelo resumió o abrevió tablas/anexos pese a las reglas, exigir transcripción íntegra
     if (transcribedText && detectTranscriptionLaziness(transcribedText)) {
@@ -393,17 +470,17 @@ export async function extractAndStructureToMarkdown(
 
       try {
         const recRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${activeModelCode}:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [
-                { role: 'user', parts },
+                { role: 'user', parts: activeParts },
                 { role: 'model', parts: [{ text: transcribedText }] },
                 { role: 'user', parts: [{ text: DOCUMENT_OCR_ANTI_LAZINESS_RETRY_PROMPT }] }
               ],
-              generationConfig: ocrGenerationConfig
+              generationConfig: activeGenerationConfig
             }),
             signal: AbortSignal.timeout(180_000)
           }
@@ -425,17 +502,17 @@ export async function extractAndStructureToMarkdown(
               `${logPrefix} 🔄 [Anti-Pereza Continuación #${recContPass}] Solicitando continuación de tablas recuperadas...`
             )
             const recContRes = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${DOCUMENT_TRANSCRIPTION_MODEL_CODE}:generateContent?key=${apiKey}`,
+              `https://generativelanguage.googleapis.com/v1beta/models/${activeModelCode}:generateContent?key=${apiKey}`,
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   contents: [
-                    { role: 'user', parts },
+                    { role: 'user', parts: activeParts },
                     { role: 'model', parts: [{ text: transcribedText + '\n\n' + recText }] },
                     { role: 'user', parts: [{ text: DOCUMENT_OCR_CONTINUATION_PROMPT }] }
                   ],
-                  generationConfig: ocrGenerationConfig
+                  generationConfig: activeGenerationConfig
                 }),
                 signal: AbortSignal.timeout(180_000)
               }
@@ -476,22 +553,22 @@ export async function extractAndStructureToMarkdown(
 
     if (!transcribedText || transcribedText.length < 20) {
       console.error(
-        `${logPrefix} ❌ [Paso 2/3] Gemini devolvió respuesta vacía o insuficiente (finishReason=${finishReason}):`,
-        data
+        `${logPrefix} ❌ [Paso 2/3] Gemini devolvió respuesta vacía o insuficiente (model=${activeModelCode}, finishReason=${finishReason})`
       )
       throw new Error(
         `El modelo no devolvió contenido legible del PDF (motivo: ${finishReason || 'sin datos'}). El archivo puede estar protegido o dañado.`
       )
     }
 
+    const ocrDuration = Date.now() - ocrStart
     console.log(
-      `${logPrefix} ✅ [Paso 2/3] Transcripción completada en ${ocrDuration}ms con ${DOCUMENT_TRANSCRIPTION_MODEL_CODE} (thinkingLevel=${DEFAULT_THINKING_LEVEL}). Total caracteres: ${transcribedText.length}`
+      `${logPrefix} ✅ [Paso 2/3] Transcripción completada en ${ocrDuration}ms con ${activeModelCode} (thinkingLevel=${activeThinkingLevel}). Total caracteres: ${transcribedText.length}`
     )
 
     // Registrar consumo de tokens acumulados
     try {
       await recordTokenUsageLog({
-        modelCode: DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+        modelCode: activeModelCode,
         provider: ModelProvider.GEMINI,
         concept: TokenUsageConcept.DOCUMENT_OCR_TRANSCRIPTION,
         promptTokens: totalInputTokens,
@@ -509,7 +586,9 @@ export async function extractAndStructureToMarkdown(
 
     return transcribedText
   } catch (err: unknown) {
-    const isTimeout = err instanceof DOMException && err.name === 'AbortError'
+    const isTimeout =
+      err instanceof DOMException &&
+      (err.name === 'AbortError' || err.name === 'TimeoutError')
     console.error(`${logPrefix} 💥 [Paso 2/3] Excepción durante transcripción:`, err)
     throw new Error(
       isTimeout

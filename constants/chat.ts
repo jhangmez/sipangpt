@@ -11,9 +11,14 @@ export const DEFAULT_RAG_TOP_K = 8
 
 // Configuración del índice vectorial en memoria y fusión híbrida Sipán-STAIR
 export const RAG_CACHE_TTL_MS = 5 * 60 * 1000
+export const RAG_VERSION_CHECK_INTERVAL_MS = 60 * 1000
 export const RAG_LEXICAL_CANDIDATES = 15
 export const RAG_NEIGHBOR_TOP_WINNERS = 3
 export const RAG_MAX_MERGED_CHUNK_CHARS = 6500
+export const RAG_APPROVAL_RESOLUTION_PENALTY = 0.22
+export const RAG_COST_TABLE_BOOST = 0.11
+export const RAG_MAX_CHUNKS_PER_DOC = 3
+export const RAG_DIVERSITY_MIN_RELEVANCE = 0.58
 
 // Mensajes informativos y amables para el usuario
 export const CHAT_LIMIT_MESSAGES = {

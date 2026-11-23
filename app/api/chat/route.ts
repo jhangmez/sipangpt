@@ -13,7 +13,10 @@ import { validateInternalAuth } from '@/lib/auth/internal-auth'
 import { getLanguageModel } from '@/lib/ai/providers'
 import { searchKnowledgeBase } from '@/lib/ai/rag'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/embeddings'
-import { rewriteAndExpandQuery } from '@/lib/ai/query-rewriter'
+import {
+  rewriteAndExpandQuery,
+  type ConversationTurnHint,
+} from '@/lib/ai/query-rewriter'
 import { detectResolutionStatus } from '@/lib/ai/resolution-detector'
 import { prisma, ModelProvider, ResolutionStatus, TokenUsageConcept, Role, type Message } from '@/lib/prisma'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
@@ -306,9 +309,52 @@ export async function POST(req: Request) {
       userId: session.user.id,
       conversationId: conversationId || undefined,
     }
+    let recentHistory: ConversationTurnHint[] = []
+    if (isRAGEnabled && userText) {
+      if (rawMessages.length > 1) {
+        const lastUserIdx = lastUserMsg ? rawMessages.lastIndexOf(lastUserMsg) : -1
+        const priorUiMessages = lastUserIdx > 0 ? rawMessages.slice(0, lastUserIdx) : []
+        recentHistory = priorUiMessages
+          .filter((m) => m.role === 'user' || m.role === 'assistant')
+          .map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            text:
+              m.parts
+                ?.filter((p) => p.type === 'text')
+                .map((p) => (p as { text: string }).text)
+                .join(' ')
+                .trim() || '',
+          }))
+          .filter((t) => t.text.length > 0)
+          .slice(-4)
+      } else if (conversationId) {
+        try {
+          const dbPrior = await prisma.message.findMany({
+            where: {
+              conversationId,
+              conversation: { userId: session.user.id },
+              role: { in: ['USER', 'ASSISTANT'] },
+              ...(lastUserMsg?.id ? { id: { not: lastUserMsg.id } } : {}),
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 4,
+            select: { role: true, content: true },
+          })
+          recentHistory = dbPrior
+            .reverse()
+            .map((m) => ({
+              role: (m.role === 'USER' ? 'user' : 'assistant') as 'user' | 'assistant',
+              text: m.content.trim(),
+            }))
+            .filter((t) => t.text.length > 0)
+        } catch {
+          recentHistory = []
+        }
+      }
+    }
     const rewrittenQuery =
       isRAGEnabled && userText
-        ? await rewriteAndExpandQuery(userText, ragContext)
+        ? await rewriteAndExpandQuery(userText, ragContext, recentHistory)
         : null
     const queryForSearch = rewrittenQuery?.expandedQuery || userText
     const sources =
@@ -331,7 +377,7 @@ export async function POST(req: Request) {
 
     if (!isWebSearchEnabled) {
       systemPrompt += `\n\n[POLÍTICA DE INFORMACIÓN INSTITUCIONAL USS]
-Prioriza siempre la información reglamentaria oficial de la USS provista. Cuando los fragmentos oficiales contengan la respuesta, fundamenta tus explicaciones en ellos citando el reglamento o manual correspondiente y reproduciendo literalmente los nombres exactos de botones, menús, rutas, columnas, estados, montos, medidas, plazos, artículos, casillas y excepciones sin resumir ni sustituir nombres de interfaz por sinónimos genéricos; reduce saludos o relleno innecesario. Si la consulta involucra procedimientos operativos estándar en plataformas institucionales (como Aula Virtual, Moodle o Campus Virtual) que complementan la normativa, brinda la orientación procedimental completa, clara y paso a paso, orientando al usuario a validar en los canales oficiales de atención (informes@uss.edu.pe o Campus Virtual) ante gestiones sensibles.`
+Prioriza siempre la información reglamentaria oficial de la USS provista. Cuando los fragmentos oficiales contengan la respuesta, fundamenta tus explicaciones en ellos citando el reglamento o manual correspondiente y conservando con exactitud literal los nombres de botones, menús, rutas, columnas, estados, montos, medidas, plazos, números de artículo, casillas y condiciones o excepciones clave, pero redactando las listas de requisitos y disposiciones normativas con tus propias palabras claras y ordenadas (sin copiar párrafos textuales palabra por palabra del PDF) para evitar cortes por filtro de recitación; no omitas pasos ni sustituyas nombres de interfaz por sinónimos genéricos y reduce saludos o relleno innecesario. Si la consulta involucra procedimientos operativos estándar en plataformas institucionales (como Aula Virtual, Moodle o Campus Virtual) que complementan la normativa, brinda la orientación procedimental completa, clara y paso a paso, orientando al usuario a validar en los canales oficiales de atención (informes@uss.edu.pe o Campus Virtual) ante gestiones sensibles.`
     }
 
     if (!isMapsSearchEnabled) {
@@ -538,8 +584,8 @@ No inventes direcciones, rutas externas ni coordenadas de mapas fuera del Campus
       model: selectedModel,
       instructions: systemPrompt,
       messages: prunedMessages,
-      maxOutputTokens: 2048,
-      temperature: 0.3,
+      maxOutputTokens: isGemini3OrNewer ? 6144 : 4096,
+      ...(!isGemini3OrNewer ? { temperature: 0.3 } : {}),
       ...(isGemini3OrNewer || isGemini25 ? { reasoning: thinkingLevel } : {}),
       ...(isGemini3OrNewer
         ? {

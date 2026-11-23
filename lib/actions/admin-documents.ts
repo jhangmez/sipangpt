@@ -6,7 +6,8 @@ import { revalidatePath } from 'next/cache'
 import { CACHE_PATHS } from '@/constants'
 import {
   indexDocumentContent,
-  extractAndStructureToMarkdown
+  extractAndStructureToMarkdown,
+  DocumentDownloadError,
 } from '@/lib/ai/document-processor'
 import { invalidateRagCache } from '@/lib/ai/rag'
 import { generateEmbedding } from '@/lib/ai/embeddings'
@@ -430,6 +431,9 @@ export async function processAndIndexDocumentAction(documentId: string) {
     `${logPrefix} 📄 Documento: "${doc.title || doc.fileName}", Tamaño: ${doc.sizeBytes} bytes, Mime: ${doc.mimeType}`
   )
 
+  const previousStatus = doc.status
+  const hadExistingChunks = doc.chunkCount > 0
+
   // 1. Marcar temporalmente como PROCESSING
   await prisma.document.update({
     where: { id: documentId },
@@ -437,7 +441,7 @@ export async function processAndIndexDocumentAction(documentId: string) {
   })
 
   try {
-    // 2. Extraer y transcribir a Markdown enriquecido mediante Gemini Multimodal (con fallback a publicUrl)
+    // 2. Extraer y transcribir a Markdown enriquecido mediante Gemini Multimodal (solo fallback a publicUrl si falló descarga)
     console.log(`${logPrefix} ⏳ Llamando a extractAndStructureToMarkdown...`)
     let markdownContent: string
     try {
@@ -446,10 +450,15 @@ export async function processAndIndexDocumentAction(documentId: string) {
         doc.mimeType || 'application/pdf'
       )
     } catch (primaryErr) {
-      if (doc.publicUrl && doc.fileUrl && doc.publicUrl !== doc.fileUrl) {
+      if (
+        primaryErr instanceof DocumentDownloadError &&
+        doc.publicUrl &&
+        doc.fileUrl &&
+        doc.publicUrl !== doc.fileUrl
+      ) {
         console.warn(
-          `${logPrefix} ⚠️ Falló lectura desde fileUrl (${doc.fileUrl}), reintentando con publicUrl (${doc.publicUrl}):`,
-          primaryErr instanceof Error ? primaryErr.message : primaryErr
+          `${logPrefix} ⚠️ Falló descarga desde fileUrl (${doc.fileUrl}), reintentando con publicUrl (${doc.publicUrl}):`,
+          primaryErr.message
         )
         markdownContent = await extractAndStructureToMarkdown(
           doc.publicUrl,
@@ -481,12 +490,20 @@ export async function processAndIndexDocumentAction(documentId: string) {
     }
   } catch (err: unknown) {
     console.error(`${logPrefix} 💥 Error fatal en Server Action:`, err)
-    // Marcar como ERROR si falla
+    // Si el documento ya estaba indexado con chunks válidos, conservar INDEXED para no sacarlo del RAG en producción
+    const preserveIndexedState =
+      previousStatus === 'INDEXED' && hadExistingChunks
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'ERROR' }
+      data: { status: preserveIndexedState ? 'INDEXED' : 'ERROR' }
     })
     invalidateRagCache()
+    revalidatePath(CACHE_PATHS.ADMIN_DOCUMENTS)
+    if (preserveIndexedState) {
+      console.warn(
+        `${logPrefix} 🛡️ Se preservó el estado INDEXED previo (${doc.chunkCount} chunks) tras fallo en reproceso.`
+      )
+    }
     const msg =
       err instanceof Error
         ? err.message

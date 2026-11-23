@@ -4,7 +4,7 @@ import { getLanguageModel } from '@/lib/ai/providers'
 import { ModelProvider, TokenUsageConcept } from '@/lib/prisma'
 import {
   DEFAULT_THINKING_LEVEL,
-  DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+  QUERY_REWRITER_MODEL_CODE,
 } from '@/constants/models'
 import { recordTokenUsageLog } from '@/lib/ai/token-tracker'
 
@@ -20,6 +20,11 @@ export interface QueryRewriterContext {
   conversationId?: string | null
 }
 
+export interface ConversationTurnHint {
+  role: 'user' | 'assistant'
+  text: string
+}
+
 // Diccionario heurístico de expresiones estudiantiles frecuentes (0 latencia / 0 tokens)
 const HEURISTIC_PATTERNS: Array<{
   regex: RegExp
@@ -28,7 +33,7 @@ const HEURISTIC_PATTERNS: Array<{
   intent: string
 }> = [
   {
-    regex: /(?:fecha|vence|vencimiento|cu[aá]ndo pago|pagar|mensualidad|pensi[oó]n|sin mora|recargo)/i,
+    regex: /(?:fecha(?:s)?\s+(?:de\s+)?(?:pago|vencimiento)\s+(?:de\s+)?(?:pensi[oó]n|pensiones|cuota|cuotas|mensualidad)|vencimiento\s+(?:de\s+)?(?:pensi[oó]n|pensiones|cuota|cuotas|mensualidad)|cronograma\s+(?:de\s+)?(?:pagos|pensiones|vencimientos?)|cu[aá]ndo\s+vence\s+(?:la\s+)?(?:pensi[oó]n|cuota|mensualidad)|mensualidad(?:es)?|pensi[oó]n|pensiones|\bsin\s+mora\b|recargo(?:s)?\s+(?:por\s+)?mora|gasto(?:s)?\s+administrativo(?:s)?\s+(?:por\s+)?mora)/i,
     expanded: 'Cronograma de vencimiento de pensiones, fechas de pago y recargos por mora semestre académico USS',
     category: 'PAGOS_PENSIONES',
     intent: 'CONSULTA_PAGOS_PENSIONES',
@@ -102,50 +107,75 @@ const HEURISTIC_PATTERNS: Array<{
  */
 export async function rewriteAndExpandQuery(
   rawQuery: string,
-  context?: QueryRewriterContext
+  context?: QueryRewriterContext,
+  recentHistory?: ConversationTurnHint[]
 ): Promise<RewrittenQuery> {
   const clean = rawQuery.trim()
   if (!clean) {
     return { originalQuery: '', expandedQuery: '' }
   }
 
-  // 1. Evaluación rápida heurística (prioritaria para latencia cero)
-  for (const item of HEURISTIC_PATTERNS) {
-    if (item.regex.test(clean)) {
+  const normalizedHistory = (recentHistory ?? [])
+    .map((turn) => ({
+      role: turn.role,
+      text: turn.text.trim(),
+    }))
+    .filter((turn) => turn.text.length > 0)
+    .slice(-4)
+  const hasHistory = normalizedHistory.length > 0
+
+  // 1. Evaluación rápida heurística solo en consultas monoturno (sin historial previo que condensar)
+  if (!hasHistory) {
+    for (const item of HEURISTIC_PATTERNS) {
+      if (item.regex.test(clean)) {
+        return {
+          originalQuery: clean,
+          expandedQuery: `${clean} - ${item.expanded}`,
+          inferredCategory: item.category,
+          detectedIntent: item.intent,
+        }
+      }
+    }
+
+    // Si la consulta es muy corta (ej. un saludo o palabra de 1 letra), no expandir
+    if (clean.length < 8) {
       return {
         originalQuery: clean,
-        expandedQuery: `${clean} - ${item.expanded}`,
-        inferredCategory: item.category,
-        detectedIntent: item.intent,
+        expandedQuery: clean,
       }
     }
   }
 
-  // Si la consulta es muy corta (ej. un saludo o palabra de 1 letra), no expandir
-  if (clean.length < 8) {
-    return {
-      originalQuery: clean,
-      expandedQuery: clean,
-    }
-  }
-
-  // 2. Normalización NLU asistida por IA para consultas ambiguas o coloquiales
+  // 2. Normalización NLU / condensación multiturno asistida por IA (modelo rápido Flash Lite)
   try {
-    const model = getLanguageModel(ModelProvider.GEMINI, DOCUMENT_TRANSCRIPTION_MODEL_CODE)
+    const model = getLanguageModel(ModelProvider.GEMINI, QUERY_REWRITER_MODEL_CODE)
     const rewriteStart = Date.now()
+    const historyBlock = hasHistory
+      ? `Historial reciente de la conversación:\n${normalizedHistory
+          .map((turn) => {
+            const label = turn.role === 'user' ? 'Estudiante' : 'SipánGPT'
+            const excerpt =
+              turn.text.length > 450
+                ? `${turn.text.slice(0, 450)}...`
+                : turn.text
+            return `${label}: "${excerpt}"`
+          })
+          .join('\n')}\n\n`
+      : ''
 
     const { text, usage } = await generateText({
       model,
       system: `Eres un normalizador de consultas institucionales para la Universidad Señor de Sipán (USS).
-Tu tarea es convertir la pregunta coloquial o informal de un estudiante en una consulta de búsqueda formal y técnica para un motor de reglamentos universitarios.
+Tu tarea es convertir la pregunta coloquial, elíptica o informal de un estudiante en una consulta de búsqueda formal, técnica y autónoma para un motor de reglamentos y manuales universitarios.
+${hasHistory ? 'Si la consulta actual depende de turnos anteriores (referencias implícitas o continuación de un tema previo), DEBES incorporar explícitamente la carrera, escuela profesional, asignatura, nivel, reglamento o trámite del historial dentro de "expandedQuery" para que la consulta se entienda por sí sola.' : ''}
 Debes responder ÚNICAMENTE un JSON válido con esta estructura:
 {
-  "expandedQuery": "Texto de búsqueda formal optimizado",
+  "expandedQuery": "Texto de búsqueda formal autónomo optimizado",
   "inferredCategory": "ADMISION | MATRICULA | PAGOS_PENSIONES | CONVALIDACIONES | GRADOS_TITULOS | BECAS | OTROS | GENERAL",
   "detectedIntent": "CODIGO_INTENCION_BREVE"
 }`,
-      prompt: `Consulta del estudiante: "${clean}"`,
-      maxOutputTokens: 120,
+      prompt: `${historyBlock}Consulta actual del estudiante: "${clean}"`,
+      maxOutputTokens: hasHistory ? 512 : 384,
       reasoning: DEFAULT_THINKING_LEVEL,
       providerOptions: {
         google: {
@@ -154,7 +184,7 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
           },
         } satisfies GoogleLanguageModelOptions,
       },
-      abortSignal: AbortSignal.timeout(2500),
+      abortSignal: AbortSignal.timeout(hasHistory ? 4500 : 3500),
     })
     const latencyMs = Date.now() - rewriteStart
 
@@ -190,7 +220,7 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
     recordTokenUsageLog({
       userId: context?.userId || null,
       conversationId: context?.conversationId || null,
-      modelCode: DOCUMENT_TRANSCRIPTION_MODEL_CODE,
+      modelCode: QUERY_REWRITER_MODEL_CODE,
       provider: ModelProvider.GEMINI,
       concept: TokenUsageConcept.QUERY_ANALYSIS,
       promptTokens,
@@ -198,21 +228,39 @@ Debes responder ÚNICAMENTE un JSON válido con esta estructura:
       latencyMs,
       metadata: {
         rawQuery: clean,
+        hasHistory,
         inferredCategory: normalizedCategory || parsed?.inferredCategory,
         detectedIntent: parsed?.detectedIntent,
       },
     }).catch((err) => console.warn('[QUERY_ANALYSIS_TOKEN_LOG_WARN]', err))
 
     if (parsed) {
+      const condensed = parsed.expandedQuery?.trim()
       return {
         originalQuery: clean,
-        expandedQuery: parsed.expandedQuery ? `${clean} ${parsed.expandedQuery}` : clean,
+        expandedQuery: condensed
+          ? hasHistory
+            ? condensed.toLowerCase().includes(clean.toLowerCase())
+              ? condensed
+              : `${condensed} (${clean})`
+            : `${clean} ${condensed}`
+          : clean,
         inferredCategory: normalizedCategory || parsed.inferredCategory,
         detectedIntent: parsed.detectedIntent,
       }
     }
   } catch {
-    // Si falla o excede el timeout (2.5s), continuar con la consulta original sin degradar el chat
+    // Si falla o excede el timeout, aplicar respaldo contextual sin degradar el chat
+  }
+
+  if (hasHistory) {
+    const lastPrevUserTurn =
+      [...normalizedHistory].reverse().find((t) => t.role === 'user') ??
+      normalizedHistory[normalizedHistory.length - 1]
+    return {
+      originalQuery: clean,
+      expandedQuery: `${lastPrevUserTurn.text.slice(0, 200)} ${clean}`,
+    }
   }
 
   return {

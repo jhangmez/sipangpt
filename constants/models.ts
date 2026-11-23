@@ -16,7 +16,13 @@ export interface ModelDefinition {
 export const DEFAULT_MODEL_CODE = 'gemini-3.1-flash-lite'
 export const DEFAULT_PROVIDER: ModelProvider = 'GEMINI'
 export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-2'
-export const DOCUMENT_TRANSCRIPTION_MODEL_CODE = 'gemini-3.1-flash-lite'
+export const DOCUMENT_TRANSCRIPTION_MODEL_CODE = 'gemini-4-hydrogen'
+export const DOCUMENT_TRANSCRIPTION_THINKING_LEVEL: ThinkingLevel = 'medium'
+export const QUERY_REWRITER_MODEL_CODE = 'gemini-3.1-flash-lite'
+export const DOCUMENT_TRANSCRIPTION_FALLBACK_MODEL_CODES = [
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+] as const
 
 export const SYSTEM_MODELS: ModelDefinition[] = [
   {
